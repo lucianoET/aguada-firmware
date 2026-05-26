@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB-Aguada
+    uid: influxdb-aguada
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    isDefault: true
+    jsonData:
+      version: Flux
+      organization: aguada
+      defaultBucket: reservoirs
+      tlsSkipVerify: true
+    secureJsonData:
+      token: aguada-admin-token-2024

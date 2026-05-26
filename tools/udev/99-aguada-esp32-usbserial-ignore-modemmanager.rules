@@ -1,0 +1,18 @@
+# Prevent ModemManager from probing the Aguada gateway USB-serial adapter.
+#
+# Symptom when ModemManager interferes with flashing:
+#   esptool: "Invalid head of packet (...)" / "The chip stopped responding"
+#
+# This repository uses a WCH USB-serial adapter (vendor 1a86, product 55d4).
+#
+# Install (requires root):
+#   sudo cp tools/udev/99-aguada-esp32-usbserial-ignore-modemmanager.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger
+#   sudo systemctl restart ModemManager
+#
+# Notes:
+# - This affects ONLY devices matching idVendor=1a86 + idProduct=55d4.
+# - If you use other WCH serial devices you may want a narrower match (by serial number).
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d4", ENV{ID_MM_DEVICE_IGNORE}="1"

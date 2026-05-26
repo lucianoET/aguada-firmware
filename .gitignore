@@ -1,0 +1,14 @@
+build/
+build_idf/
+.pio/
+.vscode/
+*.o
+*.bin
+*.elf
+*.map
+__pycache__/
+*.pyc
+.DS_Store
+sdkconfig.old
+.env
+.venv*/

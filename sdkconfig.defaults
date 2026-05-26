@@ -1,0 +1,9 @@
+# ESP-IDF defaults for Aguada stub app
+# (User-specific overrides will go to sdkconfig)
+
+# Keep logs readable
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_LOG_MAXIMUM_LEVEL_INFO=y
+
+# Reduce noise
+CONFIG_ESP_SYSTEM_PANIC_PRINT_REBOOT=y

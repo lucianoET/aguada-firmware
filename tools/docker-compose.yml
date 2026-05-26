@@ -1,0 +1,110 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Aguada — Stack completa: MQTT Broker + InfluxDB + Grafana + Writer
+#
+# Iniciar (1ª vez ou após reboot):
+#   cd tools && docker compose up -d
+#
+# Parar:
+#   docker compose down
+#
+# Ver logs em tempo real:
+#   docker compose logs -f writer
+#
+# Acessos:
+#   InfluxDB: http://localhost:8086   user: admin  senha: aguada2024
+#   Grafana:  http://localhost:3000   user: admin  senha: aguada2024
+#   MQTT:     0.0.0.0:1883            (rede local, sem autenticação)
+#
+# O gateway ESP32 deve apontar para:
+#   MQTT broker: <IP desta máquina>  porta: 1883
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Broker MQTT (Mosquitto) ─────────────────────────────────────────────────
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: aguada-mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "hc", "-W", "3"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── InfluxDB 2.x ────────────────────────────────────────────────────────────
+  influxdb:
+    image: influxdb:2.7
+    container_name: aguada-influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE:        setup
+      DOCKER_INFLUXDB_INIT_USERNAME:    admin
+      DOCKER_INFLUXDB_INIT_PASSWORD:    aguada2024
+      DOCKER_INFLUXDB_INIT_ORG:         aguada
+      DOCKER_INFLUXDB_INIT_BUCKET:      reservoirs
+      DOCKER_INFLUXDB_INIT_RETENTION:   0
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: aguada-admin-token-2024
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── MQTT → InfluxDB writer ──────────────────────────────────────────────────
+  writer:
+    image: python:3.12-slim
+    container_name: aguada-writer
+    restart: unless-stopped
+    depends_on:
+      mqtt:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+    volumes:
+      - ./mqtt_to_influx.py:/app/mqtt_to_influx.py:ro
+      - ./reservoirs.yaml:/app/reservoirs.yaml:ro
+      - writer-pip-cache:/root/.cache/pip
+    working_dir: /app
+    environment:
+      MQTT_HOST:     mqtt
+      MQTT_PORT:     "1883"
+      INFLUX_URL:    http://influxdb:8086
+      INFLUX_TOKEN:  aguada-admin-token-2024
+      INFLUX_ORG:    aguada
+      INFLUX_BUCKET: reservoirs
+    command: >
+      sh -c "pip install --quiet paho-mqtt influxdb-client pyyaml &&
+             python mqtt_to_influx.py"
+
+  # ── Grafana ─────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: aguada-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      GF_SECURITY_ADMIN_USER:     admin
+      GF_SECURITY_ADMIN_PASSWORD: aguada2024
+      GF_USERS_ALLOW_SIGN_UP:     "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/aguada.json
+    depends_on:
+      influxdb:
+        condition: service_healthy
+
+volumes:
+  influxdb-data:
+  grafana-data:
+  writer-pip-cache:
