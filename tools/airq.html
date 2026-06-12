@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aguada — Qualidade do Ar</title>
+<style>
+  :root {
+    --bg:      #f1f5f9;
+    --surface: #ffffff;
+    --border:  #e2e8f0;
+    --border2: #cbd5e1;
+    --text:    #0f172a;
+    --muted:   #64748b;
+    --muted2:  #94a3b8;
+    --accent:  #4f46e5;
+    --shadow:  0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif;
+         min-height: 100vh; padding: 24px 28px; max-width: 960px; margin: 0 auto; }
+
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
+  header h1 { font-size: 1.15rem; font-weight: 700; }
+  #status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted2); flex-shrink: 0; transition: background .4s; }
+  #status-dot.online  { background: #16a34a; box-shadow: 0 0 0 3px #bbf7d0; }
+  #status-dot.offline { background: #dc2626; box-shadow: 0 0 0 3px #fee2e2; }
+  #status-label { font-size: .78rem; color: var(--muted); }
+  #last-update  { font-size: .72rem; color: var(--muted2); margin-left: auto; }
+
+  #conn-form {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 22px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; box-shadow: var(--shadow);
+  }
+  #conn-form label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  #conn-form input {
+    background: var(--bg); border: 1px solid var(--border2); color: var(--text);
+    border-radius: 6px; padding: 5px 10px; font-size: .83rem; width: 164px; outline: none;
+  }
+  #conn-form input:focus { border-color: var(--accent); }
+  #conn-form button {
+    background: var(--accent); color: #fff; border: none; border-radius: 6px;
+    padding: 5px 16px; font-size: .83rem; cursor: pointer; font-weight: 500;
+  }
+  #conn-form button:hover { background: #4338ca; }
+  #conn-err { font-size: .75rem; color: #dc2626; }
+
+  .section-title {
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--muted); margin-top: 20px; margin-bottom: 10px; font-weight: 600;
+  }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px; display: flex; flex-direction: column; gap: 4px;
+    box-shadow: var(--shadow);
+  }
+  .card.hl { border-left: 3px solid var(--accent); }
+  .card-label  { font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+  .card-value  { font-size: 2.6rem; font-weight: 800; line-height: 1.1; margin-top: 2px; }
+  .card-unit   { font-size: .8rem; color: var(--muted); font-weight: 500; }
+  .card-status { font-size: .78rem; font-weight: 600; margin-top: 2px; }
+  .card-desc   { font-size: .73rem; color: var(--muted); margin-top: 8px; line-height: 1.45;
+                 border-top: 1px solid var(--border); padding-top: 8px; }
+
+  .bar-wrap { background: var(--border); border-radius: 4px; height: 5px; margin-top: 8px; overflow: hidden; }
+  .bar      { height: 100%; border-radius: 4px; transition: width .7s ease, background .5s; width: 0; }
+
+  .ref-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .ref-box  { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+              padding: 16px 18px; box-shadow: var(--shadow); }
+  .ref-title { font-size: .68rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: .79rem; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 3px 6px 6px; border-bottom: 1px solid var(--border); }
+  td { padding: 5px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+
+  .c-good     { color: #16a34a; }
+  .c-fair     { color: #65a30d; }
+  .c-moderate { color: #d97706; }
+  .c-poor     { color: #ea580c; }
+  .c-bad      { color: #dc2626; }
+  .aqi-1{color:#16a34a} .aqi-2{color:#65a30d} .aqi-3{color:#d97706} .aqi-4{color:#ea580c} .aqi-5{color:#dc2626}
+</style>
+</head>
+<body>
+
+<header>
+  <div id="status-dot"></div>
+  <h1>Qualidade do Ar — ANI-01</h1>
+  <span id="status-label">desligado</span>
+  <span id="last-update"></span>
+</header>
+
+<div id="conn-form">
+  <label>Broker</label>
+  <input id="broker-host" type="text"   value="localhost" placeholder="ex: 192.168.1.10">
+  <label>Porta&nbsp;WS</label>
+  <input id="broker-port" type="number" value="9001" style="width:80px">
+  <label>Node&nbsp;ID</label>
+  <input id="node-id"     type="text"   value="0x0494">
+  <button onclick="doConnect()">Ligar</button>
+  <span id="conn-err"></span>
+</div>
+
+<p class="section-title">Qualidade do Ar</p>
+<div class="grid">
+  <div class="card hl">
+    <span class="card-label">eCO₂ — CO₂ equivalente</span>
+    <span class="card-value" id="eco2">—</span>
+    <span class="card-unit">ppm</span>
+    <div class="bar-wrap"><div class="bar" id="eco2-bar"></div></div>
+    <span class="card-status" id="eco2-status"></span>
+    <span class="card-desc">Estimado pelo ENS160 a partir dos VOCs. O ar exterior ronda 420 ppm. Acima de 1000 ppm a concentração começa a afectar o conforto e a concentração.</span>
+  </div>
+  <div class="card">
+    <span class="card-label">AQI — Índice de qualidade</span>
+    <span class="card-value" id="aqi">—</span>
+    <span class="card-unit">escala 1 – 5</span>
+    <span class="card-status" id="aqi-status"></span>
+    <span class="card-desc">Calculado internamente pelo ENS160. Combina eCO₂ e TVOC numa pontuação global. 1 = excelente &nbsp;·&nbsp; 5 = muito mau.</span>
+  </div>
+  <div class="card">
+    <span class="card-label">TVOC — Compostos orgânicos voláteis</span>
+    <span class="card-value" id="tvoc">—</span>
+    <span class="card-unit">ppb</span>
+    <div class="bar-wrap"><div class="bar" id="tvoc-bar"></div></div>
+    <span class="card-status" id="tvoc-status"></span>
+    <span class="card-desc">Inclui álcoois, solventes, perfumes, produtos de limpeza. Abaixo de 150 ppb é bom para interiores (WHO / UBA).</span>
+  </div>
+</div>
+
+<p class="section-title">Ambiente</p>
+<div class="grid">
+  <div class="card">
+    <span class="card-label">Temperatura</span>
+    <span class="card-value" id="temp">—</span>
+    <span class="card-unit">°C</span>
+    <span class="card-desc">Sensor AHT21. Usada também para compensar a leitura do ENS160, melhorando a precisão do eCO₂ e TVOC.</span>
+  </div>
+  <div class="card">
+    <span class="card-label">Humidade relativa</span>
+    <span class="card-value" id="hum">—</span>
+    <span class="card-unit">%</span>
+    <div class="bar-wrap"><div class="bar" id="hum-bar"></div></div>
+    <span class="card-desc">Sensor AHT21. Conforto entre 40 – 60 %. Acima de 70 % favorece bolores e ácaros.</span>
+  </div>
+  <div class="card">
+    <span class="card-label">RSSI — Sinal rádio</span>
+    <span class="card-value" id="rssi">—</span>
+    <span class="card-unit">dBm</span>
+    <span class="card-desc">Intensidade do ESP‑NOW recebido pelo gateway. Acima de −70 dBm é bom; abaixo de −85 dBm pode causar perdas de pacotes.</span>
+  </div>
+</div>
+
+<p class="section-title">Valores de referência</p>
+<div class="ref-grid">
+  <div class="ref-box">
+    <p class="ref-title">eCO₂ (ppm)</p>
+    <table>
+      <tr><th>Intervalo</th><th>Nível</th><th>Efeitos</th></tr>
+      <tr><td><span class="dot" style="background:#16a34a"></span>&lt; 400</td><td class="c-good">Excelente</td><td>Ar exterior</td></tr>
+      <tr><td><span class="dot" style="background:#65a30d"></span>400 – 600</td><td class="c-fair">Bom</td><td>Interior ventilado</td></tr>
+      <tr><td><span class="dot" style="background:#d97706"></span>600 – 1000</td><td class="c-moderate">Razoável</td><td>Ligeiro cansaço</td></tr>
+      <tr><td><span class="dot" style="background:#ea580c"></span>1000 – 2000</td><td class="c-poor">Mau</td><td>Sonolência, dificuldade de foco</td></tr>
+      <tr><td><span class="dot" style="background:#dc2626"></span>&gt; 2000</td><td class="c-bad">Muito mau</td><td>Dores de cabeça — ventilar</td></tr>
+    </table>
+  </div>
+  <div class="ref-box">
+    <p class="ref-title">AQI ENS160 (1 – 5)</p>
+    <table>
+      <tr><th>Nível</th><th>Classificação</th><th>Acção</th></tr>
+      <tr><td><span class="dot" style="background:#16a34a"></span>1</td><td class="c-good">Excelente</td><td>Nenhuma</td></tr>
+      <tr><td><span class="dot" style="background:#65a30d"></span>2</td><td class="c-fair">Bom</td><td>Nenhuma</td></tr>
+      <tr><td><span class="dot" style="background:#d97706"></span>3</td><td class="c-moderate">Moderado</td><td>Considerar ventilação</td></tr>
+      <tr><td><span class="dot" style="background:#ea580c"></span>4</td><td class="c-poor">Mau</td><td>Ventilar e reduzir fontes</td></tr>
+      <tr><td><span class="dot" style="background:#dc2626"></span>5</td><td class="c-bad">Muito mau</td><td>Abrir janelas imediatamente</td></tr>
+    </table>
+  </div>
+  <div class="ref-box">
+    <p class="ref-title">TVOC (ppb)</p>
+    <table>
+      <tr><th>Intervalo</th><th>Nível</th><th>Fontes típicas</th></tr>
+      <tr><td><span class="dot" style="background:#16a34a"></span>&lt; 150</td><td class="c-good">Bom</td><td>Sem fontes relevantes</td></tr>
+      <tr><td><span class="dot" style="background:#d97706"></span>150 – 500</td><td class="c-moderate">Razoável</td><td>Perfumes, limpeza leve</td></tr>
+      <tr><td><span class="dot" style="background:#ea580c"></span>500 – 1500</td><td class="c-poor">Mau</td><td>Tintas, solventes, cozinha</td></tr>
+      <tr><td><span class="dot" style="background:#dc2626"></span>&gt; 1500</td><td class="c-bad">Muito mau</td><td>Ventilar imediatamente</td></tr>
+    </table>
+  </div>
+  <div class="ref-box">
+    <p class="ref-title">Humidade relativa (%)</p>
+    <table>
+      <tr><th>Intervalo</th><th>Nível</th><th>Risco</th></tr>
+      <tr><td><span class="dot" style="background:#ea580c"></span>&lt; 30 %</td><td class="c-poor">Seco</td><td>Irritação de mucosas</td></tr>
+      <tr><td><span class="dot" style="background:#16a34a"></span>40 – 60 %</td><td class="c-good">Confortável</td><td>Ideal</td></tr>
+      <tr><td><span class="dot" style="background:#d97706"></span>60 – 70 %</td><td class="c-moderate">Húmido</td><td>Possíveis bolores</td></tr>
+      <tr><td><span class="dot" style="background:#dc2626"></span>&gt; 70 %</td><td class="c-bad">Muito húmido</td><td>Bolores, ácaros</td></tr>
+    </table>
+  </div>
+</div>
+
+<script>
+// Cliente MQTT 3.1.1 sobre WebSocket — sem dependências externas
+function MiniMqtt() {
+  this.ws    = null;
+  this._ping = null;
+  this._pkid = 1;
+  this._cb   = {};
+}
+
+MiniMqtt.prototype.connect = function(host, port, clientId, cb) {
+  this._cb = cb || {};
+  var self = this;
+  var ws;
+  try { ws = new WebSocket('ws://' + host + ':' + port + '/mqtt', ['mqtt']); }
+  catch(e) { cb.onError && cb.onError('URL inválida: ' + e.message); return; }
+  ws.binaryType = 'arraybuffer';
+  this.ws = ws;
+
+  ws.onopen = function() {
+    var te  = typeof TextEncoder !== 'undefined' ? new TextEncoder() : { encode: function(s) {
+      var a = []; for (var i=0; i<s.length; i++) a.push(s.charCodeAt(i) & 0xFF); return a;
+    }};
+    var cid = Array.from(te.encode(clientId));
+    var vh  = [0x00,0x04,0x4D,0x51,0x54,0x54,0x04,0x02,0x00,0x3C];
+    var pl  = [0x00, cid.length].concat(cid);
+    var rem = vh.length + pl.length;
+    self._send([0x10, rem].concat(vh).concat(pl));
+  };
+  ws.onmessage = function(e) { self._rx(new Uint8Array(e.data)); };
+  ws.onclose   = function() { clearInterval(self._ping); self._cb.onDisconnect && self._cb.onDisconnect(); };
+  ws.onerror   = function() { self._cb.onError && self._cb.onError('Não foi possível ligar — verifique host/porta e se o broker tem WebSocket activo (porta 9001)'); };
+};
+
+MiniMqtt.prototype.subscribe = function(topic) {
+  var te  = typeof TextEncoder !== 'undefined' ? new TextEncoder() : { encode: function(s) {
+    var a = []; for (var i=0; i<s.length; i++) a.push(s.charCodeAt(i) & 0xFF); return a;
+  }};
+  var enc = Array.from(te.encode(topic));
+  var id  = this._pkid++;
+  var pl  = [id >> 8, id & 0xFF, 0x00, enc.length].concat(enc).concat([0x00]);
+  this._send([0x82].concat(this._vl(pl.length)).concat(pl));
+};
+
+MiniMqtt.prototype.disconnect = function() {
+  clearInterval(this._ping);
+  if (this.ws) { try { this._send([0xE0, 0x00]); } catch(e) {} this.ws.close(); this.ws = null; }
+};
+
+MiniMqtt.prototype._send = function(bytes) {
+  if (this.ws && this.ws.readyState === 1)
+    this.ws.send(new Uint8Array(bytes).buffer);
+};
+
+MiniMqtt.prototype._vl = function(n) {
+  var o = [];
+  do { var b = n & 0x7F; n >>= 7; if (n) b |= 0x80; o.push(b); } while (n);
+  return o;
+};
+
+MiniMqtt.prototype._rx = function(d) {
+  var p = 0;
+  var td = typeof TextDecoder !== 'undefined' ? new TextDecoder() : {
+    decode: function(a) { var s=''; for(var i=0;i<a.length;i++) s+=String.fromCharCode(a[i]); return s; }
+  };
+  while (p < d.length) {
+    var type  = d[p] >> 4;
+    var flags = d[p] & 0xF;
+    p++;
+    var mul=1, rem=0;
+    while (p < d.length) { var b=d[p++]; rem+=(b&0x7F)*mul; mul*=128; if(!(b&0x80)) break; }
+    var start = p;
+
+    if (type === 2) {                          // CONNACK
+      if (d[p+1] === 0) {
+        var self = this;
+        this._ping = setInterval(function(){ self._send([0xC0,0x00]); }, 30000);
+        this._cb.onConnect && this._cb.onConnect();
+      } else {
+        this._cb.onError && this._cb.onError('Broker recusou ligação (rc=' + d[p+1] + ')');
+      }
+    } else if (type === 3) {                   // PUBLISH
+      var qos  = (flags>>1)&3;
+      var tlen = (d[p]<<8)|d[p+1]; p+=2;
+      var topic = td.decode(d.slice(p, p+tlen)); p+=tlen;
+      if (qos > 0) p+=2;
+      var msg = td.decode(d.slice(p, start+rem));
+      this._cb.onMessage && this._cb.onMessage(topic, msg);
+    }
+    p = start + rem;
+  }
+};
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+var mqttClient = new MiniMqtt();
+
+var AQI_LABELS = ['','Excelente','Bom','Moderado','Mau','Muito mau'];
+var AQI_CLASS  = ['','aqi-1','aqi-2','aqi-3','aqi-4','aqi-5'];
+
+function eco2Info(v) {
+  if (v < 400)  return { label:'Excelente', cls:'c-good' };
+  if (v < 600)  return { label:'Bom',       cls:'c-fair' };
+  if (v < 1000) return { label:'Razoável',  cls:'c-moderate' };
+  if (v < 2000) return { label:'Mau',       cls:'c-poor' };
+  return              { label:'Muito mau',  cls:'c-bad' };
+}
+function tvocInfo(v) {
+  if (v < 150)  return { label:'Bom',      cls:'c-good',     pct:v/150*25 };
+  if (v < 500)  return { label:'Razoável', cls:'c-moderate', pct:25+(v-150)/350*25 };
+  if (v < 1500) return { label:'Mau',      cls:'c-poor',     pct:50+(v-500)/1000*35 };
+  return              { label:'Muito mau', cls:'c-bad',      pct:100 };
+}
+function humColor(v) {
+  if (v < 30)  return '#ea580c';
+  if (v < 40)  return '#d97706';
+  if (v <= 60) return '#16a34a';
+  if (v <= 70) return '#d97706';
+  return '#dc2626';
+}
+
+function $e(id) { return document.getElementById(id); }
+
+function setVal(id, val, cls) {
+  var el = $e(id);
+  el.textContent = val;
+  el.className = 'card-value' + (cls ? ' '+cls : '');
+}
+function setSt(id, label, cls) {
+  var el = $e(id);
+  el.textContent = label;
+  el.className = 'card-status' + (cls ? ' '+cls : '');
+}
+function setBar(id, pct, color) {
+  var el = $e(id);
+  el.style.width = Math.min(100, Math.max(0, pct)) + '%';
+  el.style.background = color;
+}
+
+function handleAir(data) {
+  if (data.eco2 != null) {
+    var i = eco2Info(data.eco2);
+    setVal('eco2', data.eco2, i.cls);
+    setSt('eco2-status', i.label, i.cls);
+    setBar('eco2-bar', (data.eco2-350)/(2000-350)*100,
+           data.eco2 < 600 ? '#16a34a' : data.eco2 < 1000 ? '#d97706' : '#dc2626');
+  }
+  if (data.aqi >= 1 && data.aqi <= 5) {
+    setVal('aqi', data.aqi, AQI_CLASS[data.aqi]);
+    setSt('aqi-status', AQI_LABELS[data.aqi], AQI_CLASS[data.aqi]);
+  }
+  if (data.tvoc != null) {
+    var t = tvocInfo(data.tvoc);
+    setVal('tvoc', data.tvoc, t.cls);
+    setSt('tvoc-status', t.label, t.cls);
+    setBar('tvoc-bar', t.pct, data.tvoc < 150 ? '#16a34a' : data.tvoc < 500 ? '#d97706' : '#dc2626');
+  }
+  if (data.rssi != null) setVal('rssi', data.rssi, null);
+  if (data.ts_iso) {
+    $e('last-update').textContent = 'actualizado às ' + new Date(data.ts_iso).toLocaleTimeString('pt-PT');
+  }
+}
+
+function handleEnv(data) {
+  if (data.temp_c != null) setVal('temp', parseFloat(data.temp_c).toFixed(1), null);
+  if (data.hum_pct != null) {
+    setVal('hum', data.hum_pct, null);
+    setBar('hum-bar', data.hum_pct, humColor(data.hum_pct));
+  }
+}
+
+function setOnline(on) {
+  $e('status-dot').className     = on ? 'online' : 'offline';
+  $e('status-label').textContent = on ? 'online' : 'offline';
+}
+
+function doConnect() {
+  var host   = $e('broker-host').value.trim() || 'localhost';
+  var port   = parseInt($e('broker-port').value) || 9001;
+  var nodeId = $e('node-id').value.trim() || '0x0494';
+  var errEl  = $e('conn-err');
+  errEl.textContent = '';
+
+  mqttClient.disconnect();
+  mqttClient = new MiniMqtt();
+  mqttClient.connect(host, port, 'airq-' + Math.random().toString(36).slice(2), {
+    onConnect: function() {
+      errEl.textContent = '';
+      setOnline(true);
+      mqttClient.subscribe('aguada/' + nodeId + '/1/state');
+      mqttClient.subscribe('aguada/' + nodeId + '/env/state');
+      mqttClient.subscribe('aguada/' + nodeId + '/status');
+    },
+    onMessage: function(topic, payload) {
+      if (topic.indexOf('/status') !== -1) { setOnline(payload === 'online'); return; }
+      try {
+        var data = JSON.parse(payload);
+        if (topic.indexOf('/env/') !== -1) handleEnv(data); else handleAir(data);
+      } catch(e) {}
+    },
+    onDisconnect: function() { setOnline(false); },
+    onError: function(msg) { errEl.textContent = msg; setOnline(false); }
+  });
+}
+
+window.addEventListener('load', doConnect);
+</script>
+</body>
+</html>

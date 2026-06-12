@@ -1,0 +1,10 @@
+[Unit]
+Description=Trigger Aguada Bridge Autoswitch on USB serial hotplug
+
+[Path]
+PathExistsGlob=/dev/ttyACM*
+PathExistsGlob=/dev/ttyUSB*
+Unit=aguada-bridge-autoswitch.service
+
+[Install]
+WantedBy=default.target

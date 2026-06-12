@@ -1,0 +1,73 @@
+reservoirs:
+  # node_id must match exactly the hex string printed by the gateway (uppercase, "0x" prefix)
+
+  "0X7758":
+    - sensor_id: 1
+      alias: CON
+      name: Castelo de Consumo
+      level_max_cm: 450
+      volume_max_L: 80000
+      sensor_offset_cm: 20
+
+  "0XEE02":
+    - sensor_id: 1
+      alias: CAV
+      name: Castelo de Incêndio
+      level_max_cm: 450
+      volume_max_L: 80000
+      sensor_offset_cm: 20
+
+  "0X2EC4":
+    - sensor_id: 1
+      alias: CB31
+      name: Casa de Bombas Nº3-1
+      level_max_cm: 200
+      volume_max_L: 40000
+      sensor_offset_cm: 10
+    - sensor_id: 2
+      alias: CB32
+      name: Casa de Bombas Nº3-2
+      level_max_cm: 200
+      volume_max_L: 40000
+      sensor_offset_cm: 10
+
+  "0X9EAC":
+    - sensor_id: 1
+      alias: CIE1
+      name: Cisterna IE-1
+      level_max_cm: 200
+      volume_max_L: 245000
+      sensor_offset_cm: 10
+    - sensor_id: 2
+      alias: CIE2
+      name: Cisterna IE-2
+      level_max_cm: 200
+      volume_max_L: 245000
+      sensor_offset_cm: 10
+
+  "0X3456":
+    - sensor_id: 1
+      alias: CBIF1
+      name: Casa de Bombas IF-1
+      level_max_cm: 200
+      volume_max_L: 40000
+      sensor_offset_cm: 10
+    - sensor_id: 2
+      alias: CBIF2
+      name: Casa de Bombas IF-2
+      level_max_cm: 200
+      volume_max_L: 40000
+      sensor_offset_cm: 10
+
+  # ── ANI-01 nodes (Aguada Node Indoor — qualidade do ar) ─────────────────────
+  # type: air_quality → bridge usa eco2/aqi, sem cálculo de nível/volume.
+  # Pacote 2 (SENSOR_ID_ENV=0xFE) com temp+hum é tratado automaticamente
+  # pelo handler _handle_heartbeat() existente e publicado em aguada/{id}/env/state.
+  #
+  # Exemplo: node_id fictício 0xA101 — substituir pelo MAC real do dispositivo.
+
+  "0XA101":
+    - sensor_id: 1
+      type: air_quality
+      alias: SRN
+      name: Sala de Reunião

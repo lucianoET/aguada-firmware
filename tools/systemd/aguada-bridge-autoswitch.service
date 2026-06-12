@@ -1,0 +1,16 @@
+[Unit]
+Description=Aguada Bridge Autoswitch Supervisor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/home/luc/Dev/espnow-ha/tools/start_bridge_autoswitch.sh
+Restart=always
+RestartSec=5
+
+# Avoid noisy buffering in logs
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
