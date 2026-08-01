@@ -22,3 +22,23 @@ struct Fix {
                             // this, never utc_unix, which can jump when the receiver
                             // first acquires date
 };
+
+// GateResult is fix_gate's decision over a Fix snapshot. ACCEPT is the only
+// outcome that may be forwarded downstream (cadence in Plan 02, the flash
+// logger in Phase 2); every REJECT_* variant carries a specific, named
+// reason for the bench serial log.
+enum class GateResult : uint8_t {
+    ACCEPT,
+    REJECT_NO_FIX,
+    REJECT_STALE,
+    REJECT_NULL_ISLAND,
+    REJECT_TIME,
+    REJECT_HDOP,
+    REJECT_SATS,
+    REJECT_WARMUP,
+    REJECT_OUTLIER_JUMP,
+};
+
+// Returns the enum member name as a string, for serial output and
+// per-reason health counters.
+const char *gateResultName(GateResult r);

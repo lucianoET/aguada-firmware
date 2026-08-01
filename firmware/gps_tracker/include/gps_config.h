@@ -27,3 +27,23 @@
 #ifndef GPS_BENCH_SIM
 #define GPS_BENCH_SIM 1
 #endif
+
+// --- fix_gate (Task 2) ---------------------------------------------------
+// These four are research starting points (Assumptions A1, A2, A4 in
+// 01-RESEARCH.md), not final values — tune against field data.
+
+#ifndef DEFAULT_GPS_HDOP_MAX
+#define DEFAULT_GPS_HDOP_MAX 5.0f   // reject above this HDOP (A1)
+#endif
+
+#ifndef DEFAULT_GPS_SATS_MIN
+#define DEFAULT_GPS_SATS_MIN 4   // hard minimum satellites used (A2)
+#endif
+
+#ifndef DEFAULT_GPS_WARMUP_FIXES
+#define DEFAULT_GPS_WARMUP_FIXES 3   // consecutive gate-passing fixes required post-cold-start (A4)
+#endif
+
+#ifndef DEFAULT_GPS_MAX_PLAUSIBLE_KMH
+#define DEFAULT_GPS_MAX_PLAUSIBLE_KMH 200.0f   // implied-speed outlier gate vs last accepted fix
+#endif
