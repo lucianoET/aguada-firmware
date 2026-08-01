@@ -31,8 +31,12 @@ static uint32_t   suppressCount = 0;
 static uint32_t   lastHealthMs = 0;
 static uint32_t   gateCounters[kGateResultCount] = {0};
 
-static GateResult lastPrintedReason = GateResult::ACCEPT;
-static bool       havePrintedReason = false;
+// Reject-line dedup state is kept per-origin (real vs. [SIM]) so a repeated
+// reason on one source can never silently suppress the first occurrence of
+// that same reason from the other source (WR-04) -- index 0 = real fixes,
+// index 1 = "[SIM] "-origin fixes.
+static GateResult lastPrintedReason[2] = { GateResult::ACCEPT, GateResult::ACCEPT };
+static bool       havePrintedReason[2] = { false, false };
 static GateResult lastResult        = GateResult::REJECT_NO_FIX;   // no data yet
 
 static Fix       lastFix{};
@@ -55,12 +59,19 @@ static inline void ledWrite(bool on) {
 // "[SIM] " for the bench simulator below) so a captured log can never
 // confuse a synthetic line for a real one.
 
+// 0 = real fixes, 1 = "[SIM] "-origin fixes -- see the dedup-state comment
+// above lastPrintedReason/havePrintedReason.
+static inline uint8_t originIndex(const char *origin) {
+    return (origin[0] == '\0') ? 0 : 1;
+}
+
 static void printRejectIfNew(const char *origin, GateResult result, float hdop, uint8_t sats, uint32_t ageMs, uint8_t quality) {
-    if (havePrintedReason && result == lastPrintedReason) return;   // dedup consecutive same-reason
+    uint8_t idx = originIndex(origin);
+    if (havePrintedReason[idx] && result == lastPrintedReason[idx]) return;   // dedup consecutive same-reason, per origin
     Serial.printf("%s[REJECT] reason=%s hdop=%.1f sats=%u age=%lums q=%u\n",
                   origin, gateResultName(result), hdop, sats, (unsigned long)ageMs, quality);
-    lastPrintedReason = result;
-    havePrintedReason = true;
+    lastPrintedReason[idx] = result;
+    havePrintedReason[idx] = true;
 }
 
 static void printEmit(const char *origin, CadenceAction action, const Fix &f, CadenceState state) {
@@ -93,7 +104,7 @@ static void handleAccept(const Fix &f, const char *origin) {
     lastAcceptedAtMs  = f.mono_ms;
     lastAcceptedFix   = f;
     haveAcceptedFix   = true;
-    havePrintedReason = false;   // any later rejection always prints its first line
+    havePrintedReason[originIndex(origin)] = false;   // any later rejection on this origin always prints its first line
 
     CadenceState  prevCadenceState = cadence.state();
     CadenceAction cadenceAction    = cadence.onGatedFix(f);
