@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 1
-current_phase_name: GPS Acquisition & Adaptive Cadence
-status: planning
-stopped_at: Phase 1 planned & verified (2 plans)
-last_updated: "2026-08-01T20:23:28.011Z"
+current_phase: 01
+current_phase_name: gps-acquisition-adaptive-cadence
+status: executing
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-08-01T20:58:59.796Z"
 last_activity: 2026-08-01
-last_activity_desc: Roadmap created from v1 requirements (15/15 mapped)
+last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 2
-  completed_plans: 0
+  completed_plans: 1
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-01)
 
 **Core value:** Nenhum ponto do trajeto se perde: o tracker registra continuamente offline e sincroniza tudo sozinho assim que qualquer canal de conectividade aparece.
-**Current focus:** Phase 1 - GPS Acquisition & Adaptive Cadence
+**Current focus:** Phase 01 — gps-acquisition-adaptive-cadence
 
 ## Current Position
 
-Phase: 1 of 5 (GPS Acquisition & Adaptive Cadence)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-08-01 — Roadmap created from v1 requirements (15/15 mapped)
+Phase: 01 (gps-acquisition-adaptive-cadence) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-08-01 — Phase 01 execution started
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -54,6 +54,11 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 01 P01 | 20min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -64,6 +69,9 @@ Recent decisions affecting current work:
 
 - Roadmap: Coarse granularity collapses research's 9 fine-grained phases into 5 vertical slices — v2 items (hotspot live sync, ESP-NOW mesh relay, channel arbitration, deep sleep) excluded entirely from v1 roadmap.
 - Roadmap: Power/hardware work (Phase 5) placed last, after HA attribute wiring (Phase 4) exists for PWR-02 to report into.
+- [Phase ?]: gps_reader.poll() gates the Fix snapshot on TinyGPSPlus location.isUpdated(); a main.cpp watchdog (not repeated FixGate::evaluate() calls) compensates for the library's one-way isValid()/isUpdated() latch to surface REJECT_STALE/REJECT_NO_FIX in real time without corrupting fix_gate's outlier-jump reference
+- [Phase ?]: HDOP fallback sentinel is 99.9f (not 0) so an absent/invalid HDOP fails fix_gate's max-HDOP check instead of silently passing
+- [Phase ?]: UTC epoch derived via a hand-rolled days-from-civil helper (no mktime, no timezone handling), computed only when GPS date/time are valid and year >= DEFAULT_GPS_MIN_UTC_YEAR
 
 ### Pending Todos
 
@@ -84,6 +92,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-01T20:23:27.922Z
-Stopped at: Phase 1 planned & verified (2 plans)
-Resume file: .planning/phases/01-gps-acquisition-adaptive-cadence/01-01-PLAN.md
+Last session: 2026-08-01T20:58:59.741Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None
