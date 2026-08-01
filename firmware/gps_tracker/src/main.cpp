@@ -39,6 +39,14 @@ static Fix       lastFix{};
 static bool      everAccepted    = false;
 static uint32_t  lastAcceptedAtMs = 0;
 
+// Tracks the last *gate-accepted* fix only (set exclusively inside
+// handleAccept()), as opposed to lastFix above which is the last raw poll()
+// snapshot regardless of gate outcome. The simulator's first-activation
+// anchor must seed from this, not from lastFix, so a rejected raw sample
+// (e.g. REJECT_NULL_ISLAND, REJECT_HDOP) can never poison its start position.
+static Fix       lastAcceptedFix{};
+static bool      haveAcceptedFix  = false;
+
 static inline void ledWrite(bool on) {
     digitalWrite(LED_PIN, LED_ACTIVE_LOW ? !on : on);
 }
@@ -83,6 +91,8 @@ static void printStateChange(const char *origin, CadenceState oldState, CadenceS
 static void handleAccept(const Fix &f, const char *origin) {
     everAccepted      = true;
     lastAcceptedAtMs  = f.mono_ms;
+    lastAcceptedFix   = f;
+    haveAcceptedFix   = true;
     havePrintedReason = false;   // any later rejection always prints its first line
 
     CadenceState  prevCadenceState = cadence.state();
@@ -157,13 +167,23 @@ static void simAdjustSpeed(float deltaKmh) {
 
 static void simToggle() {
     simActive_ = !simActive_;
+    // The real path and the simulator share one FixGate instance; its
+    // last-accepted-position reference must never survive a source switch
+    // unreconciled, or the first fix from the newly-active source gets
+    // measured against the other source's (possibly far-away) last
+    // position and permanently locked out by REJECT_OUTLIER_JUMP (CR-02).
+    fixGate.reset();
     if (simActive_) {
         if (!simHavePosition_) {
-            // Anchor at the last real accepted fix when one exists,
-            // otherwise the known bench coordinates.
-            if (everAccepted) {
-                simLat_ = lastFix.lat;
-                simLon_ = lastFix.lon;
+            // Anchor at the last real *accepted* fix when one exists,
+            // otherwise the known bench coordinates. Using lastFix (the
+            // last raw poll() snapshot) here would risk seeding from a fix
+            // that itself failed the gate (e.g. null-island, bad HDOP),
+            // which can trigger a spurious REJECT_OUTLIER_JUMP on the
+            // simulator's very first tick (WR-02).
+            if (haveAcceptedFix) {
+                simLat_ = lastAcceptedFix.lat;
+                simLon_ = lastAcceptedFix.lon;
             } else {
                 simLat_ = kSimDefaultLat;
                 simLon_ = kSimDefaultLon;
