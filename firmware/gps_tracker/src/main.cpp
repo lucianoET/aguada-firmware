@@ -65,13 +65,20 @@ static inline uint8_t originIndex(const char *origin) {
     return (origin[0] == '\0') ? 0 : 1;
 }
 
-static void printRejectIfNew(const char *origin, GateResult result, float hdop, uint8_t sats, uint32_t ageMs, uint8_t quality) {
+// Returns true only when this call actually printed a new line (i.e. the
+// reason changed since the last call for this origin) -- callers that drive
+// a per-loop-iteration watchdog (rather than a once-per-actual-Fix reject
+// path) use this as the edge signal for their own counters (WR-01), since
+// loop() can re-run this thousands of times per second for a single
+// lost/never-acquired fix.
+static bool printRejectIfNew(const char *origin, GateResult result, float hdop, uint8_t sats, uint32_t ageMs, uint8_t quality) {
     uint8_t idx = originIndex(origin);
-    if (havePrintedReason[idx] && result == lastPrintedReason[idx]) return;   // dedup consecutive same-reason, per origin
+    if (havePrintedReason[idx] && result == lastPrintedReason[idx]) return false;   // dedup consecutive same-reason, per origin
     Serial.printf("%s[REJECT] reason=%s hdop=%.1f sats=%u age=%lums q=%u\n",
                   origin, gateResultName(result), hdop, sats, (unsigned long)ageMs, quality);
     lastPrintedReason[idx] = result;
     havePrintedReason[idx] = true;
+    return true;
 }
 
 static void printEmit(const char *origin, CadenceAction action, const Fix &f, CadenceState state) {
@@ -366,14 +373,25 @@ void loop() {
             // reuses fix_gate's own DEFAULT_GPS_FRESH_MS window to detect a
             // frozen fix in real time (mitigates threat T-01-02), and covers
             // the symmetric cold-boot case where no fix has ever landed.
+            //
+            // This branch re-runs on every loop() iteration where poll()
+            // returned false -- thousands of times per second, not once per
+            // lost/never-acquired fix -- so the gateCounters increment below
+            // is gated on printRejectIfNew()'s edge signal (only true when
+            // the reason actually changed) rather than unconditional, or
+            // no_fix=/stale= would dwarf every other [HEALTH] counter and
+            // could wrap a uint32_t within the field lifetime of the device
+            // (WR-01).
             if (!everAccepted) {
-                gateCounters[static_cast<uint8_t>(GateResult::REJECT_NO_FIX)]++;
-                printRejectIfNew("", GateResult::REJECT_NO_FIX, lastFix.hdop, lastFix.sats, 0, lastFix.fix_quality);
+                if (printRejectIfNew("", GateResult::REJECT_NO_FIX, lastFix.hdop, lastFix.sats, 0, lastFix.fix_quality)) {
+                    gateCounters[static_cast<uint8_t>(GateResult::REJECT_NO_FIX)]++;
+                }
                 lastResult = GateResult::REJECT_NO_FIX;
             } else if ((millis() - lastAcceptedAtMs) >= DEFAULT_GPS_FRESH_MS) {
                 uint32_t ageMs = millis() - lastAcceptedAtMs;
-                gateCounters[static_cast<uint8_t>(GateResult::REJECT_STALE)]++;
-                printRejectIfNew("", GateResult::REJECT_STALE, lastFix.hdop, lastFix.sats, ageMs, lastFix.fix_quality);
+                if (printRejectIfNew("", GateResult::REJECT_STALE, lastFix.hdop, lastFix.sats, ageMs, lastFix.fix_quality)) {
+                    gateCounters[static_cast<uint8_t>(GateResult::REJECT_STALE)]++;
+                }
                 lastResult = GateResult::REJECT_STALE;
             }
         }
