@@ -29,7 +29,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. Node parses NEO-6M/M8N NMEA output via UART and exposes lat/lon/speed/altitude/course plus a UTC timestamp for each valid fix.
   2. Fixes that fail quality gating (invalid, poor HDOP, too few satellites) are discarded and never reach the log or the cadence logic.
   3. While moving, a new fix is accepted roughly every 5-10 seconds; while stationary (GPS speed below a threshold for N seconds), fix acceptance pauses.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — gps_reader + fix_gate: structured Fix snapshot from NMEA, quality gating before anything downstream (GPS-01, GPS-02)
+- [ ] 01-02-PLAN.md — cadence: speed-based debounced pacing, plus bench simulator and BENCH.md verification procedure (GPS-03)
 
 ### Phase 2: Durable Flash Logging
 **Goal**: Every accepted GPS fix is written to flash before any network attempt, and the log survives reboots and power loss without corruption or lost/duplicated upload progress.
@@ -82,7 +85,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. GPS Acquisition & Adaptive Cadence | 0/TBD | Not started | - |
+| 1. GPS Acquisition & Adaptive Cadence | 0/2 | Not started | - |
 | 2. Durable Flash Logging | 0/TBD | Not started | - |
 | 3. Store & Forward Sync (Known WiFi) | 0/TBD | Not started | - |
 | 4. Server Ingest, HA Live Tracking & GPX Export | 0/TBD | Not started | - |
