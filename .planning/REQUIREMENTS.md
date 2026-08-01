@@ -83,13 +83,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated during roadmap creation) | | |
+| GPS-01 | Phase 1 | Pending |
+| GPS-02 | Phase 1 | Pending |
+| GPS-03 | Phase 1 | Pending |
+| LOG-01 | Phase 2 | Pending |
+| LOG-02 | Phase 2 | Pending |
+| LOG-03 | Phase 2 | Pending |
+| SYNC-01 | Phase 3 | Pending |
+| SYNC-02 | Phase 3 | Pending |
+| SYNC-03 | Phase 3 | Pending |
+| SRV-01 | Phase 4 | Pending |
+| SRV-02 | Phase 4 | Pending |
+| SRV-03 | Phase 4 | Pending |
+| PWR-01 | Phase 5 | Pending |
+| PWR-02 | Phase 5 | Pending |
+| HW-01 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 ⚠️ (pre-roadmap)
+- Mapped to phases: 15
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-01*
-*Last updated: 2026-08-01 after initial definition*
+*Last updated: 2026-08-01 after roadmap creation*
