@@ -20,6 +20,11 @@ findings:
   info: 4
   total: 10
 status: issues_found
+fix_status: partial
+fixed_at: 2026-08-01T00:00:00Z
+fixed: 4
+skipped: 1
+not_in_scope: 4
 ---
 
 # Phase 1: Code Review Report
@@ -63,6 +68,8 @@ out.fix_quality = gps_.location.isValid()
     : 0;
 ```
 
+**Fix Status:** FIXED — commit `e1d2f13` (`fix(01): CR-01 normalize TinyGPSLocation::Quality ASCII code to documented 0-8 integer`). Applied the suggested normalization in `gps_reader.cpp`; both PlatformIO envs build clean.
+
 ### CR-02: `FixGate`'s last-accepted-position reference is never reset around simulator sessions — permanent outlier-jump lockout
 
 **File:** `firmware/gps_tracker/src/main.cpp` (simulator block, `simToggle()` ~L158-180) and `firmware/gps_tracker/src/fix_gate.h`/`fix_gate.cpp` (`reset()` declared, never called anywhere in the codebase)
@@ -87,6 +94,8 @@ static void simToggle() {
 ```
 and anchor `simLat_`/`simLon_` from a tracked "last *accepted* Fix" (e.g. store `lastFix` only inside `handleAccept()`, not on every raw poll) rather than the last raw `Fix`, so a rejected raw sample can never seed the simulator's continuity point.
 
+**Fix Status:** FIXED — commit `a63bead` (`fix(01): CR-02/WR-02 reset FixGate on simulator transitions; anchor sim from last accepted fix`). `simToggle()` now calls `fixGate.reset()` on every transition and anchors `simLat_`/`simLon_` from a new `lastAcceptedFix` tracked exclusively inside `handleAccept()` (never from the raw `lastFix`). This single commit also resolves WR-02 below, since both findings required the same code change. Both PlatformIO envs build clean.
+
 ## Warnings
 
 ### WR-01: `[HEALTH]` reject counters are inflated by loop-rate re-evaluation, not per-fix events
@@ -110,11 +119,15 @@ bool isNewReason = !havePrintedReason || result != lastPrintedReason;
 if (isNewReason) gateCounters[...]++;
 ```
 
+**Fix Status:** FIXED — commit `f7f59ad` (`fix(01): WR-01 edge-gate [HEALTH] no_fix/stale watchdog counters instead of per-loop-tick`). `printRejectIfNew()` now returns whether it actually printed a new line, and the watchdog block's `gateCounters[REJECT_NO_FIX]`/`gateCounters[REJECT_STALE]` increments are gated on that edge signal instead of running unconditionally every `loop()` iteration. Both PlatformIO envs build clean.
+
 ### WR-02: Simulator's first-activation anchor can be poisoned by a rejected raw fix
 
 **File:** `firmware/gps_tracker/src/main.cpp:160-172` (`simToggle()`)
 **Issue:** See CR-02 — `simLat_`/`simLon_` are seeded from `lastFix` (last raw `poll()` result) rather than from a tracked last-*accepted* position. If the most recent real fix before the simulator is turned on failed the gate (e.g. `REJECT_NULL_ISLAND`, `REJECT_HDOP`, or a rejected outlier), the simulator starts from that bad position, and its very first synthetic tick can itself trigger a spurious `REJECT_OUTLIER_JUMP` against `FixGate`'s true (older, good) last-accepted reference — undermining the "prove it from a desk" workflow Task 2 exists to deliver.
 **Fix:** Track a dedicated `lastAcceptedFix` (set only inside `handleAccept()`) and anchor the simulator from that instead of the raw `lastFix`.
+
+**Fix Status:** FIXED — commit `a63bead` (same commit as CR-02; this finding's fix suggestion is identical to CR-02's continuity-anchor change and was resolved by the same edit — see CR-02's Fix Status above). Both PlatformIO envs build clean.
 
 ### WR-03: `GpsReader::poll()` can silently coalesce multiple fixes into one if `loop()` stalls
 
@@ -122,13 +135,19 @@ if (isNewReason) gateCounters[...]++;
 **Issue:** `poll()` drains the *entire* UART receive backlog in a `while (serial_.available())` loop before checking `location.isUpdated()` once. Under normal ~1 Hz NMEA timing with a tight `loop()` this is harmless, but if `loop()` is ever delayed for more than one fix cycle (e.g. a long `Serial.printf()` burst, or future work added to `loop()`), more than one commit can land in the same `poll()` call. Only the last-committed values are ever read back, so an intermediate fix (and, in principle, an intermediate `mono_ms`/`age_ms` pairing the outlier-jump math relies on) is silently dropped with no counter or log evidence it happened — in tension with the project's stated core value ("nenhum ponto do trajeto se perde").
 **Fix:** Not necessarily worth fixing in Phase 1 given current loop() is lightweight, but worth a counter (e.g. increment a `coalescedFixes_` stat whenever more than one full sentence commits within a single `poll()` call) so the condition is at least observable in `[HEALTH]` if it ever occurs in the field.
 
+**Fix Status:** SKIPPED (deliberately, not a code-context mismatch). The reviewer's own Fix note already deems this non-essential for Phase 1 ("Not necessarily worth fixing... given current loop() is lightweight"). A technically-correct counter requires distinguishing a *location-specific* sentence commit from any other NMEA sentence type (GSA/GSV/VTG etc. also complete within the same drain loop every ~1 Hz cycle under normal operation); TinyGPSPlus's public `encode()` API only reports "a sentence with valid checksum completed," not which object it updated, so a naive "count sentences per `poll()` call" proxy would increment on essentially every call and produce a `coalescedFixes_` counter that is misleading rather than observability-improving. Deferred — revisit if field data ever shows `loop()` stalling near the 1 Hz fix cycle (WR-03 remains open, no code changed for this finding).
+
 ### WR-04: Reject-line dedup state is shared across real and `[SIM]`-origin fixes
 
 **File:** `firmware/gps_tracker/src/main.cpp:34-56` (`lastPrintedReason`/`havePrintedReason`, `printRejectIfNew`)
 **Issue:** `lastPrintedReason`/`havePrintedReason` are single global variables consulted by both the real-fix reject path and the simulator's reject path. If the last real reject was, say, `REJECT_STALE`, and the operator then turns on the simulator and injects a fix that also evaluates to `REJECT_STALE` (unlikely for the simulator specifically, but generally: any reason recurrence across a source switch), the `[SIM]`-tagged line will be silently suppressed because the dedup key doesn't include the origin — a captured log can then show a real rejection immediately followed by simulator activity with no visible `[SIM] [REJECT]` line at all, even though BENCH.md's whole premise is that every simulator-triggered rejection is independently observable.
 **Fix:** Key the dedup on `(origin, result)` rather than `result` alone, e.g. two separate `lastPrintedReason`/`havePrintedReason` pairs (or fold `origin` into the comparison).
 
+**Fix Status:** FIXED — commit `4374993` (`fix(01): WR-04 key reject-line dedup state on origin (real vs [SIM])`). `lastPrintedReason`/`havePrintedReason` are now 2-element arrays keyed by a new `originIndex()` helper (0 = real, 1 = `[SIM] `), so a repeated reason on one source can no longer suppress the first occurrence of that reason on the other. Both PlatformIO envs build clean.
+
 ## Info
+
+_All four Info findings below are out of scope for this fix pass (fix scope: Critical + Warning only) and were left untouched. None looked trivial enough to fold in opportunistically without expanding scope beyond what was requested._
 
 ### IN-01: Outlier-jump check is skipped entirely when `mono_ms` delta is zero
 
@@ -152,6 +171,23 @@ if (isNewReason) gateCounters[...]++;
 
 ---
 
+## Fix Pass Summary
+
+**Scope:** Critical + Warning (Info findings left untouched).
+
+| Finding | Status | Commit |
+|---------|--------|--------|
+| CR-01 | FIXED | `e1d2f13` |
+| CR-02 | FIXED | `a63bead` |
+| WR-01 | FIXED | `f7f59ad` |
+| WR-02 | FIXED (same fix as CR-02) | `a63bead` |
+| WR-03 | SKIPPED — reviewer's own note deems it non-essential; a correct fix needs sentence-type-specific commit tracking not exposed by TinyGPSPlus's public API | — |
+| WR-04 | FIXED | `4374993` |
+
+Both `esp32-c3-supermini` and `esp32-devkit` PlatformIO environments build clean (`pio run`) after all four fix commits.
+
 _Reviewed: 2026-08-01_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+_Fixed: 2026-08-01_
+_Fixer: Claude (gsd-code-fixer)_
