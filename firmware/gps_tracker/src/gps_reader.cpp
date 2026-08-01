@@ -62,7 +62,12 @@ bool GpsReader::poll(Fix &out) {
     // fix_gate rather than silently accepted.
     out.hdop        = gps_.hdop.isValid() ? static_cast<float>(gps_.hdop.hdop()) : 99.9f;
     out.sats        = gps_.satellites.isValid() ? static_cast<uint8_t>(gps_.satellites.value()) : 0;
-    out.fix_quality = gps_.location.isValid() ? static_cast<uint8_t>(gps_.location.FixQuality()) : 0;
+    // TinyGPSLocation::Quality's enumerators are ASCII digit characters
+    // ('0'..'8'), not small integers — normalize before storing so
+    // fix_quality carries the documented 0-8 range (gps_types.h).
+    out.fix_quality = gps_.location.isValid()
+        ? static_cast<uint8_t>(gps_.location.FixQuality() - '0')
+        : 0;
     out.age_ms      = gps_.location.age();
     out.mono_ms     = millis();
 
