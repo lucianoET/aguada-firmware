@@ -11,7 +11,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **GPS-01**: Node lê NEO-6M/M8N via UART e extrai lat/lon/velocidade/altitude/curso + timestamp UTC (TinyGPSPlus)
 - [x] **GPS-02**: Fixes passam por gating de qualidade (validade, HDOP, sats) — fix ruim nunca entra no log nem alimenta a cadência
-- [ ] **GPS-03**: Cadência adaptativa: ponto a cada ~5–10 s em movimento, pausa quando parado (classificação por velocidade GPS abaixo de limiar por N segundos)
+- [x] **GPS-03**: Cadência adaptativa: ponto a cada ~5–10 s em movimento, pausa quando parado (classificação por velocidade GPS abaixo de limiar por N segundos)
 
 ### Logging (LOG)
 
@@ -87,7 +87,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | GPS-01 | Phase 1 | Complete |
 | GPS-02 | Phase 1 | Complete |
-| GPS-03 | Phase 1 | Pending |
+| GPS-03 | Phase 1 | Complete |
 | LOG-01 | Phase 2 | Pending |
 | LOG-02 | Phase 2 | Pending |
 | LOG-03 | Phase 2 | Pending |

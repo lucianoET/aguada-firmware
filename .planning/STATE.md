@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 01
 current_phase_name: gps-acquisition-adaptive-cadence
-status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-08-01T20:58:59.796Z"
+status: verifying
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-08-01T21:18:04.318Z"
 last_activity: 2026-08-01
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-01)
 
 Phase: 01 (gps-acquisition-adaptive-cadence) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-01 — Phase 01 execution started
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [█████░░░░░] 50%
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01 P01 | 20min | 2 tasks | 7 files |
+| Phase 01 P02 | 25min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,9 @@ Recent decisions affecting current work:
 - [Phase ?]: gps_reader.poll() gates the Fix snapshot on TinyGPSPlus location.isUpdated(); a main.cpp watchdog (not repeated FixGate::evaluate() calls) compensates for the library's one-way isValid()/isUpdated() latch to surface REJECT_STALE/REJECT_NO_FIX in real time without corrupting fix_gate's outlier-jump reference
 - [Phase ?]: HDOP fallback sentinel is 99.9f (not 0) so an absent/invalid HDOP fails fix_gate's max-HDOP check instead of silently passing
 - [Phase ?]: UTC epoch derived via a hand-rolled days-from-civil helper (no mktime, no timezone handling), computed only when GPS date/time are valid and year >= DEFAULT_GPS_MIN_UTC_YEAR
+- [Phase ?]: cadence.onGatedFix() kept to a single call site via a shared handleAccept() helper reused by both the real-fix path and the bench simulator, rather than duplicating ACCEPT-branch logic; structural GateResult::ACCEPT gating verified by source review, not lexical nesting
+- [Phase ?]: Bench simulator's outlier-jump/null-island injections leave the simulator's own position continuity anchor untouched on the injected tick, mirroring fix_gate's never-poison-the-reference-on-reject behavior
+- [Phase ?]: Stationary heartbeat (DEFAULT_GPS_STATIONARY_HEARTBEAT_S) defaults to 0/disabled in Phase 1 per GPS-03's scope; Phase 2 can enable a low-rate parked heartbeat later without touching cadence.cpp
 
 ### Pending Todos
 
@@ -92,6 +96,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-01T20:58:59.741Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-08-01T21:18:04.124Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
