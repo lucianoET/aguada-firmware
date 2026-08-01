@@ -60,10 +60,12 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ### Periféricos
 
-- **HW-02**: OLED com status (fix, sats, canal ativo, bateria) + botões
+- **HW-02**: Display TFT RGB 1.8" 128×160 (ST7735, SPI) com status: fix, sats, canal ativo, bateria + botões
 - **HW-03**: Buzzer/LEDs de status
 - **HW-04**: Saída serial NMEA 0183 para radar/chartplotter marítimo
-- **HW-05**: Sensor de inclinação (IMU simples) e outros sensores
+- **HW-05**: IMU giroscópio+acelerômetro (ex.: MPU6050, I2C) — inclinação, detecção de movimento (pode virar wake source e gatilho de cadência)
+- **HW-06**: HTU21D temperatura/umidade (I2C, endereço 0x40)
+- **HW-07**: (indefinido) sonda de temperatura externa — provável DS18B20 1-Wire; decidir caso de uso antes
 
 ## Out of Scope
 

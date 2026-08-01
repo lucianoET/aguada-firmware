@@ -13,8 +13,27 @@ Enumera como `/dev/ttyACM0` (USB nativo, sem chip serial). Env PlatformIO: `esp3
 | TX | **GPIO20** (RX) | dados NMEA GPS → ESP32 |
 | RX | **GPIO21** (TX) | opcional |
 
-LED onboard: **GPIO8** (azul, lógica invertida — firmware já trata).
-Pinos livres restantes no C3: GPIO0–5 (ADC1), GPIO6/7 (I2C padrão AirQ), GPIO9 (boot), GPIO10.
+LED onboard: **GPIO8** (active-high nesta placa; `LED_ACTIVE_LOW=0`).
+
+### Orçamento de pinos v2 (periféricos planejados — HW-02..07, ainda não montar)
+
+| GPIO | Função planejada | Notas |
+| --- | --- | --- |
+| 0 | ADC bateria | ADC1_CH0 + divisor (Fase 5) |
+| 1 | TFT RST | ST7735 1.8" SPI |
+| 2 | TFT DC | strapping — precisa ficar alto no boot (DC idle ok) |
+| 3 | TFT MOSI (SDA) | |
+| 4 | TFT SCK | |
+| 5 | TFT CS | |
+| 6 | I2C SDA | **MPU6050** (0x68) + **HTU21D** (0x40) no mesmo barramento |
+| 7 | I2C SCL | convenção do repo (AirQ usa 6/7) |
+| 8 | LED onboard | TFT BL → 3V3 direto (sem dimmer) |
+| 9 | botão (boot) | strapping — só entrada c/ pull-up |
+| 10 | DS18B20 (HW-07, indefinido) | 1-Wire, pull-up 4k7 |
+| 20 | GPS RX (← TX módulo) | ocupado |
+| 21 | GPS TX | ocupado |
+
+> ⚠️ **C3 fica 100% ocupado** com esse conjunto — e **HW-04 (saída NMEA 0183 p/ radar) NÃO cabe** (sem UART/pino sobrando). Conjunto completo + radar = voltar ao ESP32 DevKit clássico (escolha original, seção abaixo) quando houver placa funcional.
 
 ---
 
