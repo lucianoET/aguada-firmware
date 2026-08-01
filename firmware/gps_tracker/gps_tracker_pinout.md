@@ -1,6 +1,24 @@
-# GPS Tracker — Pinagem (ESP32 DevKit clássico)
+# GPS Tracker — Pinagem
 
-Placa: **ESP32 DevKit V1 (WROOM-32, 30 pinos)**
+## ⚡ Placa atual: ESP32-C3 SuperMini (antena externa)
+
+Enumera como `/dev/ttyACM0` (USB nativo, sem chip serial). Env PlatformIO: `esp32-c3-supermini`.
+
+### GPS (UART1)
+
+| Pino módulo GPS | Liga a (C3 SuperMini) | Notas |
+| --- | --- | --- |
+| VCC | **5V** | breakout NEO-6M (GY-GPS6MV2) tem LDO AMS1117 — precisa 5 V; com 3V3 o módulo browna e cala. ATGM336H: 3V3 direto ok |
+| GND | GND | massa comum |
+| TX | **GPIO20** (RX) | dados NMEA GPS → ESP32 |
+| RX | **GPIO21** (TX) | opcional |
+
+LED onboard: **GPIO8** (azul, lógica invertida — firmware já trata).
+Pinos livres restantes no C3: GPIO0–5 (ADC1), GPIO6/7 (I2C padrão AirQ), GPIO9 (boot), GPIO10.
+
+---
+
+## Placa alternativa: ESP32 DevKit clássico (WROOM-32, 30 pinos)
 Módulos GPS suportados: **ATGM336H** (AT6558, NMEA, GPS+BeiDou) e **NEO-6M** (u-blox, NMEA).
 Ambos falam NMEA a **9600 baud, 1 Hz** (default) — firmware é NMEA-agnóstico, sem comandos UBX/CASIC obrigatórios.
 
