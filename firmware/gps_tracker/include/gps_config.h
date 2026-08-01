@@ -47,3 +47,34 @@
 #ifndef DEFAULT_GPS_MAX_PLAUSIBLE_KMH
 #define DEFAULT_GPS_MAX_PLAUSIBLE_KMH 200.0f   // implied-speed outlier gate vs last accepted fix
 #endif
+
+// --- cadence (Plan 02) ----------------------------------------------------
+// These five are research starting points (Assumptions A3, A4 in
+// 01-RESEARCH.md), not final values — pending a multi-hour stationary test
+// in the real mounting location. Any field override belongs in
+// platformio.ini build_flags, never by editing this header.
+
+#ifndef DEFAULT_GPS_MOVING_KMH
+#define DEFAULT_GPS_MOVING_KMH 5.0f   // upper hysteresis edge: at/above this is a "moving" vote (A3) —
+                                       // stays clear of the bench-observed 2.6 km/h stationary jitter
+#endif
+
+#ifndef DEFAULT_GPS_STATIONARY_KMH
+#define DEFAULT_GPS_STATIONARY_KMH 3.0f   // lower hysteresis edge: at/below this is a "stationary" vote (A3) —
+                                            // the gap to DEFAULT_GPS_MOVING_KMH is what prevents flapping
+#endif
+
+#ifndef DEFAULT_GPS_DEBOUNCE_FIXES
+#define DEFAULT_GPS_DEBOUNCE_FIXES 3   // consecutive confirming accepted fixes required before a state flip (A4)
+#endif
+
+#ifndef DEFAULT_GPS_CADENCE_MOVING_S
+#define DEFAULT_GPS_CADENCE_MOVING_S 8   // emit interval while MOVING, seconds — mid-point of GPS-03's 5-10s range
+#endif
+
+#ifndef DEFAULT_GPS_STATIONARY_HEARTBEAT_S
+#define DEFAULT_GPS_STATIONARY_HEARTBEAT_S 0   // 0 disables the stationary heartbeat (Phase 1 default: GPS-03
+                                                 // only requires acceptance to pause when parked). The constant
+                                                 // exists so Phase 2's flash logger can turn on a low-rate
+                                                 // "still parked" record later without touching cadence logic.
+#endif

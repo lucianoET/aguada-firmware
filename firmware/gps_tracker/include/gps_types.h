@@ -42,3 +42,26 @@ enum class GateResult : uint8_t {
 // Returns the enum member name as a string, for serial output and
 // per-reason health counters.
 const char *gateResultName(GateResult r);
+
+// CadenceState is the moving/stationary classification cadence maintains
+// across accepted fixes (Plan 02). Movement is classified from the
+// receiver's own speed field, never from position deltas.
+enum class CadenceState : uint8_t {
+    MOVING,
+    STATIONARY,
+};
+
+// CadenceAction is cadence's pacing decision for a single gate-accepted
+// fix: EMIT/EMIT_HEARTBEAT mean "forward this fix downstream"; the
+// SUPPRESS_* variants mean "this fix was gated-accepted but cadence is
+// holding it back" and carry a specific reason for the bench serial log.
+enum class CadenceAction : uint8_t {
+    EMIT,
+    EMIT_HEARTBEAT,
+    SUPPRESS_STATIONARY,
+    SUPPRESS_INTERVAL,
+};
+
+// Returns the enum member name as a string, for serial output.
+const char *cadenceStateName(CadenceState s);
+const char *cadenceActionName(CadenceAction a);

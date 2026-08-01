@@ -1,9 +1,10 @@
 // GPS Tracker — bench harness (Fase 1)
-// Wires GpsReader -> FixGate -> serial output. Every snapshot returned by
-// poll() goes through FixGate::evaluate() before anything else happens
-// with it; only the GateResult::ACCEPT branch may forward a fix downstream
-// (Plan 02's cadence module hooks in there next). LED onboard: solid =
-// most recent evaluation was ACCEPT, blinking = bytes arriving but the
+// Wires GpsReader -> FixGate -> Cadence -> serial output. Every snapshot
+// returned by poll() goes through FixGate::evaluate() before anything else
+// happens with it; only the GateResult::ACCEPT branch may forward a fix
+// downstream, and cadence's single call site lives inside that branch
+// (Phase 2's flash logger attaches after cadence next). LED onboard: solid
+// = most recent evaluation was ACCEPT, blinking = bytes arriving but the
 // last result was a rejection, dark = no data at all.
 
 #include <Arduino.h>
@@ -11,6 +12,7 @@
 #include "gps_types.h"
 #include "gps_reader.h"
 #include "fix_gate.h"
+#include "cadence.h"
 
 #ifndef LED_ACTIVE_LOW
 #define LED_ACTIVE_LOW 0
@@ -20,6 +22,10 @@ static const uint8_t kGateResultCount = static_cast<uint8_t>(GateResult::REJECT_
 
 static GpsReader  gpsReader;
 static FixGate    fixGate;
+static Cadence    cadence;
+
+static uint32_t   emitCount    = 0;
+static uint32_t   suppressCount = 0;
 
 static uint32_t   lastHealthMs = 0;
 static uint32_t   gateCounters[kGateResultCount] = {0};
@@ -36,20 +42,32 @@ static inline void ledWrite(bool on) {
     digitalWrite(LED_PIN, LED_ACTIVE_LOW ? !on : on);
 }
 
-static void printFixFields(const char *prefix, const Fix &f) {
-    Serial.printf(
-        "%s t=%lu lat=%.6f lon=%.6f alt=%.1fm spd=%.1fkm/h crs=%.0f hdop=%.1f sats=%u q=%u age=%lums\n",
-        prefix, (unsigned long)f.utc_unix, f.lat, f.lon, f.alt_m,
-        f.speed_kmh, f.course_deg, f.hdop, f.sats, f.fix_quality,
-        (unsigned long)f.age_ms);
-}
-
 static void printRejectIfNew(GateResult result, float hdop, uint8_t sats, uint32_t ageMs, uint8_t quality) {
     if (havePrintedReason && result == lastPrintedReason) return;   // dedup consecutive same-reason
     Serial.printf("[REJECT] reason=%s hdop=%.1f sats=%u age=%lums q=%u\n",
                   gateResultName(result), hdop, sats, (unsigned long)ageMs, quality);
     lastPrintedReason = result;
     havePrintedReason = true;
+}
+
+static void printEmit(CadenceAction action, const Fix &f, CadenceState state) {
+    const char *prefix = (action == CadenceAction::EMIT_HEARTBEAT) ? "[EMIT] hb=1" : "[EMIT]";
+    Serial.printf(
+        "%s t=%lu lat=%.6f lon=%.6f alt=%.1fm spd=%.1fkm/h crs=%.0f hdop=%.1f sats=%u q=%u age=%lums state=%s\n",
+        prefix, (unsigned long)f.utc_unix, f.lat, f.lon, f.alt_m,
+        f.speed_kmh, f.course_deg, f.hdop, f.sats, f.fix_quality,
+        (unsigned long)f.age_ms, cadenceStateName(state));
+}
+
+static void printSuppress(CadenceAction action, const Fix &f, CadenceState state) {
+    Serial.printf("[SUPPRESS] reason=%s spd=%.1fkm/h state=%s\n",
+                  cadenceActionName(action), f.speed_kmh, cadenceStateName(state));
+}
+
+static void printStateChange(CadenceState oldState, CadenceState newState, float speedKmh, uint32_t elapsedS) {
+    Serial.printf("[STATE] %s -> %s spd=%.1fkm/h elapsed_in_prev_state=%lus\n",
+                  cadenceStateName(oldState), cadenceStateName(newState),
+                  speedKmh, (unsigned long)elapsedS);
 }
 
 void setup() {
@@ -81,14 +99,28 @@ void loop() {
         if (result == GateResult::ACCEPT) {
             everAccepted     = true;
             lastAcceptedAtMs = fix.mono_ms;
-            printFixFields("[ACCEPT]", fix);
             havePrintedReason = false;   // any later rejection always prints its first line
 
             // --- single downstream hand-off point -----------------------
-            // Plan 02's cadence module attaches here: cadence.onGatedFix(fix);
             // Nothing outside this GateResult::ACCEPT branch may see, print,
             // or forward a gated fix.
+            CadenceState  prevCadenceState = cadence.state();
+            CadenceAction cadenceAction    = cadence.onGatedFix(fix);
             // --------------------------------------------------------------
+
+            if (cadence.stateChanged()) {
+                printStateChange(prevCadenceState, cadence.state(),
+                                  cadence.lastTransitionSpeedKmh(),
+                                  cadence.lastTransitionElapsedS());
+            }
+
+            if (cadenceAction == CadenceAction::EMIT || cadenceAction == CadenceAction::EMIT_HEARTBEAT) {
+                emitCount++;
+                printEmit(cadenceAction, fix, cadence.state());
+            } else {
+                suppressCount++;
+                printSuppress(cadenceAction, fix, cadence.state());
+            }
         } else {
             printRejectIfNew(result, fix.hdop, fix.sats, fix.age_ms, fix.fix_quality);
         }
@@ -124,7 +156,8 @@ void loop() {
         lastHealthMs = millis();
         Serial.printf(
             "[HEALTH] bytes=%lu ok=%lu bad=%lu sats=%u hdop=%.1f rx=%s"
-            " accept=%lu no_fix=%lu stale=%lu null_island=%lu time=%lu hdop_rej=%lu sats_rej=%lu warmup=%lu jump=%lu\n",
+            " accept=%lu no_fix=%lu stale=%lu null_island=%lu time=%lu hdop_rej=%lu sats_rej=%lu warmup=%lu jump=%lu"
+            " cadence=%s since_emit=%lus emit=%lu suppress=%lu\n",
             (unsigned long)gpsReader.bytesRead(),
             (unsigned long)gpsReader.passedChecksum(),
             (unsigned long)gpsReader.failedChecksum(),
@@ -138,6 +171,10 @@ void loop() {
             (unsigned long)gateCounters[static_cast<uint8_t>(GateResult::REJECT_HDOP)],
             (unsigned long)gateCounters[static_cast<uint8_t>(GateResult::REJECT_SATS)],
             (unsigned long)gateCounters[static_cast<uint8_t>(GateResult::REJECT_WARMUP)],
-            (unsigned long)gateCounters[static_cast<uint8_t>(GateResult::REJECT_OUTLIER_JUMP)]);
+            (unsigned long)gateCounters[static_cast<uint8_t>(GateResult::REJECT_OUTLIER_JUMP)],
+            cadenceStateName(cadence.state()),
+            (unsigned long)cadence.secondsSinceEmit(),
+            (unsigned long)emitCount,
+            (unsigned long)suppressCount);
     }
 }
