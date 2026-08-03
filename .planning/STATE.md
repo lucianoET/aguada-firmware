@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01.1
 current_phase_name: perifericos-i2c-e-display
 status: executing
-stopped_at: Phase 01.1 context gathered
-last_updated: "2026-08-03T08:44:15.127Z"
-last_activity: 2026-08-01
-last_activity_desc: Phase 01 execution started
+stopped_at: Completed 01.1-01-PLAN.md
+last_updated: "2026-08-03T09:07:31.960Z"
+last_activity: 2026-08-03
+last_activity_desc: Phase 01.1 execution started
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 6
+  completed_plans: 3
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-01)
 
 **Core value:** Nenhum ponto do trajeto se perde: o tracker registra continuamente offline e sincroniza tudo sozinho assim que qualquer canal de conectividade aparece.
-**Current focus:** Phase 01.1 — perifericos-i2c-e-display (INSERTED)
+**Current focus:** Phase 01.1 — perifericos-i2c-e-display
 
 ## Current Position
 
-Phase: 01.1 (perifericos-i2c-e-display) — NOT PLANNED
-Plan: 2 of 2
+Phase: 01.1 (perifericos-i2c-e-display) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-08-01 — Phase 01 execution started
+Last activity: 2026-08-03 — Phase 01.1 execution started
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [██████████] 100%
 |------|----------|-------|-------|
 | Phase 01 P01 | 20min | 2 tasks | 7 files |
 | Phase 01 P02 | 25min | 2 tasks | 6 files |
+| Phase 01.1 P01 | 40min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,7 @@ Recent decisions affecting current work:
 - [Phase ?]: cadence.onGatedFix() kept to a single call site via a shared handleAccept() helper reused by both the real-fix path and the bench simulator, rather than duplicating ACCEPT-branch logic; structural GateResult::ACCEPT gating verified by source review, not lexical nesting
 - [Phase ?]: Bench simulator's outlier-jump/null-island injections leave the simulator's own position continuity anchor untouched on the injected tick, mirroring fix_gate's never-poison-the-reference-on-reject behavior
 - [Phase ?]: Stationary heartbeat (DEFAULT_GPS_STATIONARY_HEARTBEAT_S) defaults to 0/disabled in Phase 1 per GPS-03's scope; Phase 2 can enable a low-rate parked heartbeat later without touching cadence.cpp
+- [Phase ?]: Reused DEFAULT_GPS_STATIONARY_KMH as the future heading-arbiter threshold (D-08) instead of a new constant, per RESEARCH.md Pattern 3
 
 ### Pending Todos
 
@@ -100,6 +102,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-03T07:48:17.237Z
-Stopped at: Phase 01.1 context gathered
-Resume file: .planning/phases/01.1-perifericos-i2c-e-display/01.1-CONTEXT.md
+Last session: 2026-08-03T09:07:31.900Z
+Stopped at: Completed 01.1-01-PLAN.md
+Resume file: None
