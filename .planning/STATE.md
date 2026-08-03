@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: gps-acquisition-adaptive-cadence
+current_phase: 01.1
+current_phase_name: perifericos-i2c-e-display
 status: verifying
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-08-01T21:18:04.318Z"
+stopped_at: Phase 01.1 context gathered
+last_updated: "2026-08-03T07:48:17.334Z"
 last_activity: 2026-08-01
 last_activity_desc: Phase 01 execution started
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
   total_plans: 2
   completed_plans: 2
@@ -23,11 +23,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-01)
 
 **Core value:** Nenhum ponto do trajeto se perde: o tracker registra continuamente offline e sincroniza tudo sozinho assim que qualquer canal de conectividade aparece.
-**Current focus:** Phase 01 — gps-acquisition-adaptive-cadence
+**Current focus:** Phase 01.1 — perifericos-i2c-e-display (INSERTED)
 
 ## Current Position
 
-Phase: 01 (gps-acquisition-adaptive-cadence) — EXECUTING
+Phase: 01.1 (perifericos-i2c-e-display) — NOT PLANNED
 Plan: 2 of 2
 Status: Phase complete — ready for verification
 Last activity: 2026-08-01 — Phase 01 execution started
@@ -86,6 +86,10 @@ None yet.
 - Phase 3/4 (sync + server ingest) carry MEDIUM confidence per research — WiFiMulti/PubSubClient patterns are standard but idempotent cursor/dedupe logic is flagged as the one shortcut this project cannot afford.
 - Phase 5 (power) carries LOW confidence per research on automotive power protection component specifics — treat as a hardware spike requiring component-level research during planning.
 
+### Roadmap Evolution
+
+- Phase 01.1 inserted after Phase 1: Perifericos I2C e Display: OLED SSD1306 status ao vivo, MPU6050 movimento p/ cadencia, HMC5883 rumo, HTU21 temp/umidade — modulos separados no barramento I2C (0x3C, 0x68, 0x1E, 0x40) (URGENT)
+
 ## Deferred Items
 
 Items acknowledged and carried forward from previous milestone close:
@@ -96,6 +100,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-01T21:18:04.124Z
-Stopped at: Completed 01-02-PLAN.md
-Resume file: None
+Last session: 2026-08-03T07:48:17.237Z
+Stopped at: Phase 01.1 context gathered
+Resume file: .planning/phases/01.1-perifericos-i2c-e-display/01.1-CONTEXT.md
