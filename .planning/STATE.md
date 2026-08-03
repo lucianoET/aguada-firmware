@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01.1
 current_phase_name: perifericos-i2c-e-display
 status: executing
-stopped_at: Completed 01.1-01-PLAN.md
-last_updated: "2026-08-03T09:07:31.960Z"
+stopped_at: Completed 01.1-02-PLAN.md
+last_updated: "2026-08-03T09:25:46.549Z"
 last_activity: 2026-08-03
 last_activity_desc: Phase 01.1 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-01)
 ## Current Position
 
 Phase: 01.1 (perifericos-i2c-e-display) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-08-03 — Phase 01.1 execution started
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [█████░░░░░] 50%
 | Phase 01 P01 | 20min | 2 tasks | 7 files |
 | Phase 01 P02 | 25min | 2 tasks | 6 files |
 | Phase 01.1 P01 | 40min | 3 tasks | 5 files |
+| Phase 01.1 P02 | 25min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,7 @@ Recent decisions affecting current work:
 - [Phase ?]: Bench simulator's outlier-jump/null-island injections leave the simulator's own position continuity anchor untouched on the injected tick, mirroring fix_gate's never-poison-the-reference-on-reject behavior
 - [Phase ?]: Stationary heartbeat (DEFAULT_GPS_STATIONARY_HEARTBEAT_S) defaults to 0/disabled in Phase 1 per GPS-03's scope; Phase 2 can enable a low-rate parked heartbeat later without touching cadence.cpp
 - [Phase ?]: Reused DEFAULT_GPS_STATIONARY_KMH as the future heading-arbiter threshold (D-08) instead of a new constant, per RESEARCH.md Pattern 3
+- [Phase ?]: Cadence gains a second, promote-only entry point onAccelWake() alongside the GPS-gated onGatedFix(); only GPS speed can demote MOVING->STATIONARY, keeping engine vibration on a parked vehicle from holding the tracker falsely in MOVING (D-05).
 
 ### Pending Todos
 
@@ -102,6 +104,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-03T09:07:31.900Z
-Stopped at: Completed 01.1-01-PLAN.md
+Last session: 2026-08-03T09:25:46.471Z
+Stopped at: Completed 01.1-02-PLAN.md
 Resume file: None

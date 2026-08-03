@@ -52,7 +52,7 @@ Plans:
   3. O rumo vem da bussola abaixo de `DEFAULT_GPS_STATIONARY_KMH` e do course do GPS acima dele, com auto-deteccao HMC5883L/QMC5883L e calibracao hard-iron pelo comando serial `cal` persistida em NVS (D-08/D-09/D-10/D-11).
   4. O OLED mostra uma tela densa unica a 1 Hz alinhada ao fix, com tela de aquisicao ao vivo enquanto nao ha fix, unidade de velocidade selecionavel por build flag e marcacao de modulos offline (D-01/D-02/D-03/D-04/D-14).
 
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 Plans:
 **Wave 1**
 
@@ -60,7 +60,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01.1-02-PLAN.md — accel_sensor MPU6050 e Cadence::onAccelWake com autoridade assimetrica (D-05, D-06, D-07)
+- [x] 01.1-02-PLAN.md — accel_sensor MPU6050 e Cadence::onAccelWake com autoridade assimetrica (D-05, D-06, D-07)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -134,7 +134,7 @@ Phases execute in numeric order: 1 → 01.1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. GPS Acquisition & Adaptive Cadence | 2/2 | In Progress|  |
-| 01.1. Perifericos I2C e Display (INSERTED) | 1/4 | In Progress|  |
+| 01.1. Perifericos I2C e Display (INSERTED) | 2/4 | In Progress|  |
 | 2. Durable Flash Logging | 0/TBD | Not started | - |
 | 3. Store & Forward Sync (Known WiFi) | 0/TBD | Not started | - |
 | 4. Server Ingest, HA Live Tracking & GPX Export | 0/TBD | Not started | - |
