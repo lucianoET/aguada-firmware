@@ -54,10 +54,20 @@ Plans:
 
 **Plans**: 4 plans
 Plans:
+**Wave 1**
 
 - [ ] 01.1-01-PLAN.md — fundacao I2C: constantes DEFAULT_*, lib_deps, modulo i2c_bus com boot scan, saude por modulo e retry (D-12, D-13)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 01.1-02-PLAN.md — accel_sensor MPU6050 e Cadence::onAccelWake com autoridade assimetrica (D-05, D-06, D-07)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 01.1-03-PLAN.md — mag_sensor dual-chip com calibracao em NVS e arbitro de rumo, env_sensor HTU21D, comando serial `cal` (D-08, D-09, D-10, D-11, D-14)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 01.1-04-PLAN.md — display OLED com tela densa e tela de aquisicao, satelites em vista, e procedimento de bancada no BENCH.md (D-01, D-02, D-03, D-04)
 
 ### Phase 2: Durable Flash Logging
