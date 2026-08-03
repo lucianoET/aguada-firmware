@@ -5,6 +5,7 @@
 
 #include "gps_reader.h"
 #include "gps_config.h"
+#include <cstdlib>
 
 // Howard Hinnant's days-from-civil algorithm (public domain), used instead
 // of mktime()/an external time library because we only ever need pure UTC
@@ -17,6 +18,17 @@ static int32_t daysFromCivil(int y, int m, int d) {
     uint32_t doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;           // [0, 365]
     uint32_t doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;                    // [0, 146096]
     return era * 146097 + static_cast<int32_t>(doe) - 719468;
+}
+
+// Registers the three GSV field-3 ("total satellites in view") custom
+// elements against gps_ -- the only place in the firmware allowed to
+// instantiate TinyGPSCustom (see gps_reader.h's class-level ownership
+// comment). GPGSV covers u-blox NEO-6M; GNGSV/GLGSV cover ATGM336H's
+// GPS+BeiDou (and, on some firmware, GLONASS) output.
+GpsReader::GpsReader()
+    : gpgsvSatsInView_(gps_, "GPGSV", 3),
+      glgsvSatsInView_(gps_, "GLGSV", 3),
+      gngsvSatsInView_(gps_, "GNGSV", 3) {
 }
 
 void GpsReader::begin() {
@@ -33,6 +45,25 @@ uint32_t GpsReader::failedChecksum() const {
 
 bool GpsReader::receiving() const {
     return bytesRead_ > 0 && (millis() - lastByteAtMs_) < 2000;
+}
+
+uint8_t GpsReader::satsInView() const {
+    uint8_t best = 0;
+
+    if (gpgsvSatsInView_.age() < DEFAULT_GPS_FRESH_MS) {
+        uint8_t v = static_cast<uint8_t>(atoi(gpgsvSatsInView_.value()));
+        if (v > best) best = v;
+    }
+    if (glgsvSatsInView_.age() < DEFAULT_GPS_FRESH_MS) {
+        uint8_t v = static_cast<uint8_t>(atoi(glgsvSatsInView_.value()));
+        if (v > best) best = v;
+    }
+    if (gngsvSatsInView_.age() < DEFAULT_GPS_FRESH_MS) {
+        uint8_t v = static_cast<uint8_t>(atoi(gngsvSatsInView_.value()));
+        if (v > best) best = v;
+    }
+
+    return best;
 }
 
 bool GpsReader::poll(Fix &out) {
