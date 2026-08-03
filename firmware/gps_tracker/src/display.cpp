@@ -92,11 +92,12 @@ uint8_t display::addr() {
 }
 
 void display::render(const DisplayState &s) {
+    // Re-init on recovery is driven solely by main.cpp::i2cRecoverTick()
+    // (the only path i2c_bus::reinitDue() is ever actually observed true --
+    // it consumes and clears the flag within the same loop() iteration it
+    // was set, before this render() would next run per WR-02). This branch
+    // just skips the frame while offline.
     if (!i2c_bus::online(I2cModule::DISPLAY)) {
-        if (i2c_bus::reinitDue(I2cModule::DISPLAY)) {
-            begin();
-            i2c_bus::clearReinit(I2cModule::DISPLAY);
-        }
         return;
     }
 

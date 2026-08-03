@@ -130,11 +130,12 @@ bool mag_sensor::begin() {
 }
 
 bool mag_sensor::poll() {
+    // Re-init on recovery is driven solely by main.cpp::i2cRecoverTick()
+    // (the only path i2c_bus::reinitDue() is ever actually observed true --
+    // it consumes and clears the flag within the same loop() iteration it
+    // was set, before this poll() would next run per WR-02). This branch
+    // just yields last-known-value while offline.
     if (!i2c_bus::online(I2cModule::MAG)) {
-        if (i2c_bus::reinitDue(I2cModule::MAG)) {
-            begin();
-            i2c_bus::clearReinit(I2cModule::MAG);
-        }
         return false;
     }
 
