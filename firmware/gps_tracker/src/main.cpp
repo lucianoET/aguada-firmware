@@ -14,6 +14,7 @@
 #include "gps_reader.h"
 #include "fix_gate.h"
 #include "cadence.h"
+#include "i2c_bus.h"
 
 #ifndef LED_ACTIVE_LOW
 #define LED_ACTIVE_LOW 0
@@ -332,6 +333,54 @@ void setup() {
 #if GPS_BENCH_SIM
     Serial.println("[gps_tracker] 'h' = bench simulator help (GPS_BENCH_SIM=1)");
 #endif
+
+    // The I2C bus init below runs AFTER gpsReader.begin() and the banner
+    // lines above: the GPS UART must already be open and draining before
+    // any I2C transaction competes for CPU, so the boot scan is never the
+    // first thing racing the GPS pipeline (Fase 01.1, D-12).
+    Serial.printf("[gps_tracker] I2C bus on sda=%d scl=%d\n",
+                  static_cast<int>(DEFAULT_I2C_SDA_PIN), static_cast<int>(DEFAULT_I2C_SCL_PIN));
+    i2c_bus::begin();
+}
+
+// Drives i2c_bus's runtime recovery: tick() advances the round-robin retry
+// scan (at most one address probe per call, see i2c_bus.cpp), and any
+// module i2c_bus flags as reinitDue() gets its driver re-attached here. No
+// drivers exist yet in this plan -- planos 02 (ACCEL), 03 (MAG, ENV), and
+// 04 (DISPLAY) each insert their own begin() call before setOnline() in the
+// matching case below, so this block is additive rather than needing a
+// rewrite each time a driver lands.
+static void i2cRecoverTick() {
+    i2c_bus::tick();
+
+    for (uint8_t i = 0; i < static_cast<uint8_t>(I2cModule::COUNT); i++) {
+        I2cModule m = static_cast<I2cModule>(i);
+        if (!i2c_bus::reinitDue(m)) continue;
+
+        switch (m) {
+            case I2cModule::DISPLAY:
+                // Plano 04 insere display::begin(i2c_bus::boundAddr(m)) aqui antes do setOnline.
+                i2c_bus::setOnline(m, true);
+                break;
+            case I2cModule::ACCEL:
+                // Plano 02 insere accel_sensor::begin(i2c_bus::boundAddr(m)) aqui antes do setOnline.
+                i2c_bus::setOnline(m, true);
+                break;
+            case I2cModule::MAG:
+                // Plano 03 insere mag_sensor::begin(i2c_bus::boundAddr(m)) aqui antes do setOnline.
+                i2c_bus::setOnline(m, true);
+                break;
+            case I2cModule::ENV:
+                // Plano 03 insere env_sensor::begin(i2c_bus::boundAddr(m)) aqui antes do setOnline.
+                i2c_bus::setOnline(m, true);
+                break;
+            default:
+                break;
+        }
+
+        Serial.printf("[I2C] %s recovered addr=0x%02X\n", i2c_bus::moduleName(m), i2c_bus::boundAddr(m));
+        i2c_bus::clearReinit(m);
+    }
 }
 
 void loop() {
@@ -399,6 +448,11 @@ void loop() {
 
     simTick();
 
+    // Peripheral work always runs after the GPS pass above (poll/gate/
+    // cadence/simTick already processed this iteration's fix snapshot) and
+    // before the LED/[HEALTH] block -- the GPS pipeline never waits on I2C.
+    i2cRecoverTick();
+
     if (lastResult == GateResult::ACCEPT) {
         ledWrite(true);
     } else if (gpsReader.receiving()) {
@@ -409,10 +463,16 @@ void loop() {
 
     if (millis() - lastHealthMs >= DEFAULT_GPS_HEALTH_PERIOD_MS) {
         lastHealthMs = millis();
+        uint32_t i2cDrops = i2c_bus::offlineEvents(I2cModule::DISPLAY) +
+                            i2c_bus::offlineEvents(I2cModule::ACCEL) +
+                            i2c_bus::offlineEvents(I2cModule::MAG) +
+                            i2c_bus::offlineEvents(I2cModule::ENV);
+
         Serial.printf(
             "[HEALTH] bytes=%lu ok=%lu bad=%lu sats=%u hdop=%.1f rx=%s"
             " accept=%lu no_fix=%lu stale=%lu null_island=%lu time=%lu hdop_rej=%lu sats_rej=%lu warmup=%lu jump=%lu"
-            " cadence=%s since_emit=%lus emit=%lu suppress=%lu\n",
+            " cadence=%s since_emit=%lus emit=%lu suppress=%lu"
+            " disp=%s accel=%s mag=%s env=%s i2c_drops=%lu\n",
             (unsigned long)gpsReader.bytesRead(),
             (unsigned long)gpsReader.passedChecksum(),
             (unsigned long)gpsReader.failedChecksum(),
@@ -430,6 +490,11 @@ void loop() {
             cadenceStateName(cadence.state()),
             (unsigned long)cadence.secondsSinceEmit(),
             (unsigned long)emitCount,
-            (unsigned long)suppressCount);
+            (unsigned long)suppressCount,
+            i2c_bus::online(I2cModule::DISPLAY) ? "on" : "off",
+            i2c_bus::online(I2cModule::ACCEL) ? "on" : "off",
+            i2c_bus::online(I2cModule::MAG) ? "on" : "off",
+            i2c_bus::online(I2cModule::ENV) ? "on" : "off",
+            (unsigned long)i2cDrops);
     }
 }
