@@ -61,7 +61,10 @@
 
 #ifndef DEFAULT_GPS_STATIONARY_KMH
 #define DEFAULT_GPS_STATIONARY_KMH 3.0f   // lower hysteresis edge: at/below this is a "stationary" vote (A3) —
-                                            // the gap to DEFAULT_GPS_MOVING_KMH is what prevents flapping
+                                            // the gap to DEFAULT_GPS_MOVING_KMH is what prevents flapping.
+                                            // Second consumer (Fase 01.1, D-08): also the speed threshold
+                                            // below which the OLED heading arbiter prefers the compass over
+                                            // GPS course — do not add a second, competing threshold constant.
 #endif
 
 #ifndef DEFAULT_GPS_DEBOUNCE_FIXES
@@ -77,4 +80,111 @@
                                                  // only requires acceptance to pause when parked). The constant
                                                  // exists so Phase 2's flash logger can turn on a low-rate
                                                  // "still parked" record later without touching cadence logic.
+#endif
+
+// --- perifericos I2C (Fase 01.1) ------------------------------------------
+// Shared bus + per-module config for the 4 bench peripherals (OLED SSD1306,
+// MPU6050 accel, HMC5883L/QMC5883L compass, HTU21D temp/hum). All planos
+// 01/02/03/04 desta fase consomem exclusivamente daqui — nao adicionar mais
+// nenhuma constante DEFAULT_* fora deste bloco para esta fase.
+
+// Barramento -----------------------------------------------------------
+
+#ifndef DEFAULT_I2C_SDA_PIN
+#define DEFAULT_I2C_SDA_PIN 6   // convencao do repo (mesma pinagem do node AirQ) — esp32-devkit sobrescreve para 21
+#endif
+
+#ifndef DEFAULT_I2C_SCL_PIN
+#define DEFAULT_I2C_SCL_PIN 7   // convencao do repo (mesma pinagem do node AirQ) — esp32-devkit sobrescreve para 22
+#endif
+
+#ifndef DEFAULT_I2C_CLOCK_HZ
+#define DEFAULT_I2C_CLOCK_HZ 400000   // research A3; 100000 e o fallback documentado se o barramento com os
+                                       // 4 modulos em paralelo se mostrar instavel na bancada
+#endif
+
+#ifndef DEFAULT_I2C_ERROR_THRESHOLD
+#define DEFAULT_I2C_ERROR_THRESHOLD 3   // erros consecutivos antes de marcar um modulo offline (research A4)
+#endif
+
+#ifndef DEFAULT_I2C_RETRY_INTERVAL_MS
+#define DEFAULT_I2C_RETRY_INTERVAL_MS 10000   // D-13: ~10s entre tentativas de re-init de um modulo offline
+#endif
+
+// Enderecos --------------------------------------------------------------
+
+#ifndef DEFAULT_OLED_ADDR
+#define DEFAULT_OLED_ADDR 0x3C
+#endif
+
+#ifndef DEFAULT_OLED_ADDR_ALT
+#define DEFAULT_OLED_ADDR_ALT 0x3D
+#endif
+
+#ifndef DEFAULT_ACCEL_ADDR
+#define DEFAULT_ACCEL_ADDR 0x68
+#endif
+
+#ifndef DEFAULT_MAG_ADDR_HMC
+#define DEFAULT_MAG_ADDR_HMC 0x1E
+#endif
+
+#ifndef DEFAULT_MAG_ADDR_QMC
+#define DEFAULT_MAG_ADDR_QMC 0x0D   // muitos GY-271 vem com QMC5883L em vez do HMC5883L anunciado (D-11)
+#endif
+
+#ifndef DEFAULT_MAG_ADDR_VCM
+#define DEFAULT_MAG_ADDR_VCM 0x0C
+#endif
+
+#ifndef DEFAULT_ENV_ADDR
+#define DEFAULT_ENV_ADDR 0x40
+#endif
+
+// Accel (D-06/D-07) --------------------------------------------------------
+// research starting points (A1/A2), pendente de soak test em veiculo.
+
+#ifndef DEFAULT_ACCEL_POLL_MS
+#define DEFAULT_ACCEL_POLL_MS 100   // research starting point (A2), pendente de soak test em veiculo
+#endif
+
+#ifndef DEFAULT_ACCEL_WAKE_THRESHOLD_G
+#define DEFAULT_ACCEL_WAKE_THRESHOLD_G 0.20f   // desvio absoluto em relacao ao baseline de 1g; research
+                                                 // starting point (A1), pendente de soak test em veiculo
+#endif
+
+#ifndef DEFAULT_ACCEL_WAKE_DEBOUNCE_SAMPLES
+#define DEFAULT_ACCEL_WAKE_DEBOUNCE_SAMPLES 3   // research starting point (A1), pendente de soak test em veiculo
+#endif
+
+// Bussola (D-09/D-10) -------------------------------------------------------
+
+#ifndef DEFAULT_MAG_POLL_MS
+#define DEFAULT_MAG_POLL_MS 250
+#endif
+
+#ifndef DEFAULT_MAG_DECLINATION
+#define DEFAULT_MAG_DECLINATION 0.0f   // graus, D-10 — sem tilt compensation nesta fase (montagem plana assumida)
+#endif
+
+#ifndef DEFAULT_MAG_CAL_TIMEOUT_S
+#define DEFAULT_MAG_CAL_TIMEOUT_S 120   // auto-encerramento da captura de calibracao "cal" (D-09)
+#endif
+
+// Ambiente (D-14) -----------------------------------------------------------
+
+#ifndef DEFAULT_HTU21_POLL_MS
+#define DEFAULT_HTU21_POLL_MS 4000   // a leitura da lib Adafruit bloqueia ~100ms somados (Pitfall 6 do
+                                      // RESEARCH.md); este intervalo mantem o custo longe da janela de
+                                      // ~266ms do buffer UART do GPS
+#endif
+
+// Display (D-02/D-04) --------------------------------------------------------
+
+#ifndef DEFAULT_DISPLAY_REFRESH_MS
+#define DEFAULT_DISPLAY_REFRESH_MS 1000   // 1 Hz, alinhado ao fix do GPS (D-02)
+#endif
+
+#ifndef DEFAULT_SPEED_UNIT
+#define DEFAULT_SPEED_UNIT 0   // 0 = km/h, 1 = nos/kt (D-04)
 #endif
