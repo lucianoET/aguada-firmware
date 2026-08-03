@@ -84,9 +84,23 @@ bool accel_sensor::poll() {
         return false;
     }
 
-    int16_t axRaw = (static_cast<int16_t>(Wire.read()) << 8) | Wire.read();
-    int16_t ayRaw = (static_cast<int16_t>(Wire.read()) << 8) | Wire.read();
-    int16_t azRaw = (static_cast<int16_t>(Wire.read()) << 8) | Wire.read();
+    // Force the read order: the C++ standard does not specify evaluation
+    // order between the two operands of `|`, so combining two Wire.read()
+    // calls (each with the side effect of consuming the next receive-buffer
+    // byte) in one expression risks silently swapping high/low bytes on a
+    // compiler that evaluates right-to-left (WR-01). Two separate statements
+    // per axis (not a comma-separated declaration, which has the same
+    // ordering problem) guarantee a sequence point between the two reads.
+    uint8_t axHi = Wire.read();
+    uint8_t axLo = Wire.read();
+    uint8_t ayHi = Wire.read();
+    uint8_t ayLo = Wire.read();
+    uint8_t azHi = Wire.read();
+    uint8_t azLo = Wire.read();
+
+    int16_t axRaw = (static_cast<int16_t>(axHi) << 8) | axLo;
+    int16_t ayRaw = (static_cast<int16_t>(ayHi) << 8) | ayLo;
+    int16_t azRaw = (static_cast<int16_t>(azHi) << 8) | azLo;
 
     float gx = static_cast<float>(axRaw) / kLsbPerG;
     float gy = static_cast<float>(ayRaw) / kLsbPerG;
