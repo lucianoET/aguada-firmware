@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-01)
 Phase: 01.1 (perifericos-i2c-e-display) — EXECUTING
 Plan: 4 of 4
 Status: Phase complete — ready for verification
-Last activity: 2026-08-03 — Phase 01.1 execution started
+Last activity: 2026-08-03 — Completed quick task 260803-l28: node ethernet cabeado (Nano+ENC28J60) + bridge.py aguada/raw/#
 
 Progress: [██████████] 100%
 
@@ -96,6 +96,12 @@ None yet.
 
 - Phase 3/4 (sync + server ingest) carry MEDIUM confidence per research — WiFiMulti/PubSubClient patterns are standard but idempotent cursor/dedupe logic is flagged as the one shortcut this project cannot afford.
 - Phase 5 (power) carries LOW confidence per research on automotive power protection component specifics — treat as a hardware spike requiring component-level research during planning.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260803-l28 | Node ethernet cabeado (Nano+ENC28J60+HC-SR04, MQTT aguada/raw, 0xEE02 CAV) + bridge.py aguada/raw/# | 2026-08-03 | 274b134 | [260803-l28-criar-node-ethernet-cabeado-aguada-firmw](./quick/260803-l28-criar-node-ethernet-cabeado-aguada-firmw/) |
 
 ### Roadmap Evolution
 
