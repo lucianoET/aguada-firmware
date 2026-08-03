@@ -15,6 +15,7 @@
 #include "fix_gate.h"
 #include "cadence.h"
 #include "i2c_bus.h"
+#include "accel_sensor.h"
 
 #ifndef LED_ACTIVE_LOW
 #define LED_ACTIVE_LOW 0
@@ -30,6 +31,8 @@ static uint32_t   emitCount    = 0;
 static uint32_t   suppressCount = 0;
 
 static uint32_t   lastHealthMs = 0;
+static uint32_t   lastAccelPollMs = 0;
+static uint32_t   accelWakeCount = 0;   // accumulated accel_sensor::wakeEdge() edges since boot, for [HEALTH]
 static uint32_t   gateCounters[kGateResultCount] = {0};
 
 // Reject-line dedup state is kept per-origin (real vs. [SIM]) so a repeated
@@ -341,15 +344,18 @@ void setup() {
     Serial.printf("[gps_tracker] I2C bus on sda=%d scl=%d\n",
                   static_cast<int>(DEFAULT_I2C_SDA_PIN), static_cast<int>(DEFAULT_I2C_SCL_PIN));
     i2c_bus::begin();
+
+    bool accelOk = accel_sensor::begin();
+    Serial.printf("[gps_tracker] MPU6050 accel: %s\n", accelOk ? "OK" : "not found");
 }
 
 // Drives i2c_bus's runtime recovery: tick() advances the round-robin retry
 // scan (at most one address probe per call, see i2c_bus.cpp), and any
-// module i2c_bus flags as reinitDue() gets its driver re-attached here. No
-// drivers exist yet in this plan -- planos 02 (ACCEL), 03 (MAG, ENV), and
-// 04 (DISPLAY) each insert their own begin() call before setOnline() in the
-// matching case below, so this block is additive rather than needing a
-// rewrite each time a driver lands.
+// module i2c_bus flags as reinitDue() gets its driver re-attached here. This
+// plan (02) wires ACCEL's begin() call into its case below; planos 03 (MAG,
+// ENV) and 04 (DISPLAY) still each insert their own begin() call before
+// setOnline() in the matching case, so this block stays additive rather
+// than needing a rewrite each time a driver lands.
 static void i2cRecoverTick() {
     i2c_bus::tick();
 
@@ -363,7 +369,9 @@ static void i2cRecoverTick() {
                 i2c_bus::setOnline(m, true);
                 break;
             case I2cModule::ACCEL:
-                // Plano 02 insere accel_sensor::begin(i2c_bus::boundAddr(m)) aqui antes do setOnline.
+                // Re-runs the WHO_AM_I + sleep-exit sequence so D-13 recovery
+                // actually re-initialises the chip, not just flips the flag.
+                accel_sensor::begin();
                 i2c_bus::setOnline(m, true);
                 break;
             case I2cModule::MAG:
@@ -448,6 +456,27 @@ void loop() {
 
     simTick();
 
+    // Accel wake poll (D-05/D-06). This block is the ONLY place in the
+    // codebase that invokes Cadence's accelerometer wake entry point --
+    // mirrors handleAccept() being the sole call site of the GPS-gated one.
+    // Runs after the GPS/simTick pass above and before i2cRecoverTick()
+    // below, so the GPS pipeline always gets first claim on this iteration.
+    if (millis() - lastAccelPollMs >= DEFAULT_ACCEL_POLL_MS) {
+        lastAccelPollMs = millis();
+        accel_sensor::poll();
+
+        if (accel_sensor::wakeEdge()) {
+            CadenceState prevCadenceState = cadence.state();
+            if (cadence.onAccelWake(millis())) {
+                accelWakeCount++;
+                Serial.printf("[ACCEL] wake mag=%.2fg streak=%u\n",
+                              accel_sensor::magnitudeG(), accel_sensor::debounceStreak());
+                printStateChange("", prevCadenceState, cadence.state(),
+                                  cadence.lastTransitionSpeedKmh(), cadence.lastTransitionElapsedS());
+            }
+        }
+    }
+
     // Peripheral work always runs after the GPS pass above (poll/gate/
     // cadence/simTick already processed this iteration's fix snapshot) and
     // before the LED/[HEALTH] block -- the GPS pipeline never waits on I2C.
@@ -472,7 +501,8 @@ void loop() {
             "[HEALTH] bytes=%lu ok=%lu bad=%lu sats=%u hdop=%.1f rx=%s"
             " accept=%lu no_fix=%lu stale=%lu null_island=%lu time=%lu hdop_rej=%lu sats_rej=%lu warmup=%lu jump=%lu"
             " cadence=%s since_emit=%lus emit=%lu suppress=%lu"
-            " disp=%s accel=%s mag=%s env=%s i2c_drops=%lu\n",
+            " disp=%s accel=%s mag=%s env=%s i2c_drops=%lu"
+            " accel_g=%.2f accel_wakes=%lu\n",
             (unsigned long)gpsReader.bytesRead(),
             (unsigned long)gpsReader.passedChecksum(),
             (unsigned long)gpsReader.failedChecksum(),
@@ -495,6 +525,8 @@ void loop() {
             i2c_bus::online(I2cModule::ACCEL) ? "on" : "off",
             i2c_bus::online(I2cModule::MAG) ? "on" : "off",
             i2c_bus::online(I2cModule::ENV) ? "on" : "off",
-            (unsigned long)i2cDrops);
+            (unsigned long)i2cDrops,
+            accel_sensor::magnitudeG(),
+            (unsigned long)accelWakeCount);
     }
 }
