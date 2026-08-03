@@ -18,6 +18,7 @@
 #include "accel_sensor.h"
 #include "mag_sensor.h"
 #include "env_sensor.h"
+#include "display.h"
 
 #ifndef LED_ACTIVE_LOW
 #define LED_ACTIVE_LOW 0
@@ -36,6 +37,7 @@ static uint32_t   lastHealthMs = 0;
 static uint32_t   lastAccelPollMs = 0;
 static uint32_t   lastMagPollMs = 0;
 static uint32_t   lastEnvPollMs = 0;
+static uint32_t   lastDisplayMs = 0;
 static uint32_t   accelWakeCount = 0;   // accumulated accel_sensor::wakeEdge() edges since boot, for [HEALTH]
 static uint32_t   gateCounters[kGateResultCount] = {0};
 
@@ -360,6 +362,70 @@ void setup() {
 
     bool envOk = env_sensor::begin();
     Serial.printf("[gps_tracker] HTU21D env: %s\n", envOk ? "OK" : "not found");
+
+    bool dispOk = display::begin();
+    Serial.printf("[gps_tracker] OLED display: %s addr=0x%02X\n", dispOk ? "OK" : "not found", display::addr());
+}
+
+// Speed-unit conversion (D-04). Both functions branch only on the
+// DEFAULT_SPEED_UNIT build-time constant -- never on a runtime variable --
+// so the compiler folds the branch away and the unit is fixed for the whole
+// binary, selectable only by a platformio.ini build_flags override.
+static float speedInDisplayUnit(float kmh) {
+    if (DEFAULT_SPEED_UNIT == 0) return kmh;
+    return kmh * 0.539957f;   // km/h -> knots
+}
+
+static const char *speedUnitLabel() {
+    if (DEFAULT_SPEED_UNIT == 0) return "km/h";
+    return "kt";
+}
+
+// Assembles one complete display frame from state main.cpp already tracks
+// plus each peripheral's own accessor -- display.cpp itself never touches
+// any of these modules directly (see display.h). Called only from the
+// render block in loop(), after the GPS/simTick pass and every peripheral
+// poll for this iteration have already run, so the frame it builds always
+// reflects this iteration's fix -- never a half-processed one (D-02).
+static DisplayState buildDisplayState() {
+    DisplayState s{};
+
+    // Same freshness window as the REJECT_STALE watchdog above: losing the
+    // fix mid-session must fall back to the D-03 acquisition screen instead
+    // of freezing the last known values on screen.
+    bool haveFreshFix = everAccepted && (millis() - lastAcceptedAtMs) < DEFAULT_GPS_FRESH_MS;
+
+    s.have_fix      = haveFreshFix;
+    s.sats_used     = lastFix.sats;
+    s.sats_in_view  = gpsReader.satsInView();
+    s.hdop          = lastFix.hdop;
+    s.receiving_nmea = gpsReader.receiving();
+
+    s.speed_display = speedInDisplayUnit(lastFix.speed_kmh);
+    s.speed_unit    = speedUnitLabel();
+
+    bool fromCompass = false;
+    s.heading_deg = mag_sensor::arbitratedHeading(lastFix.speed_kmh, lastFix.course_deg,
+                                                   haveFreshFix, &fromCompass);
+    s.heading_from_compass = fromCompass;
+    s.heading_cardinal     = mag_sensor::cardinal(s.heading_deg);
+
+    EnvReading env = env_sensor::last();
+    s.temp_c    = env.temp_c;
+    s.hum_pct   = env.hum_pct;
+    s.env_valid = env.valid;
+
+    s.accel_g = accel_sensor::magnitudeG();
+
+    s.cadence_moving = (cadence.state() == CadenceState::MOVING);
+
+    s.uptime_s = millis() / 1000;
+
+    s.accel_online = i2c_bus::online(I2cModule::ACCEL);
+    s.mag_online   = i2c_bus::online(I2cModule::MAG);
+    s.env_online   = i2c_bus::online(I2cModule::ENV);
+
+    return s;
 }
 
 // Multi-character serial command parser for "cal" (D-09), consulted BEFORE
@@ -436,7 +502,10 @@ static void i2cRecoverTick() {
 
         switch (m) {
             case I2cModule::DISPLAY:
-                // Plano 04 insere display::begin(i2c_bus::boundAddr(m)) aqui antes do setOnline.
+                // Re-runs the address probe + U8g2 begin() sequence so D-13
+                // recovery actually re-initialises the OLED, not just flips
+                // the flag.
+                display::begin();
                 i2c_bus::setOnline(m, true);
                 break;
             case I2cModule::ACCEL:
@@ -570,6 +639,26 @@ void loop() {
         env_sensor::poll();
     }
 
+    // Display render (D-01/D-02/D-03/D-04). Positioned after the GPS/simTick
+    // pass and every peripheral poll above, so the frame reflects this
+    // iteration's fix + sensor state, never a half-processed one. Renders on
+    // the DEFAULT_DISPLAY_REFRESH_MS timer, but also anticipates the render
+    // to this iteration when a fresh GPS snapshot just arrived and at least
+    // 80% of the interval has already elapsed -- without this, a free-running
+    // 1 Hz timer and a 1 Hz fix that drift out of phase would always show the
+    // previous fix, up to a full second late (D-02).
+    {
+        bool renderDue = (millis() - lastDisplayMs) >= DEFAULT_DISPLAY_REFRESH_MS;
+        if (!renderDue && haveFix &&
+            (millis() - lastDisplayMs) >= (DEFAULT_DISPLAY_REFRESH_MS * 4) / 5) {
+            renderDue = true;
+        }
+        if (renderDue) {
+            lastDisplayMs = millis();
+            display::render(buildDisplayState());
+        }
+    }
+
     // Peripheral work always runs after the GPS pass above (poll/gate/
     // cadence/simTick already processed this iteration's fix snapshot) and
     // before the LED/[HEALTH] block -- the GPS pipeline never waits on I2C.
@@ -601,7 +690,8 @@ void loop() {
             " cadence=%s since_emit=%lus emit=%lu suppress=%lu"
             " disp=%s accel=%s mag=%s env=%s i2c_drops=%lu"
             " accel_g=%.2f accel_wakes=%lu"
-            " hdg=%.0f hdg_src=%s mag_chip=%s temp=%.1fC hum=%.0f%%\n",
+            " hdg=%.0f hdg_src=%s mag_chip=%s temp=%.1fC hum=%.0f%%"
+            " sats_view=%u disp_addr=0x%02X\n",
             (unsigned long)gpsReader.bytesRead(),
             (unsigned long)gpsReader.passedChecksum(),
             (unsigned long)gpsReader.failedChecksum(),
@@ -628,7 +718,8 @@ void loop() {
             accel_sensor::magnitudeG(),
             (unsigned long)accelWakeCount,
             hdgDeg, hdgFromCompass ? "mag" : "gps", mag_sensor::chipName(),
-            envReading.temp_c, envReading.hum_pct);
+            envReading.temp_c, envReading.hum_pct,
+            gpsReader.satsInView(), display::addr());
 
         if (mag_sensor::calActive()) {
             float xMin, xMax, yMin, yMax;
