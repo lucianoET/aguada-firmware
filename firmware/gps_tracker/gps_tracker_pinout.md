@@ -15,9 +15,9 @@ Enumera como `/dev/ttyACM0` (USB nativo, sem chip serial). Env PlatformIO: `esp3
 
 LED onboard: **GPIO8** (active-high nesta placa; `LED_ACTIVE_LOW=0`).
 
-### Fase 01.1 — Barramento I2C (MONTAR AGORA)
+### Fase 01.1 — Barramento I2C (fiação implementada e validada em firmware)
 
-4 módulos em paralelo no mesmo barramento — 4 fios compartilhados (3V3, GND, SDA, SCL):
+4 módulos em paralelo no mesmo barramento — 4 fios compartilhados (3V3, GND, SDA, SCL). Fiação abaixo é a mesma usada pelos planos 01-04 desta fase (`i2c_bus`, `accel_sensor`, `mag_sensor`, `env_sensor`, `display`) — nenhuma mudança de pino em relação ao que foi montado.
 
 | Barramento | Pino C3 SuperMini | Liga a (todos os módulos) |
 | --- | --- | --- |
@@ -37,17 +37,24 @@ LED onboard: **GPIO8** (active-high nesta placa; `LED_ACTIVE_LOW=0`).
 > Fios curtos (<20 cm) na bancada. GPS continua como na seção acima (GPIO20/21, VCC 5V no NEO-6M).
 > OLED I2C **substitui** o TFT ST7735 SPI do orçamento v2 abaixo — GPIO1–5 ficam livres.
 
+**Hardware efetivamente montado (preencher em bancada — ver `BENCH.md`, seção "Fase 01.1", registro de calibração de campo):**
+
+| Item | Valor |
+| --- | --- |
+| Chip de bússola detectado (`[MAG] chip=...` no boot / `mag_chip=` no `[HEALTH]`) | _(preencher: HMC5883L ou QMC5883L)_ |
+| Velocidade de barramento em uso (`DEFAULT_I2C_CLOCK_HZ`) | 400 kHz (default) — _(preencher se o fallback de 100 kHz foi necessário)_ |
+
 ### Orçamento de pinos v2 (periféricos planejados — HW-02..07, ainda não montar)
 
 
 | GPIO | Função planejada | Notas |
 | --- | --- | --- |
 | 0 | ADC bateria | ADC1_CH0 + divisor (Fase 5) |
-| 1 | TFT RST | ST7735 1.8" SPI |
-| 2 | TFT DC | strapping — precisa ficar alto no boot (DC idle ok) |
-| 3 | TFT MOSI (SDA) | |
-| 4 | TFT SCK | |
-| 5 | TFT CS | |
+| 1 | TFT RST (não usado) | ST7735 1.8" SPI — **livre**: OLED I2C (Fase 01.1) substituiu o TFT SPI, GPIO1 disponível |
+| 2 | TFT DC (não usado) | strapping — **livre** pelo mesmo motivo acima |
+| 3 | TFT MOSI/SDA (não usado) | **livre** pelo mesmo motivo acima |
+| 4 | TFT SCK (não usado) | **livre** pelo mesmo motivo acima |
+| 5 | TFT CS (não usado) | **livre** pelo mesmo motivo acima |
 | 6 | I2C SDA | **MPU6050** (0x68) + **HTU21D** (0x40) no mesmo barramento |
 | 7 | I2C SCL | convenção do repo (AirQ usa 6/7) |
 | 8 | LED onboard | TFT BL → 3V3 direto (sem dimmer) |
