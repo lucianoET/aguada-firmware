@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01.1
 current_phase_name: perifericos-i2c-e-display
 status: executing
-stopped_at: Completed 01.1-02-PLAN.md
-last_updated: "2026-08-03T09:25:46.549Z"
+stopped_at: Completed 01.1-03-PLAN.md
+last_updated: "2026-08-03T09:50:48.969Z"
 last_activity: 2026-08-03
 last_activity_desc: Phase 01.1 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-08-01)
 ## Current Position
 
 Phase: 01.1 (perifericos-i2c-e-display) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-08-03 — Phase 01.1 execution started
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [███████░░░] 67%
 | Phase 01 P02 | 25min | 2 tasks | 6 files |
 | Phase 01.1 P01 | 40min | 3 tasks | 5 files |
 | Phase 01.1 P02 | 25min | 3 tasks | 5 files |
+| Phase 01.1 P03 | 30min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Stationary heartbeat (DEFAULT_GPS_STATIONARY_HEARTBEAT_S) defaults to 0/disabled in Phase 1 per GPS-03's scope; Phase 2 can enable a low-rate parked heartbeat later without touching cadence.cpp
 - [Phase ?]: Reused DEFAULT_GPS_STATIONARY_KMH as the future heading-arbiter threshold (D-08) instead of a new constant, per RESEARCH.md Pattern 3
 - [Phase ?]: Cadence gains a second, promote-only entry point onAccelWake() alongside the GPS-gated onGatedFix(); only GPS speed can demote MOVING->STATIONARY, keeping engine vibration on a parked vehicle from holding the tracker falsely in MOVING (D-05).
+- [Phase ?]: DFRobot_QMC5883 constructed with the i2c_bus::present()-detected address (not the library default 0x0C) — its begin() auto-detects ICType via hardcoded scan addresses, but subsequent reads use the constructor address, so they must match
+- [Phase ?]: Added mag_sensor::calRange() beyond Task 1's 13-function contract so main.cpp's bench [CAL] active line can read live capture min/max without duplicating accumulator state
 
 ### Pending Todos
 
@@ -104,6 +107,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-03T09:25:46.471Z
-Stopped at: Completed 01.1-02-PLAN.md
+Last session: 2026-08-03T09:50:48.892Z
+Stopped at: Completed 01.1-03-PLAN.md
 Resume file: None
