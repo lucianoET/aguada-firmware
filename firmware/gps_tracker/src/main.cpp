@@ -504,34 +504,43 @@ static void i2cRecoverTick() {
             case I2cModule::DISPLAY:
                 // Re-runs the address probe + U8g2 begin() sequence so D-13
                 // recovery actually re-initialises the OLED, not just flips
-                // the flag.
+                // the flag. begin() already reports its own real result via
+                // i2c_bus::setOnline() -- do not override it here.
                 display::begin();
-                i2c_bus::setOnline(m, true);
                 break;
             case I2cModule::ACCEL:
                 // Re-runs the WHO_AM_I + sleep-exit sequence so D-13 recovery
                 // actually re-initialises the chip, not just flips the flag.
+                // begin() already reports its own real result via
+                // i2c_bus::setOnline() -- do not override it here.
                 accel_sensor::begin();
-                i2c_bus::setOnline(m, true);
                 break;
             case I2cModule::MAG:
                 // Re-runs address detection + the DFRobot_QMC5883 begin() sequence
                 // so D-13 recovery actually re-initialises the chip, not just flips
-                // the flag.
+                // the flag. begin() already reports its own real result via
+                // i2c_bus::setOnline() -- do not override it here.
                 mag_sensor::begin();
-                i2c_bus::setOnline(m, true);
                 break;
             case I2cModule::ENV:
                 // Re-runs the Adafruit HTU21DF begin() sequence so D-13 recovery
                 // actually re-initialises the chip, not just flips the flag.
+                // begin() already reports its own real result via
+                // i2c_bus::setOnline() -- do not override it here.
                 env_sensor::begin();
-                i2c_bus::setOnline(m, true);
                 break;
             default:
                 break;
         }
 
-        Serial.printf("[I2C] %s recovered addr=0x%02X\n", i2c_bus::moduleName(m), i2c_bus::boundAddr(m));
+        // Only report "recovered" when the driver's own begin() actually
+        // succeeded (i2c_bus::online(m) reflects that real result now, per
+        // i2c_bus.h's setOnline() contract) -- a WHO_AM_I mismatch, missing
+        // chip, or failed library begin() must NOT be reported as recovered
+        // (CR-01). clearReinit() always runs, success or not, per contract.
+        if (i2c_bus::online(m)) {
+            Serial.printf("[I2C] %s recovered addr=0x%02X\n", i2c_bus::moduleName(m), i2c_bus::boundAddr(m));
+        }
         i2c_bus::clearReinit(m);
     }
 }
