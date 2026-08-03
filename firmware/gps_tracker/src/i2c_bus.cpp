@@ -111,6 +111,11 @@ bool retryProbe(I2cModule m) {
     }
 
     s_boundAddr[idx] = addr;
+    // A live probe just proved this address answers now -- refresh the
+    // presence cache so display::begin()/mag_sensor::begin() (which gate
+    // address selection on i2c_bus::present()) can succeed for a module
+    // that was absent during the one-time boot scan (CR-02).
+    s_present[addr] = true;
     return true;
 }
 
