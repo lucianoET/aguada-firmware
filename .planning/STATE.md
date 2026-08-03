@@ -4,16 +4,16 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 01.1
 current_phase_name: perifericos-i2c-e-display
-status: executing
-stopped_at: Completed 01.1-03-PLAN.md
-last_updated: "2026-08-03T09:50:48.969Z"
+status: verifying
+stopped_at: Completed 01.1-04-PLAN.md
+last_updated: "2026-08-03T10:26:19.757Z"
 last_activity: 2026-08-03
 last_activity_desc: Phase 01.1 execution started
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -29,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-08-01)
 
 Phase: 01.1 (perifericos-i2c-e-display) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-08-03 — Phase 01.1 execution started
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [████████░░] 83%
 | Phase 01.1 P01 | 40min | 3 tasks | 5 files |
 | Phase 01.1 P02 | 25min | 3 tasks | 5 files |
 | Phase 01.1 P03 | 30min | 3 tasks | 5 files |
+| Phase 01.1 P04 | 45min | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Cadence gains a second, promote-only entry point onAccelWake() alongside the GPS-gated onGatedFix(); only GPS speed can demote MOVING->STATIONARY, keeping engine vibration on a parked vehicle from holding the tracker falsely in MOVING (D-05).
 - [Phase ?]: DFRobot_QMC5883 constructed with the i2c_bus::present()-detected address (not the library default 0x0C) — its begin() auto-detects ICType via hardcoded scan addresses, but subsequent reads use the constructor address, so they must match
 - [Phase ?]: Added mag_sensor::calRange() beyond Task 1's 13-function contract so main.cpp's bench [CAL] active line can read live capture min/max without duplicating accumulator state
+- [Phase 01.1]: GpsReader::satsInView() adds 3 mutable TinyGPSCustom members registered in the constructor (not header in-class init), preserving default-constructibility
+- [Phase 01.1]: Display render scheduling adds an 80%-elapsed-and-fresh-fix anticipation rule alongside the 1Hz timer so the OLED frame never drifts a full second behind the GPS fix (D-02)
+- [Phase 01.1]: pio CLI in this environment has no --project-option flag; PLATFORMIO_BUILD_FLAGS env var used instead to verify the DEFAULT_SPEED_UNIT=1 build
 
 ### Pending Todos
 
@@ -107,6 +111,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-03T09:50:48.892Z
-Stopped at: Completed 01.1-03-PLAN.md
+Last session: 2026-08-03T10:26:19.726Z
+Stopped at: Completed 01.1-04-PLAN.md
 Resume file: None
