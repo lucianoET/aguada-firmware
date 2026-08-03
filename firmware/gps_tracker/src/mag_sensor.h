@@ -91,4 +91,11 @@ MagCalibration calibration();
 // returns gpsCourseDeg with *fromCompass = false, regardless of speed/fix.
 float arbitratedHeading(float gpsSpeedKmh, float gpsCourseDeg, bool haveGpsFix, bool *fromCompass);
 
+// Live min/max accumulators of the in-progress calibration capture (only
+// meaningful while calActive() is true) -- feeds main.cpp's bench
+// "[CAL] active" progress line. Added alongside the Task 3 wiring: the
+// capture window itself is internal state, but Task 3's bench-visible
+// progress line needs to read it without duplicating the accumulation logic.
+void calRange(float *xMin, float *xMax, float *yMin, float *yMax);
+
 }  // namespace mag_sensor

@@ -257,6 +257,13 @@ MagCalibration mag_sensor::calibration() {
     return s_cal;
 }
 
+void mag_sensor::calRange(float *xMin, float *xMax, float *yMin, float *yMax) {
+    if (xMin) *xMin = s_calXMin;
+    if (xMax) *xMax = s_calXMax;
+    if (yMin) *yMin = s_calYMin;
+    if (yMax) *yMax = s_calYMax;
+}
+
 float mag_sensor::arbitratedHeading(float gpsSpeedKmh, float gpsCourseDeg, bool haveGpsFix, bool *fromCompass) {
     if (!i2c_bus::online(I2cModule::MAG)) {
         if (fromCompass) *fromCompass = false;

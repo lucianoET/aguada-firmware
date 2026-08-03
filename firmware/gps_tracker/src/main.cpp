@@ -16,6 +16,8 @@
 #include "cadence.h"
 #include "i2c_bus.h"
 #include "accel_sensor.h"
+#include "mag_sensor.h"
+#include "env_sensor.h"
 
 #ifndef LED_ACTIVE_LOW
 #define LED_ACTIVE_LOW 0
@@ -32,6 +34,8 @@ static uint32_t   suppressCount = 0;
 
 static uint32_t   lastHealthMs = 0;
 static uint32_t   lastAccelPollMs = 0;
+static uint32_t   lastMagPollMs = 0;
+static uint32_t   lastEnvPollMs = 0;
 static uint32_t   accelWakeCount = 0;   // accumulated accel_sensor::wakeEdge() edges since boot, for [HEALTH]
 static uint32_t   gateCounters[kGateResultCount] = {0};
 
@@ -178,6 +182,9 @@ static void simPrintHelp() {
     Serial.println("[SIM] [HELP] x  inject one outlier-jump fix -> REJECT_OUTLIER_JUMP");
     Serial.println("[SIM] [HELP] z  inject one (0,0) fix -> REJECT_NULL_ISLAND");
     Serial.println("[SIM] [HELP] b  inject one bad-quality fix (HDOP+sats) -> REJECT_HDOP");
+    Serial.println("[SIM] [HELP] cal + Enter  start hard-iron calibration capture; rotate the "
+                    "compass module slowly through one full horizontal turn; send 'cal' + Enter "
+                    "again to save offsets to NVS (D-09)");
 }
 
 static void simAdjustSpeed(float deltaKmh) {
@@ -347,6 +354,70 @@ void setup() {
 
     bool accelOk = accel_sensor::begin();
     Serial.printf("[gps_tracker] MPU6050 accel: %s\n", accelOk ? "OK" : "not found");
+
+    bool magOk = mag_sensor::begin();
+    Serial.printf("[gps_tracker] compass: %s chip=%s\n", magOk ? "OK" : "not found", mag_sensor::chipName());
+
+    bool envOk = env_sensor::begin();
+    Serial.printf("[gps_tracker] HTU21D env: %s\n", envOk ? "OK" : "not found");
+}
+
+// Multi-character serial command parser for "cal" (D-09), consulted BEFORE
+// the existing single-char hotkey dispatch in loop()'s Serial.available()
+// block (Pitfall 5 in 01.1-RESEARCH.md). Returns true when the character was
+// consumed by this parser and must NOT also reach the single-char scheme;
+// false when it should fall through unchanged. Fixed 8-byte buffer with an
+// explicit bound check before every write (ASVS V5 control for threat
+// T-01.1-01) -- overflow-prone input is discarded, never written past the
+// buffer's declared size.
+static bool calHandleChar(char c) {
+    static const uint32_t kCalInactivityMs = 3000;   // distinct keystroke bursts never merge into one command
+    static char     buf[8];
+    static uint8_t  len = 0;
+    static uint32_t lastCharMs = 0;
+
+    uint32_t now = millis();
+    if (len > 0 && (now - lastCharMs) > kCalInactivityMs) {
+        len = 0;   // stale fragment from an earlier, unrelated keystroke burst
+    }
+
+    if (c == '\r' || c == '\n') {
+        bool matched = (len == 3 && buf[0] == 'c' && buf[1] == 'a' && buf[2] == 'l');
+        len = 0;
+        if (matched) {
+            if (mag_sensor::calActive()) {
+                mag_sensor::calFinish();
+            } else {
+                mag_sensor::calStart();
+            }
+        }
+        return true;   // Enter never falls through to the single-char dispatch
+    }
+
+    // Explicit bound check BEFORE any write, reserving room for a trailing
+    // NUL -- the buffer must never be written past its declared size,
+    // whatever the input.
+    if (len >= sizeof(buf) - 1) {
+        len = 0;
+        return false;
+    }
+
+    buf[len] = c;
+    len++;
+
+    static const char kLiteral[] = "cal";
+    bool isPrefix = true;
+    for (uint8_t i = 0; i < len; i++) {
+        if (buf[i] != kLiteral[i]) { isPrefix = false; break; }
+    }
+
+    if (isPrefix) {
+        lastCharMs = now;
+        return true;
+    }
+
+    len = 0;
+    return false;
 }
 
 // Drives i2c_bus's runtime recovery: tick() advances the round-robin retry
@@ -375,11 +446,16 @@ static void i2cRecoverTick() {
                 i2c_bus::setOnline(m, true);
                 break;
             case I2cModule::MAG:
-                // Plano 03 insere mag_sensor::begin(i2c_bus::boundAddr(m)) aqui antes do setOnline.
+                // Re-runs address detection + the DFRobot_QMC5883 begin() sequence
+                // so D-13 recovery actually re-initialises the chip, not just flips
+                // the flag.
+                mag_sensor::begin();
                 i2c_bus::setOnline(m, true);
                 break;
             case I2cModule::ENV:
-                // Plano 03 insere env_sensor::begin(i2c_bus::boundAddr(m)) aqui antes do setOnline.
+                // Re-runs the Adafruit HTU21DF begin() sequence so D-13 recovery
+                // actually re-initialises the chip, not just flips the flag.
+                env_sensor::begin();
                 i2c_bus::setOnline(m, true);
                 break;
             default:
@@ -397,11 +473,13 @@ void loop() {
 
     if (Serial.available()) {
         char c = (char)Serial.read();
-        if (c == 'r') {
-            gpsReader.setRawEcho(!gpsReader.rawEcho());
-            Serial.printf("\n[gps_tracker] raw echo: %s\n", gpsReader.rawEcho() ? "ON" : "OFF");
-        } else {
-            simHandleCommand(c);
+        if (!calHandleChar(c)) {
+            if (c == 'r') {
+                gpsReader.setRawEcho(!gpsReader.rawEcho());
+                Serial.printf("\n[gps_tracker] raw echo: %s\n", gpsReader.rawEcho() ? "ON" : "OFF");
+            } else {
+                simHandleCommand(c);
+            }
         }
     }
 
@@ -477,6 +555,21 @@ void loop() {
         }
     }
 
+    // Compass + env poll (D-08/D-09/D-14). Both blocks are independent and
+    // may coincide on the same iteration -- acceptable because the combined
+    // blocking cost (a sub-millisecond compass read plus at most one
+    // alternated HTU21D read, ~50ms) stays well inside the ~266ms GPS UART
+    // buffer budget.
+    if (millis() - lastMagPollMs >= DEFAULT_MAG_POLL_MS) {
+        lastMagPollMs = millis();
+        mag_sensor::poll();
+    }
+
+    if (millis() - lastEnvPollMs >= DEFAULT_HTU21_POLL_MS) {
+        lastEnvPollMs = millis();
+        env_sensor::poll();
+    }
+
     // Peripheral work always runs after the GPS pass above (poll/gate/
     // cadence/simTick already processed this iteration's fix snapshot) and
     // before the LED/[HEALTH] block -- the GPS pipeline never waits on I2C.
@@ -497,12 +590,18 @@ void loop() {
                             i2c_bus::offlineEvents(I2cModule::MAG) +
                             i2c_bus::offlineEvents(I2cModule::ENV);
 
+        bool hdgFromCompass = false;
+        float hdgDeg = mag_sensor::arbitratedHeading(lastFix.speed_kmh, lastFix.course_deg,
+                                                      everAccepted, &hdgFromCompass);
+        EnvReading envReading = env_sensor::last();
+
         Serial.printf(
             "[HEALTH] bytes=%lu ok=%lu bad=%lu sats=%u hdop=%.1f rx=%s"
             " accept=%lu no_fix=%lu stale=%lu null_island=%lu time=%lu hdop_rej=%lu sats_rej=%lu warmup=%lu jump=%lu"
             " cadence=%s since_emit=%lus emit=%lu suppress=%lu"
             " disp=%s accel=%s mag=%s env=%s i2c_drops=%lu"
-            " accel_g=%.2f accel_wakes=%lu\n",
+            " accel_g=%.2f accel_wakes=%lu"
+            " hdg=%.0f hdg_src=%s mag_chip=%s temp=%.1fC hum=%.0f%%\n",
             (unsigned long)gpsReader.bytesRead(),
             (unsigned long)gpsReader.passedChecksum(),
             (unsigned long)gpsReader.failedChecksum(),
@@ -527,6 +626,15 @@ void loop() {
             i2c_bus::online(I2cModule::ENV) ? "on" : "off",
             (unsigned long)i2cDrops,
             accel_sensor::magnitudeG(),
-            (unsigned long)accelWakeCount);
+            (unsigned long)accelWakeCount,
+            hdgDeg, hdgFromCompass ? "mag" : "gps", mag_sensor::chipName(),
+            envReading.temp_c, envReading.hum_pct);
+
+        if (mag_sensor::calActive()) {
+            float xMin, xMax, yMin, yMax;
+            mag_sensor::calRange(&xMin, &xMax, &yMin, &yMax);
+            Serial.printf("[CAL] active %lus x=[%.0f..%.0f] y=[%.0f..%.0f]\n",
+                          (unsigned long)mag_sensor::calElapsedS(), xMin, xMax, yMin, yMax);
+        }
     }
 }
