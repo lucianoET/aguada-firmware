@@ -806,6 +806,9 @@ class Bridge:
                 retain=True,
             )
             client.subscribe("aguada/cmd/#")
+            # Wired Ethernet nodes (e.g. node-eth) publish sensor JSON straight
+            # to the broker instead of arriving over the gateway serial link.
+            client.subscribe("aguada/raw/#")
             publish_gateway_discovery(client)
 
             # Re-publish HA Discovery on every (re)connect to survive broker
@@ -832,11 +835,29 @@ class Bridge:
         log.warning("MQTT disconnected rc=%d, will reconnect", rc)
 
     def _on_mqtt_message(self, client, userdata, msg):
-        """Commands from HA/server → forward to gateway via serial."""
+        """Commands from HA/server → forward to gateway via serial.
+        Also routes wired Ethernet node sensor JSON (aguada/raw/#) into the
+        existing serial-sensor pipeline."""
         topic = msg.topic
         try:
             payload = json.loads(msg.payload)
         except Exception:
+            if topic.startswith("aguada/raw/"):
+                log.warning("Malformed JSON on %s", topic)
+            return
+
+        if topic.startswith("aguada/raw/"):
+            if not isinstance(payload, dict):
+                log.warning("Non-dict payload on %s", topic)
+                return
+            node_id = str(payload.get("node_id", "")).upper()
+            if node_id not in self._configured_nodes:
+                log.warning("Unknown node_id %r on %s", node_id, topic)
+                return
+            try:
+                self._handle_sensor(payload)
+            except Exception:
+                log.exception("Handler error for raw topic=%s payload=%s", topic, str(payload)[:200])
             return
 
         if topic == "aguada/cmd/restart":
