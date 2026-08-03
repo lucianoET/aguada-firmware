@@ -14,6 +14,7 @@ Ships a new no-GSM GPS tracker node type for the Aguada mesh: a battery-backed E
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: GPS Acquisition & Adaptive Cadence** - Node reads NEO-6M/M8N fixes, filters out bad ones, and paces logging to movement
+- [ ] **Phase 01.1: Perifericos I2C e Display (INSERTED)** - OLED de status, acelerometro alimentando a cadencia, bussola e temp/umidade num barramento I2C com degradacao graciosa
 - [ ] **Phase 2: Durable Flash Logging** - Every accepted fix survives reboot/power loss on flash before any network attempt
 - [ ] **Phase 3: Store & Forward Sync (Known WiFi)** - Node autonomously finds known WiFi and uploads its backlog with zero loss/duplication
 - [ ] **Phase 4: Server Ingest, HA Live Tracking & GPX Export** - Uploaded trajectory is stored, shown live on the HA map, and exportable as GPX
@@ -38,6 +39,26 @@ Plans:
 
 - [x] 01-01-PLAN.md — gps_reader + fix_gate: structured Fix snapshot from NMEA, quality gating before anything downstream (GPS-01, GPS-02)
 - [x] 01-02-PLAN.md — cadence: speed-based debounced pacing, plus bench simulator and BENCH.md verification procedure (GPS-03)
+
+### Phase 01.1: Perifericos I2C e Display (INSERTED)
+
+**Goal**: O firmware `gps_tracker` ganha um barramento I2C compartilhado (GPIO6/GPIO7) com OLED de status ao vivo, acelerometro alimentando a cadencia, bussola com rumo calibravel e sensor de temperatura/umidade — com degradacao graciosa total, recuperacao automatica em runtime, e sem jamais bloquear o pipeline GPS existente.
+**Depends on**: Phase 1
+**Requirements**: D-01..D-14 (fase inserida sem REQ IDs formais — o contrato de escopo sao as decisoes travadas em `phases/01.1-perifericos-i2c-e-display/01.1-CONTEXT.md`)
+**Success Criteria** (what must be TRUE):
+
+  1. Qualquer subconjunto dos 4 modulos I2C (inclusive nenhum) permite boot e operacao completos; modulo ausente desliga so o proprio recurso e um modulo que cai em runtime volta sozinho em ~10 s, sem reboot (D-12/D-13).
+  2. O acelerometro promove a cadencia de STATIONARY para MOVING em ~300 ms sem esperar o debounce de 3 fixes do GPS, e nenhum caminho derivado do accel consegue rebaixar o estado — so a velocidade do GPS rebaixa (D-05/D-06/D-07).
+  3. O rumo vem da bussola abaixo de `DEFAULT_GPS_STATIONARY_KMH` e do course do GPS acima dele, com auto-deteccao HMC5883L/QMC5883L e calibracao hard-iron pelo comando serial `cal` persistida em NVS (D-08/D-09/D-10/D-11).
+  4. O OLED mostra uma tela densa unica a 1 Hz alinhada ao fix, com tela de aquisicao ao vivo enquanto nao ha fix, unidade de velocidade selecionavel por build flag e marcacao de modulos offline (D-01/D-02/D-03/D-04/D-14).
+
+**Plans**: 4 plans
+Plans:
+
+- [ ] 01.1-01-PLAN.md — fundacao I2C: constantes DEFAULT_*, lib_deps, modulo i2c_bus com boot scan, saude por modulo e retry (D-12, D-13)
+- [ ] 01.1-02-PLAN.md — accel_sensor MPU6050 e Cadence::onAccelWake com autoridade assimetrica (D-05, D-06, D-07)
+- [ ] 01.1-03-PLAN.md — mag_sensor dual-chip com calibracao em NVS e arbitro de rumo, env_sensor HTU21D, comando serial `cal` (D-08, D-09, D-10, D-11, D-14)
+- [ ] 01.1-04-PLAN.md — display OLED com tela densa e tela de aquisicao, satelites em vista, e procedimento de bancada no BENCH.md (D-01, D-02, D-03, D-04)
 
 ### Phase 2: Durable Flash Logging
 
@@ -98,11 +119,12 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 → 01.1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. GPS Acquisition & Adaptive Cadence | 2/2 | In Progress|  |
+| 01.1. Perifericos I2C e Display (INSERTED) | 0/4 | Planned | - |
 | 2. Durable Flash Logging | 0/TBD | Not started | - |
 | 3. Store & Forward Sync (Known WiFi) | 0/TBD | Not started | - |
 | 4. Server Ingest, HA Live Tracking & GPX Export | 0/TBD | Not started | - |
