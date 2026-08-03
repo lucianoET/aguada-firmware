@@ -68,9 +68,10 @@ CadenceAction Cadence::onGatedFix(const Fix &f) {
         const uint32_t intervalMs = (uint32_t)DEFAULT_GPS_CADENCE_MOVING_S * 1000UL;
         const uint32_t elapsedMs  = haveEmitted_ ? (f.mono_ms - lastEmitMs_) : intervalMs;
 
-        if (justEnteredMoving || !haveEmitted_ || elapsedMs >= intervalMs) {
-            lastEmitMs_  = f.mono_ms;
-            haveEmitted_ = true;
+        if (justEnteredMoving || accelWakePending_ || !haveEmitted_ || elapsedMs >= intervalMs) {
+            lastEmitMs_       = f.mono_ms;
+            haveEmitted_      = true;
+            accelWakePending_ = false;
             return CadenceAction::EMIT;
         }
         return CadenceAction::SUPPRESS_INTERVAL;
@@ -88,6 +89,27 @@ CadenceAction Cadence::onGatedFix(const Fix &f) {
         }
     }
     return CadenceAction::SUPPRESS_STATIONARY;
+}
+
+bool Cadence::onAccelWake(uint32_t mono_ms) {
+    if (state_ == CadenceState::MOVING) return false;   // only onGatedFix() may demote; nothing to promote here
+
+    // Same bookkeeping as onGatedFix()'s STATIONARY -> MOVING branch above,
+    // with two differences: there is no GPS speed sample for this
+    // transition (lastTransitionSpeedKmh_ = 0.0f signals that), and
+    // accelWakePending_ arms the "fast resume" EMIT on the next accepted
+    // fix (D-05).
+    lastTransitionElapsedS_ = (mono_ms - stateEnteredMs_) / 1000;
+    lastTransitionSpeedKmh_ = 0.0f;
+    state_            = CadenceState::MOVING;
+    stateEnteredMs_   = mono_ms;
+    movingStreak_     = 0;
+    stationaryStreak_ = 0;
+    stateChanged_     = true;
+    accelWakePending_ = true;
+    lastKnownMonoMs_  = mono_ms;
+
+    return true;
 }
 
 uint32_t Cadence::secondsSinceEmit() const {
