@@ -15,7 +15,30 @@ Enumera como `/dev/ttyACM0` (USB nativo, sem chip serial). Env PlatformIO: `esp3
 
 LED onboard: **GPIO8** (active-high nesta placa; `LED_ACTIVE_LOW=0`).
 
+### Fase 01.1 — Barramento I2C (MONTAR AGORA)
+
+4 módulos em paralelo no mesmo barramento — 4 fios compartilhados (3V3, GND, SDA, SCL):
+
+| Barramento | Pino C3 SuperMini | Liga a (todos os módulos) |
+| --- | --- | --- |
+| SDA | **GPIO6** | SDA do OLED, MPU6050, HMC5883, HTU21 |
+| SCL | **GPIO7** | SCL do OLED, MPU6050, HMC5883, HTU21 |
+| VCC | **3V3** | VCC de todos (NÃO usar 5V — lógica I2C é 3.3 V) |
+| GND | **GND** | GND de todos |
+
+| Módulo | Endereço | Breakout típico | Notas |
+| --- | --- | --- | --- |
+| OLED SSD1306 128×64 | **0x3C** | 4 pinos I2C | alguns vêm 0x3D — scan no boot detecta |
+| MPU6050 accel+gyro | **0x68** | GY-521 | deixar **AD0 solto/GND** (AD0 alto = 0x69); pinos INT/XDA/XCL não ligar |
+| HMC5883L bússola | **0x1E** | GY-271 | ⚠️ muitos GY-271 vêm com **QMC5883L (0x0D)** — firmware detecta os dois; pino DRDY não ligar |
+| HTU21D temp/umid | **0x40** | GY-21 | — |
+
+> Pull-ups: os breakouts já têm pull-up onboard (4k7/10k). Com 4 módulos em paralelo o equivalente fica ~1–2 kΩ — ok a 3.3 V/400 kHz. Se o barramento falhar com todos ligados, remover resistores de pull-up de um ou dois módulos.
+> Fios curtos (<20 cm) na bancada. GPS continua como na seção acima (GPIO20/21, VCC 5V no NEO-6M).
+> OLED I2C **substitui** o TFT ST7735 SPI do orçamento v2 abaixo — GPIO1–5 ficam livres.
+
 ### Orçamento de pinos v2 (periféricos planejados — HW-02..07, ainda não montar)
+
 
 | GPIO | Função planejada | Notas |
 | --- | --- | --- |
