@@ -1,0 +1,1 @@
+{"content":"ESP32-C3 supports Wire.setClock(400000) fast-mode I2C; with multiple sensors on long wires, bus segmentation/multiplexer is more reliable than just lowering clock speed, but short bench wiring with reasonable pull-ups should be fine at 400kHz.","source":"web","provider":"websearch","confidence":"LOW","fetched_at":"2026-08-03T08:12:49.350Z","ttl":86400000,"kind":"web"}

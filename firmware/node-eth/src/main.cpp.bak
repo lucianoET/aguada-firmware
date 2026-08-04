@@ -17,7 +17,7 @@
 // ── Debug ────────────────────────────────────────────────────────────────
 // DEBUG=0 links no serial code at all (flash savings, D-02). Set to 1 and
 // reflash to see boot/connect/measure traces on the 9600-baud monitor.
-#define DEBUG 0
+#define DEBUG 1  // bench test — revert to 0 for field deploy
 #if DEBUG
   #define DBG(...)   Serial.print(__VA_ARGS__)
   #define DBGLN(...) Serial.println(__VA_ARGS__)
@@ -38,12 +38,12 @@ static const uint8_t ECHO_PIN = 7;
 static const char TOPIC[] = "aguada/raw/" NODE_ID_STR "/1"; // RAM: PubSubClient::publish() needs a RAM pointer
 
 // ── Network (static — no DHCP, no on-device config) ─────────────────────
-static uint8_t   mac[]    = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0x02};
-static IPAddress ipAddr(192, 168, 0, 202);
+static uint8_t   mac[]    = {0x00, 0x04, 0xA3, 0xDD, 0xEE, 0x02};  // bench test: Microchip OUI (router may drop locally-administered AA:BB:..)
+static IPAddress ipAddr(192, 168, 0, 50);  // bench test — spec IP is .202
 static IPAddress dnsIP(192, 168, 0, 1);
 static IPAddress gwIP(192, 168, 0, 1);
 static IPAddress subnet(255, 255, 255, 0);
-static IPAddress brokerIP(192, 168, 0, 101);
+static IPAddress brokerIP(192, 168, 0, 13);  // bench test — field broker is .101
 static const uint16_t BROKER_PORT = 1883;
 
 // ── Timing / filter ──────────────────────────────────────────────────────
@@ -157,7 +157,13 @@ static bool mqttEnsure() {
 
     mqttFail++;
     DBG(F("MQTT connect failed, fail="));
-    DBGLN(mqttFail);
+    DBG(mqttFail);
+#if DEBUG
+    Serial.print(F(" rev="));
+    Serial.print(Enc28J60Network::geterevid());   // 0x00/0xFF = SPI/chip dead; 6 = B7 silicon
+    Serial.print(F(" link="));
+    Serial.println((uint8_t)Ethernet.linkStatus()); // 1=LinkON 2=LinkOFF 0=Unknown
+#endif
 
     // Escalation per D-02: re-init the Ethernet stack after sustained
     // failures, and force a watchdog reset if that still doesn't recover.
@@ -190,13 +196,16 @@ static void publishReading(uint16_t cm, uint8_t flags) {
 void setup() {
 #if DEBUG
     Serial.begin(9600);
+    DBGLN(F("boot"));
 #endif
 
     pinMode(TRIG_PIN, OUTPUT);
     pinMode(ECHO_PIN, INPUT);
     digitalWrite(TRIG_PIN, LOW);
 
+    DBGLN(F("eth init..."));
     netBegin();
+    DBGLN(F("eth ok"));
 
     mqtt.setServer(brokerIP, BROKER_PORT);
     mqtt.setSocketTimeout(4); // before the first connect: a stalled broker must not outlast the 8s watchdog

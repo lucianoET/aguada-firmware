@@ -1,0 +1,1 @@
+{"content":"u8g2 sendBuffer() for a smaller SSD1306 (64x48) takes ~14-18ms on ESP32; full 128x64 frame will take longer proportionally. u8g2 defaults to 400kHz I2C for SSD1306 when the constructor supports it.","source":"web","provider":"websearch","confidence":"LOW","fetched_at":"2026-08-03T08:12:49.803Z","ttl":86400000,"kind":"web"}

@@ -1,0 +1,285 @@
+- generic [ref=e1]:
+  - dialog "Cookie banner" [active] [ref=e2]:
+    - generic [ref=e3]:
+      - paragraph [ref=e6]:
+        - text: A Fracttal Tech SL utiliza cookies próprias e de terceiros para analisar seus hábitos de navegação, melhorar sua experiência e permitir o compartilhamento de conteúdo nas redes sociais. Você pode aceitar, personalizar ou rejeitar as cookies. Este site utiliza cookies próprias e de terceiros para obter estatísticas sobre os hábitos de navegação dos usuários, melhorar sua experiência e permitir o compartilhamento de conteúdos nas redes sociais. Você pode aceitar ou rejeitar as cookies, assim como personalizar quais deseja desativar. Todas as informações estão disponíveis na nossa
+        - link "política de cookies" [ref=e7] [cursor=pointer]:
+          - /url: https://www.fracttal.com/pt-br/politica-de-cookies
+        - text: .
+      - generic [ref=e9]:
+        - button "Configurações de cookies" [ref=e10] [cursor=pointer]
+        - generic [ref=e11]:
+          - button "Aceitar" [ref=e12] [cursor=pointer]
+          - button "Recusar" [ref=e13] [cursor=pointer]
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic:
+        - banner [ref=e16]:
+          - generic [ref=e18]:
+            - link [ref=e20] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/
+              - img "Fracttal" [ref=e21]
+            - generic [ref=e22]: menu
+            - text: public
+        - generic [ref=e28]:
+          - generic [ref=e29]: o que procura?
+          - textbox "o que procura?" [ref=e30]:
+            - /placeholder: Procurar
+          - button "Search" [ref=e31] [cursor=pointer]: search
+      - article [ref=e35]:
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - generic [ref=e42]:
+              - paragraph [ref=e43]: Índice
+              - list [ref=e44]:
+                - listitem [ref=e45]:
+                  - generic [ref=e46]: done
+                  - button "O que é o CHPM?" [ref=e47] [cursor=pointer]:
+                    - paragraph
+                    - paragraph
+                - listitem [ref=e49]:
+                  - generic [ref=e50]: done
+                  - button "Posso continuar classificando os custos da minha organização por tipo de manutenção?" [ref=e51] [cursor=pointer]:
+                    - paragraph
+                    - paragraph
+                - listitem [ref=e53]:
+                  - generic [ref=e54]: done
+                  - button "Na prática, como é calculado o custo das horas de trabalho por tipo de manutenção?" [ref=e55] [cursor=pointer]:
+                    - paragraph
+                    - paragraph
+            - link [ref=e61] [cursor=pointer]:
+              - /url: /hs/cta/wi/redirect?encryptedPayload=AVxigLKaLvJA%2FPNhlpU%2Fp9ecnwac9k%2BdaJ91nVFQA%2B9mXfS%2FVgXs%2BDerBQVh%2Fo8P49EsWD%2Bz7yFaxbUWzFQyD8HKxzFxS2aDAjyc4AwId3p648Wqnposq7vMtWHyfmlswK853ovi7lcGfMm9BIcBCKlDgTDaAcdeTd5SXOkts1xfPMLqw2%2FgVdjJbjrBocHyk3xdxRUxVgge6nDvyp2A%2F99S&webInteractiveContentId=185255593326&portalId=2394276
+              - img "calculadora-roi" [ref=e62]
+          - generic [ref=e63]:
+            - generic [ref=e64]:
+              - heading "Conheça o custo de homem-hora por tipo de manutenção (CHPM)" [level=1] [ref=e65]
+              - generic [ref=e66]:
+                - paragraph [ref=e68]: "Tempo de leitura: 3 min."
+                - generic [ref=e70]:
+                  - link [ref=e71] [cursor=pointer]:
+                    - /url: http://www.linkedin.com/shareArticle?mini=true&url=https://www.fracttal.com/pt-br/manutenpedia/custo-homem-hora-por-tipo-de-manutencao&utm_medium=social&utm_source=linkedin
+                    - img "linkedin icon" [ref=e72]
+                  - link [ref=e73] [cursor=pointer]:
+                    - /url: http://www.facebook.com/share.php?u=https://www.fracttal.com/pt-br/manutenpedia/custo-homem-hora-por-tipo-de-manutencao&utm_medium=social&utm_source=facebook
+                    - img "facebook icon" [ref=e74]
+                  - link [ref=e75] [cursor=pointer]:
+                    - /url: ""
+                    - img "x icon" [ref=e76]
+                  - link [ref=e77] [cursor=pointer]:
+                    - /url: mailto:?subject=Check%20out%20https://www.fracttal.com/pt-br/manutenpedia/custo-homem-hora-por-tipo-de-manutencao&utm_medium=social&utm_source=email%20&body=Check%20out%20https://www.fracttal.com/pt-br/manutenpedia/custo-homem-hora-por-tipo-de-manutencao&utm_medium=social&utm_source=email
+                    - img "email icon" [ref=e78]
+            - generic [ref=e79]:
+              - img "Conheça o custo de homem-hora por tipo de manutenção (CHPM)" [ref=e81]
+              - generic [ref=e82]:
+                - img "Ramón Toro" [ref=e83]
+                - paragraph [ref=e84]: Ramón Toro
+                - paragraph [ref=e85]: 19/01/2024
+            - generic [ref=e86]:
+              - 'group "Reproduzir áudio do post de blog: ”Ouvir a versão de áudio”" [ref=e90]':
+                - button "Reproduzir" [ref=e92] [cursor=pointer]:
+                  - generic "Carregando"
+                - generic [ref=e96]: ”Ouvir a versão de áudio”
+                - img "Áudio gerado por IA" [ref=e97]
+                - generic [ref=e100]: 7:01
+              - generic [ref=e101]:
+                - paragraph [ref=e102]: O custo por homem-hora por tipo de manutenção (CHPM) é uma métrica financeira usada para avaliar os custos totais de mão de obra associados à realização de diferentes tipos de atividades de manutenção em um determinado período de tempo. É calculado dividindo o custo de mão de obra (incluindo salários, benefícios, etc.) registrado por um tipo específico de manutenção pelo número total de horas trabalhadas nesse tipo de manutenção.
+                - heading "O que é o CHPM?" [level=2] [ref=e103]
+                - paragraph [ref=e104]:
+                  - generic [ref=e105]:
+                    - text: Segundo a
+                    - link "SMRP (Society for Maintenance & Reliability Professionals)" [ref=e106] [cursor=pointer]:
+                      - /url: https://smrp.org/
+                    - text: ", os custos com mão de obra podem ultrapassar 40% do orçamento anual de manutenção."
+                  - text: Este custo por hora pode variar dependendo de vários fatores, incluindo a complexidade do trabalho, o nível de habilidade e experiência necessários, as ferramentas e equipamentos necessários e a região ou país onde o trabalho é realizado. Diferentes tipos de manutenção (como
+                  - link "manutenção preventiva" [ref=e107] [cursor=pointer]:
+                    - /url: /pt-br/guias-manutencao/o-que-e-manutencao-preventiva
+                  - text: ","
+                  - link "corretiva" [ref=e108] [cursor=pointer]:
+                    - /url: /pt-br/o-que-e-manutencao-corretiva
+                  - text: ou preditiva) podem ter diferentes métricas de custo por hora devido às diferenças na natureza do trabalho envolvido.
+                - paragraph [ref=e109]: No entanto, muitas empresas começaram a contar com equipe mais especializada para realizar tarefas específicas de manutenção, organizando os colaboradores de manutenção por área técnica com base em suas habilidades e conhecimentos técnicos, ou seja, em equipes especializadas em manutenção elétrica, mecânica, automação, instalações em geral, entre outras.
+                - paragraph [ref=e110]: Esta abordagem permite que as empresas acompanhem mais detalhadamente os custos por hora de trabalho para cada atividade realizada, entendendo diretamente em qual área técnica estão investindo mais dinheiro.
+                - heading [level=2] [ref=e111]:
+                  - strong [ref=e113]: Posso continuar classificando os custos da minha organização por tipo de manutenção?
+                - paragraph [ref=e114]: Sim. Na verdade, seguindo as orientações e benchmarking do modelo de manutenção de classe mundial, o valor da mão de obra para atividades corretivas (não planejadas) deve representar apenas 10% do total investido. No entanto, isso não fornece um resultado claro de onde especificamente os recursos estão sendo gastos.
+                - paragraph [ref=e115]:
+                  - img "1080x1080-janeiro-custo-hh-colaborador-ptbr-rrss" [ref=e117]
+                - heading "Na prática, como é calculado o custo das horas de trabalho por tipo de manutenção?" [level=2] [ref=e118]
+                - paragraph [ref=e120]: Para realizar este cálculo, a organização deve contar com um sistema de gestão de manutenção, ou algum outro método, que lhe permita registar detalhadamente informação sobre os membros da equipa de manutenção, como estão distribuídos segundo os seus conhecimentos técnicos e qual é o custo estimado da mão de obra de cada um.
+                - paragraph [ref=e121]: "Além disso, é necessário um sistema eficiente para gerar ordens de trabalho, que permita registar informações como: o tipo de manutenção associado à atividade a realizar, o custo total da mão de obra correspondente aos responsáveis pela execução da tarefa e a duração da ordem de trabalho desde o início até ao seu fim."
+                - paragraph [ref=e122]: "Com isso, podemos considerar que a empresa calcula os custos de homem-hora de acordo com cada área técnica:"
+                - list [ref=e123]:
+                  - listitem [ref=e124]:
+                    - generic [ref=e125]:
+                      - strong [ref=e126]: "Manutenção mecânica:"
+                      - text: Envolve a manutenção de equipamentos e sistemas mecânicos, como motores, bombas, transportadores e outras partes móveis.
+                  - listitem [ref=e127]:
+                    - generic [ref=e128]:
+                      - strong [ref=e129]: "Manutenção elétrica:"
+                      - text: Inclui a manutenção e reparação de equipamentos e sistemas elétricos, como cabos, painéis de controle, disjuntores e outros componentes elétricos.
+                  - listitem [ref=e130]:
+                    - generic [ref=e131]:
+                      - strong [ref=e132]: "Manutenção de instrumentação e controle:"
+                      - text: Esta área implica em manter e solucionar problemas nos sistemas utilizados para medir e controlar processos industriais, como sensores, válvulas de controle e controladores lógicos programáveis (PLCs).
+                  - listitem [ref=e133]:
+                    - generic [ref=e134]:
+                      - strong [ref=e135]: "Manutenção de HVAC:"
+                      - text: Envolve a manutenção dos sistemas de aquecimento, ventilação e ar condicionado para garantir um ambiente controlado e confortável dentro das instalações industriais.
+                  - listitem [ref=e136]:
+                    - generic [ref=e137]:
+                      - strong [ref=e138]: "Manutenção estrutural:"
+                      - text: Envolve a manutenção e reparação da infraestrutura física de uma instalação industrial, como edifícios, telhados e outras estruturas.
+                - paragraph [ref=e139]:
+                  - generic [ref=e140]: "A fórmula básica é:"
+                - blockquote [ref=e141]:
+                  - paragraph [ref=e142]:
+                    - generic [ref=e143]: Custo por homem-hora (CHPM) =
+                  - paragraph [ref=e145]: Custo total de mão de obra / Total de horas trabalhadas
+                - paragraph [ref=e146]: "Agora, podemos considerar que para o último trimestre o departamento de manutenção registrou um total de 930 horas de trabalhos distribuídas da seguinte forma:"
+                - heading "Custo por homem-hora por manutenção mecânica (CHPMM)" [level=4] [ref=e147]
+                - list [ref=e148]:
+                  - listitem [ref=e149]: Total de horas trabalhadas = 500
+                  - listitem [ref=e150]: Custo total de mão de obra = $25000
+                  - listitem [ref=e151]: CHMM = $25000 / 500 horas = $50 por hora
+                - heading "Custo por homem-hora por manutenção eléctrica (CHPME)" [level=4] [ref=e152]
+                - list [ref=e153]:
+                  - listitem [ref=e154]: Total de horas trabalhadas = 200
+                  - listitem [ref=e155]: Custo total de mão de obra = $18000
+                  - listitem [ref=e156]: CHMM = $18000 / 200 horas = $90 por hora
+                - heading "Custo por homem-hora por manutenção de instrumentação e controle (CHMIC)" [level=4] [ref=e157]
+                - list [ref=e158]:
+                  - listitem [ref=e159]: Total de horas trabalhadas = 50
+                  - listitem [ref=e160]: Custo total de mão de obra = $30000
+                  - listitem [ref=e161]: CHMIC = $30000 / 50 horas = $600 por hora
+                - heading "Custo por homem-hora por manutenção de HVAC (CHPMH)" [level=4] [ref=e162]
+                - list [ref=e163]:
+                  - listitem [ref=e164]: Total de horas trabalhadas = 80
+                  - listitem [ref=e165]: Custo total de mão de obra = $1000
+                  - listitem [ref=e166]: CHMH = $1000 / 80 horas = $12.5 por hora
+                - heading "Custo por homem-hora por manutenção estrutural (CHPMES)" [level=4] [ref=e167]
+                - list [ref=e168]:
+                  - listitem [ref=e169]: Total de horas trabalhadas = 100
+                  - listitem [ref=e170]: Custo total de mão de obra = $2000
+                  - listitem [ref=e171]: CHMES = $2000 / 100 horas = $20 por hora
+                - paragraph [ref=e172]:
+                  - img "1080x1080-janeiro-chpm-ptbr-blog" [ref=e174]
+                - paragraph [ref=e175]: "Analisando os resultados, podemos concluir que no último trimestre, o gasto total com mão de obra foi de $76000, dos quais:"
+                - list [ref=e176]:
+                  - listitem [ref=e177]: 39,5% foram destinados à manutenção no setor de controle;
+                  - listitem [ref=e178]: 32,9% foram destinados à manutenção mecânica;
+                  - listitem [ref=e179]: 23,7% foram destinados à manutenção elétrica;
+                  - listitem [ref=e180]: 2,6% foram destinados à manutenção estrutural;
+                  - listitem [ref=e181]: 1,3% foram destinados à manutenção AVAC-R.
+                - paragraph [ref=e182]: Por outro lado, também podemos observar que 53,7% das horas totais de manutenção foram destinadas a ações de natureza mecânica. 21,5% foram destinados a tarefas elétricas. 10,8% foram destinados à manutenção estrutural, e 8,6% e 5,4% foram destinados à manutenção de AVAC-R e de controle, respectivamente.
+                - paragraph [ref=e183]: Se compararmos em detalhes, podemos observar que o percentual de horas de manutenção na área de instrumentação e controle foi o menor de todos, porém, o gasto destinado a esta área foi o maior de todos. Isso se reflete no custo elevado de homem-hora, já que esses são serviços altamente especializados.
+                - paragraph [ref=e184]: Neste caso, com base no custo de homem-hora, a empresa pode decidir se conta com profissionais dessa área em sua equipe ou, por outro lado, terceiriza esse serviço.
+                - paragraph [ref=e185]: Em resumo, ao calcular o custo por hora para cada tipo de manutenção, as organizações podem obter uma melhor compreensão de seus gastos de manutenção e tomar decisões mais assertivas sobre a alocação de recursos, orçamentos e melhorias de eficiência.
+                - paragraph [ref=e186]: Isso também pode ser útil para comparar o desempenho com os padrões da indústria ou com o desempenho passado da organização.
+                - paragraph [ref=e187]
+                - paragraph [ref=e188]
+    - contentinfo [ref=e191]:
+      - generic [ref=e194]:
+        - generic [ref=e195]:
+          - generic [ref=e196]:
+            - paragraph [ref=e197]: Produtos
+            - link "Fracttal One" [ref=e199] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/fracttal-one
+            - link "Fracttal Sense" [ref=e201] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/fracttal-sense
+            - link "Consultar preços" [ref=e203] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/consultar-precos-fracttal
+            - link "Integrações" [ref=e205] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/integracoes
+            - link "Casos de Sucesso" [ref=e207] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/casos-de-sucesso
+            - link "Licenças educacionais" [ref=e209] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/acordos-educativos
+          - generic [ref=e210]:
+            - paragraph [ref=e211]: Recursos
+            - link "Blog" [ref=e213] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/blog-home
+            - link "Guias técnicas" [ref=e215] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/guias-manutencao
+            - link "Manutenpedia" [ref=e217] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/manutenpedia
+            - link "Calculadoras" [ref=e219] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/calculadoras-indicadores-manutencao
+          - generic [ref=e220]:
+            - paragraph [ref=e221]: Suporte
+            - link "Certifique-se no Fracttal" [ref=e223] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/certifiquese-no-fracttal-one
+            - link "Central de Ajuda" [ref=e225] [cursor=pointer]:
+              - /url: https://help.fracttal.com/hc/pt-br
+            - link "Estado do Sistema" [ref=e227] [cursor=pointer]:
+              - /url: https://status.fracttal.com/
+            - link "Fracttal API" [ref=e229] [cursor=pointer]:
+              - /url: https://api.fracttal.com
+          - generic [ref=e230]:
+            - paragraph [ref=e231]: Nossa Empresa
+            - link "Quem somos" [ref=e233] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/sobre-nos
+            - link "Time Fracttal" [ref=e235] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/equipe-fracttal
+            - link "Carreiras" [ref=e237] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/careers
+            - link "Parceiros" [ref=e239] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/parceiros
+            - link "Contato" [ref=e241] [cursor=pointer]:
+              - /url: https://www.fracttal.com/pt-br/entre-em-contato
+            - link "Área do Cliente" [ref=e243] [cursor=pointer]:
+              - /url: https://fracttalbrasil.superlogica.net/clients/areadocliente/cobranca/index
+          - generic [ref=e244]:
+            - paragraph [ref=e245]: Siga-nos
+            - generic [ref=e246]:
+              - link [ref=e248] [cursor=pointer]:
+                - /url: https://www.facebook.com/fracttalbrasil/
+                - img "Facebook" [ref=e249]
+              - link [ref=e251] [cursor=pointer]:
+                - /url: https://www.instagram.com/fracttalbrasil/
+                - img "Instagram" [ref=e252]
+              - link [ref=e254] [cursor=pointer]:
+                - /url: https://www.linkedin.com/showcase/fracttalbrasil/
+                - img "LinkedIn" [ref=e255]
+              - link [ref=e257] [cursor=pointer]:
+                - /url: https://twitter.com/fracttalbrasil
+                - img "X" [ref=e258]
+              - link [ref=e260] [cursor=pointer]:
+                - /url: https://www.youtube.com/@fracttalbrasil
+                - img "YouTube" [ref=e261]
+          - generic [ref=e262]:
+            - paragraph [ref=e263]: Baixe o App
+            - generic [ref=e264]:
+              - link [ref=e266] [cursor=pointer]:
+                - /url: https://play.google.com/store/apps/details?id=com.fracttalmobile.one
+                - img "App para Android" [ref=e267]
+              - link [ref=e269] [cursor=pointer]:
+                - /url: https://apps.apple.com/cl/app/fracttal-one-mantenimiento/id1556129140
+                - img "App para iOS" [ref=e270]
+          - generic [ref=e271]:
+            - paragraph [ref=e272]: Reconhecimento
+            - generic [ref=e273]:
+              - img "ISO 27001" [ref=e275]
+              - link [ref=e277] [cursor=pointer]:
+                - /url: https://www.fracttal.com/pt-br/fracttal-e-aws
+                - img "Fracttal - AWS Partner" [ref=e278]
+              - img "Fracttal Qualified Software" [ref=e280]
+              - img "Sello BUK" [ref=e282]
+              - img "EFY" [ref=e284]
+              - img "Great Place to Work" [ref=e286]
+              - img "SoftDoit Top 2026" [ref=e288]
+              - img "SAP Silver Partner" [ref=e290]
+              - link [ref=e292] [cursor=pointer]:
+                - /url: https://www.gartner.com/reviews/market/enterprise-asset-management-software/vendor/fracttal
+                - img "Gartner PeerInsights" [ref=e293]
+        - generic [ref=e294]:
+          - link "Termos e Condições" [ref=e295] [cursor=pointer]:
+            - /url: https://www.fracttal.com/pt-br/termos-e-condicoes
+          - link "Política de Privacidade" [ref=e296] [cursor=pointer]:
+            - /url: https://www.fracttal.com/pt-br/politica-de-privacidade
+          - link "LGPD" [ref=e297] [cursor=pointer]:
+            - /url: https://lgpd.fracttal.com.br
+          - link "AVISO LEGAL" [ref=e298] [cursor=pointer]:
+            - /url: https://www.fracttal.com/pt-br/aviso-legal
+          - link "Segurança da Informação" [ref=e299] [cursor=pointer]:
+            - /url: https://www.fracttal.com/pt-br/seguranca-da-informacao
+        - generic [ref=e301]: © 2026, Fracttal Tech S.L - Todos os Direitos Reservados.

@@ -1,0 +1,1 @@
+{"content":"Arduino-ESP32 Preferences library wraps ESP-IDF NVS: preferences.begin(namespace, readOnly), putFloat/getFloat(key, default). Max ~127 namespaces, one open at a time per Preferences object.","source":"web","provider":"websearch","confidence":"LOW","fetched_at":"2026-08-03T08:12:50.279Z","ttl":86400000,"kind":"docs"}

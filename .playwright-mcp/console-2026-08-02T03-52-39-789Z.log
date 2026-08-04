@@ -1,0 +1,12 @@
+[    5884ms] [WARNING] Calculator Error Caught: Error: Other error: "result missing name"
+    at dispatchOtherError (https://www.fracttal.com/pt-br/manutenpedia/custo-homem-hora-por-tipo-de-manutencao:5156:9)
+    at processResult (https://www.fracttal.com/pt-br/manutenpedia/custo-homem-hora-por-tipo-de-manutencao:5278:12)
+    at https://www.fracttal.com/pt-br/manutenpedia/custo-homem-hora-por-tipo-de-manutencao:5393:7
+    at Array.forEach (<anonymous>)
+    at runCalculations (https://www.fracttal.com/pt-br/manutenpedia/custo-homem-hora-por-tipo-de-manutencao:5392:42)
+    at initCalculator (https://www.fracttal.com/pt-br/manutenpedia/custo-homem-hora-por-tipo-de-manutencao:5422:3)
+    at HTMLDocument.<anonymous> (https://www.fracttal.com/pt-br/manutenpedia/custo-homem-hora-por-tipo-de-manutencao:4598:31)
+    at e (https://code.jquery.com/jquery-3.5.1.min.js:2:30005)
+    at t (https://code.jquery.com/jquery-3.5.1.min.js:2:30307) @ https://www.fracttal.com/pt-br/manutenpedia/custo-homem-hora-por-tipo-de-manutencao:5395
+[    7024ms] [LOG] ✅ Banner mostrado nuevamente tras no aceptar todas las cookies. @ :1
+[   12585ms] [ERROR] Failed to load resource: net::ERR_CERT_COMMON_NAME_INVALID @ https://appvizer.one/ariadne/v1/ariadne.js?ts=1785642766601:0

@@ -1,0 +1,1 @@
+{"content":"U8g2 supports full-buffer (fast, ~1KB RAM for 128x64) and page-buffer (slower, 128B RAM) modes for SSD1306; full buffer is recommended when RAM isn't constrained (ESP32-C3 has 400KB SRAM).","source":"web","provider":"websearch","confidence":"LOW","fetched_at":"2026-08-03T08:12:46.442Z","ttl":86400000,"kind":"web"}

@@ -1,0 +1,1 @@
+{"content":"HTU21D has both SparkFun and Adafruit Arduino libraries; Adafruit_HTU21DF depends on Adafruit_BusIO and uses delay(50) internally per read (not hold-master/clock-stretch blocking), confirmed via direct source fetch.","source":"web","provider":"websearch","confidence":"MEDIUM","fetched_at":"2026-08-03T08:12:48.377Z","ttl":86400000,"kind":"web"}

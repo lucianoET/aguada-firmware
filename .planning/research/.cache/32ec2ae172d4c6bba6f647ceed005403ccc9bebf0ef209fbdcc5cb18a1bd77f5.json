@@ -1,0 +1,1 @@
+{"content":"MPU6050 raw I2C accel-only read: WHO_AM_I reg 0x75 (expect 0x68), wake via PWR_MGMT_1 reg 0x6B=0, burst-read ACCEL_XOUT_H..ACCEL_ZOUT_L (0x3B-0x40), default +/-2g sensitivity 16384 LSB/g. No external library needed for accel-only use.","source":"web","provider":"websearch","confidence":"LOW","fetched_at":"2026-08-03T08:12:47.884Z","ttl":86400000,"kind":"web"}
