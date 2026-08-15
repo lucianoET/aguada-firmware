@@ -21,13 +21,13 @@ precisa de **5 V** — em 3V3 ele faz brownout e cala. O ATGM336H já roda em
 cd firmware/gps_tracker
 
 # ESP32-C3 SuperMini (antena externa, /dev/ttyACM0)
-/home/luc/Dev/aguada-firmware-main/.venv/bin/python -m platformio run -e esp32-c3-supermini -t upload --upload-port /dev/ttyACM0
+~/.platformio/penv/bin/pio run -e esp32-c3-supermini -t upload --upload-port /dev/ttyACM0
 
 # ESP32 DevKit clássico
-/home/luc/Dev/aguada-firmware-main/.venv/bin/python -m platformio run -e esp32-devkit -t upload
+~/.platformio/penv/bin/pio run -e esp32-devkit -t upload
 
 # Monitor serial (os dois, 115200 baud)
-/home/luc/Dev/aguada-firmware-main/.venv/bin/python -m platformio device monitor
+~/.platformio/penv/bin/pio device monitor
 ```
 
 (Substitua `pio` pelo caminho acima — o binário não está no `PATH` deste
@@ -287,3 +287,250 @@ pesquisa (`01.1-RESEARCH.md`), não um valor final. Qualquer ajuste vai em
 `build_flags` no `platformio.ini` (`-DDEFAULT_ACCEL_...=...`, etc.), **nunca**
 editando `gps_config.h` diretamente — mesma regra já em vigor para os
 tunáveis da Fase 1 acima.
+
+---
+
+## Fase 3 — Portal captive + MQTT/Home Assistant
+
+Rede entra como `WIFI_AP_STA`: o **AP fica sempre no ar** (UI de campo, sem
+depender de nada) e a **station** liga ao WiFi de casa só quando entra no
+alcance. Nenhum dos dois derruba o outro.
+
+> ⚠️ Esta é uma build em rede, portanto **`GPS_BENCH_SIM=0`** nos dois envs —
+> regra explícita do `gps_config.h`. Com o simulador ligado, posições
+> sintéticas iriam parar ao mapa do Home Assistant. Para voltar a usar o
+> simulador, criar um env dedicado sem `portal`/`telemetry`, **não** reativar
+> a flag num env que tem rede.
+
+### Módulos novos
+
+| Arquivo | Papel |
+|---------|-------|
+| `include/net_config.h` | tunáveis de rede, todos `#ifndef`-guarded — nenhuma credencial |
+| `include/gps_web.h` | página do portal, PROGMEM, single-file (o AP não tem internet) |
+| `src/net_state.h` | `NetState` — frame único, produzido só por `buildNetState()` |
+| `src/net_store.{h,cpp}` | credenciais em NVS (namespace `gpsnet`) |
+| `src/portal.{h,cpp}` | SoftAP + DNS wildcard + HTTP (`/`, `/api/state`, `/api/config`) |
+| `src/telemetry.{h,cpp}` | station + MQTT + discovery do Home Assistant |
+
+### ⚠️ Armadilha: `softAP()` retorna true e mente
+
+Bancada 2026-08-14: com o firmware a reportar `portal captive: OK`,
+`mode=3`, `ap_ip=192.168.4.1` e o SSID correto, **o AP não aparecia em
+nenhum scan** (6 rescans seguidos no host). Nada em lado nenhum acusava erro.
+
+Causa: em `WIFI_AP_STA` o driver liga **modem sleep** por causa da interface
+station. Com a station ociosa — o caso normal deste tracker, que passa a
+viagem fora de alcance — o rádio dorme entre beacons e o AP some do scan.
+
+Correção, em `portal::begin()` logo após `softAP()`:
+
+```cpp
+WiFi.setSleep(false);                      // sem isto o AP fica invisível
+WiFi.setTxPower(WIFI_POWER_19_5dBm);       // antena de PCB pequena no C3 SuperMini
+```
+
+Depois disto: `gps-tracker-a8ac05  sinal 100  canal 1  aberta`.
+
+O boot passou a imprimir `tx=` e `sleep=` justamente para que este modo de
+falha seja visível na serial em vez de só "não acho a rede no telemóvel".
+
+### ⚠️ Armadilha 2: a station arrasta o AP e ele some
+
+Segundo modo de AP invisível, **causa diferente** da anterior e só aparece
+**depois** de configurar uma rede: o ESP32 tem **um rádio só**. Cada tentativa
+de associação arrasta o SoftAP para o canal da rede alvo. Com a station a
+falhar para sempre — o estado normal de um tracker fora de alcance — o AP fica
+parado nesse canal em estado degradado e desaparece do scan.
+
+Bancada 2026-08-14: AP configurado no canal 1, `[HEALTH]` a mostrar
+`ap_ch=11`, invisível em 5 scans. Sem credencial gravada o AP funcionava — o
+bug só nasce quando existe uma rede configurada que não entra.
+
+Não há erro associado: `WiFi.getMode()` continua a incluir AP e
+`softAPSSID()` continua preenchido. **Só o canal denuncia** — daí `ap_ch=` no
+`[HEALTH]`.
+
+Correção, em três peças, todas necessárias:
+
+1. `WiFi.setAutoReconnect(false)` em `telemetry::begin()` — senão o driver
+   retenta sozinho a cada ~4 s e anula o backoff.
+2. Backoff exponencial com teto em `staTick()` (20 s → 40 → 80 → 160 → 5 min)
+   e `WiFi.disconnect(false)` antes de esperar, para largar o canal.
+3. `portal::tick()` repõe o AP no canal dele sempre que a station **não** está
+   ligada. Com a station ligada, partilhar o canal é inevitável e correto.
+
+Prioridade de projeto: **a UI de campo ganha da sincronização com casa.** O
+tracker passa a maior parte do tempo fora de alcance; o portal não pode
+depender de a rede de casa existir.
+
+No log isto vê-se assim:
+
+```
+ap_ch=11 ... sta_fails=0
+[PORTAL] AP fora do canal (ch=11) -- a repor no canal 1
+ap_ch=1  ... sta_fails=0
+```
+
+### Diagnosticar falha de associação (`sta=down`)
+
+`WiFi.status()` colapsa todos os modos de falha em `6` (DISCONNECTED). O dado
+útil é o **reason code** do driver, impresso em `[STA] desligado reason=N`:
+
+| reason | Significado | Onde olhar |
+|--------|-------------|------------|
+| 2 | `AUTH_EXPIRE` — autenticação expirou | senha errada **ou** roteador a recusar o cliente (filtro de MAC, limite de clientes). Indistinguíveis pelo lado do ESP |
+| 15 | `4WAY_HANDSHAKE_TIMEOUT` | senha errada |
+| 39 | `TIMEOUT` — a troca de frames não terminou a tempo | observado a alternar com o 2 na mesma rede; roteador lento a responder, canal congestionado, ou o cliente a ser ignorado |
+| 201 | `NO_AP_FOUND` | fora de alcance, ou rede só a 5 GHz (o C3 não vê 5 GHz) |
+| 205 | `CONNECTION_FAIL` | genérico |
+
+**Escada de bisect usada em 2026-08-14** (todas descartaram o firmware):
+
+1. Comprimento das credenciais no boot (`ssid N chars`, `senha N chars`) —
+   apanha truncagem no POST/NVS sem imprimir a senha na serial.
+2. Subir o SoftAP no mesmo canal da rede de casa — testa conflito de canal
+   (o C3 tem um rádio só).
+3. Injetar a credencial por `build_flags`, sem passar pelo portal/NVS —
+   separa "portal gravou errado" de "associação falha".
+4. `WIFI_STA` puro, sem SoftAP — testa se o AP ativo é que atrapalha.
+5. `WiFi.scanNetworks()` na própria placa — RSSI e `encryptionType` **vistos
+   pelo C3**. Um beacon forte no PC não prova margem de RF na placa.
+
+Resultado naquele dia: rede vista a **−54 dBm**, `enc=3` (WPA2-PSK), canal 11,
+credencial correta injetada, sem SoftAP — e mesmo assim `reason=2` em todas as
+tentativas. Com sinal forte, cifra certa e senha certa, sobra o lado do
+roteador.
+
+> O `sta_mac=` no boot existe para isto: é o endereço a colar num roteador com
+> filtro de MAC, ou a procurar na lista de clientes.
+
+**Teste que isola de vez:** apontar o tracker para um **hotspot de telemóvel**.
+Se associa no hotspot e não no roteador de casa, o firmware está correto e o
+problema é configuração do roteador.
+
+**Executado em 2026-08-14 — veredito: firmware correto.**
+
+```
+wifi de casa: "luciano.ferreira's iPhone" (ssid 27 chars) senha=definida (8 chars)
+[STA] ligado ch=1 rssi=-31 ip=172.20.10.2
+sta=up ip=172.20.10.2 sta_fails=0
+```
+
+O `172.20.10.x` é a sub-rede típica de hotspot de iPhone. Associação limpa à
+primeira, sem retentativas. A mesma placa, o mesmo binário e o mesmo caminho
+portal→NVS→`WiFi.begin()` que falham contra `luciano2ghz` funcionam aqui —
+logo a recusa é do roteador de casa (filtro de MAC `8C:D0:B2:A8:AC:05`,
+limite de clientes, ou bloqueio temporário), não do firmware.
+
+Nota: o SSID tem apóstrofo tipográfico (`’`, U+2019) e espaços, e sobreviveu
+intacto ao percurso lista do scan → formulário → POST → NVS → `WiFi.begin()`
+— prova de que o escape de `/api/scan` e do `data-s` aguenta nomes reais.
+
+### Roteiro de verificação — Fase 3
+
+1. **AP sobe sem nada configurado.** Gravar numa placa virgem. O boot deve
+   imprimir `portal captive: OK ssid="gps-tracker-XXXXXX"`,
+   `radio ... tx=19.5dBm sleep=off` e `sem wifi configurado`. Nenhuma
+   tentativa de associação deve aparecer. Confirmar o SSID num scan
+   (`nmcli dev wifi rescan; nmcli dev wifi list | grep gps-tracker` — pode
+   precisar de 2–3 tentativas mesmo estando tudo certo).
+2. **Captive dispara sozinho.** Ligar o telemóvel à rede `gps-tracker-XXXXXX`
+   (aberta). A página deve abrir sozinha; se não abrir,
+   `http://192.168.4.1/`. Qualquer outro URL tem de redirecionar (302) para a
+   raiz — é isso que faz o detector do SO acusar portal.
+3. **Página viva sem fixo.** Ponto de estado laranja + "a procurar
+   satélites…" com o GPS ligado mas sem céu; vermelho + "sem dados do módulo
+   GPS" com o GPS desligado. Satélites à vista devem contar mesmo sem fixo.
+4. **Fixo.** Com céu: ponto verde, lat/lon com 6 casas, botão "Abrir no mapa"
+   ativo. Conferir a coordenada no mapa antes de confiar em qualquer outra
+   coisa.
+5. **Config persiste.** Preencher SSID + senha + broker, Guardar. Deve
+   responder "Guardado. A ligar à rede…" e `[PORTAL] config guardada` na
+   serial. Reiniciar a placa: os campos voltam preenchidos e as senhas
+   aparecem como `••••••• (guardada)` — a página nunca recebe a senha de volta.
+6. **Station liga.** `[HEALTH]` passa a `sta=up ip=192.168.x.y`. Sem alcance,
+   fica `sta=down` e a tentativa repete a cada `DEFAULT_STA_RETRY_MS` — **o
+   GPS não pode perder bytes durante isso** (conferir `bad=` no `[HEALTH]`
+   estável).
+7. **MQTT + HAOS.** `[HEALTH]` mostra `mqtt=up` e `pub=` a subir. No Home
+   Assistant deve aparecer o device *GPS Tracker XXXXXX* com 7 sensores e a
+   entidade **Posição** no mapa, sem escrever YAML nenhum.
+8. **Indisponibilidade.** Desligar a placa. O HA tem de marcar as entidades
+   como indisponíveis em segundos (LWT retido em `aguada/gps/<id>/status`),
+   **não** congelar no último fixo.
+9. **AP sobrevive à station.** Com `sta=up`, reconferir que a página do AP
+   continua a responder — é o requisito que obrigou ao `WIFI_AP_STA`.
+
+### Campos novos do `[HEALTH]`
+
+| Campo | Significado |
+|-------|-------------|
+| `ap=` | SSID do AP em uso |
+| `portal_polls=` | pedidos a `/api/state` servidos — não-zero prova que um telemóvel chegou lá |
+| `sta=` | `up`/`down` — station no WiFi de casa |
+| `ip=` | IP da station, `-` quando fora de alcance |
+| `mqtt=` | `up`/`down` — sessão com o broker |
+| `pub=` | publicações de estado desde o boot |
+
+### Tópicos MQTT
+
+| Tópico | Conteúdo |
+|--------|----------|
+| `aguada/gps/<id>/state` | JSON do estado (lat/lon/alt/speed/heading/sats/hdop/temp/hum) |
+| `aguada/gps/<id>/status` | `online` / `offline` (LWT retido) |
+| `homeassistant/sensor/gps_<id>_*/config` | discovery dos 7 sensores (retido) |
+| `homeassistant/device_tracker/gps_<id>_pos/config` | discovery da posição no mapa (retido) |
+
+`<id>` são os 3 últimos bytes do MAC da station — estável entre regravações,
+portanto as entidades do HA sobrevivem a um reflash.
+
+### Custo em memória (medido, 2026-08-14)
+
+| | Antes da Fase 3 | Depois |
+|---|---|---|
+| RAM | 5,1% (16 824 B) | 13,2% (43 412 B) |
+| Flash | 26,0% (340 436 B) | 67,3% (881 920 B) |
+
+### Registro de bancada — Fase 3
+
+| Item | Valor |
+|------|-------|
+| Passos 1–9 acima | _(preencher: OK / falha)_ |
+| `bad=` estável durante retry de associação (passo 6) | _(preencher — se subir, o retry está a roubar tempo do UART)_ |
+| Precisão do mapa no HA vs. coordenada real (passo 7) | _(preencher — `gps_accuracy` é HDOP×5 m, aproximação, não levantamento)_ |
+| `DEFAULT_MQTT_PUBLISH_MS` | 10000 — _(preencher se 10 s se mostrar denso/esparso demais em viagem)_ |
+| `DEFAULT_STA_RETRY_MS` | 20000 — _(preencher)_ |
+
+### Seleção de SSID por scan (`/api/scan`)
+
+O formulário tem botão **Procurar** ao lado do campo de rede: lista as redes
+2.4 GHz com barras de sinal, cadeado e canal; tocar numa preenche o SSID e
+salta para o campo da senha.
+
+**Assíncrono por obrigação.** `WiFi.scanNetworks()` síncrono bloqueia ~3 s —
+custaria bytes do UART do GPS (orçamento ~266 ms). O endpoint usa
+`scanNetworks(true)` e devolve `{"status":"scanning"}` até haver resultado;
+a página faz polling de 1 s.
+
+**A ligação pisca durante o scan.** A varredura passa por todos os canais e
+tira o rádio do canal do AP por alguns segundos — o telemóvel ligado ao portal
+pode perder pedidos. Por isso: o JS trata falha de rede como "continuar a
+tentar" e só desiste ao fim de 15 tentativas; e `portal::tick()` **suspende a
+reposição do AP enquanto `scanBusy`**, senão repor o canal a meio abortava a
+varredura e devolvia lista vazia.
+
+Por isso também o scan é **sob demanda** (o utilizador carrega no botão),
+nunca periódico, com cache de `DEFAULT_SCAN_MAX_AGE_MS` (60 s).
+
+Resultados: dedup por SSID mantendo o mais forte (o scan vem ordenado por
+RSSI), redes ocultas descartadas (não dá para as escolher), aspas e barras
+escapadas, teto de `DEFAULT_SCAN_MAX_RESULTS` (20) para limitar o JSON.
+
+> Armadilha apanhada em revisão: ao disparar um scan novo é preciso zerar
+> `scanDoneMs`. Sem isso o resultado chega já "velho" pela marca anterior e o
+> endpoint entra em ciclo de rescan infinito.
+
+**Verificar:** botão Procurar → lista aparece em 2–5 s → tocar numa rede
+preenche o SSID → Guardar. Na serial, `portal_polls=` continua a subir e
+`bad=` no `[HEALTH]` tem de ficar estável durante a varredura.

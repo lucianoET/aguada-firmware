@@ -21,8 +21,8 @@ LED onboard: **GPIO8** (active-high nesta placa; `LED_ACTIVE_LOW=0`).
 
 | Barramento | Pino C3 SuperMini | Liga a (todos os módulos) |
 | --- | --- | --- |
-| SDA | **GPIO6** | SDA do OLED, MPU6050, HMC5883, HTU21 |
-| SCL | **GPIO7** | SCL do OLED, MPU6050, HMC5883, HTU21 |
+| SDA | **GPIO3** | SDA do OLED, MPU6050, HMC5883, HTU21 |
+| SCL | **GPIO4** | SCL do OLED, MPU6050, HMC5883, HTU21 |
 | VCC | **3V3** | VCC de todos (NÃO usar 5V — lógica I2C é 3.3 V) |
 | GND | **GND** | GND de todos |
 
@@ -52,16 +52,18 @@ LED onboard: **GPIO8** (active-high nesta placa; `LED_ACTIVE_LOW=0`).
 | 0 | ADC bateria | ADC1_CH0 + divisor (Fase 5) |
 | 1 | TFT RST (não usado) | ST7735 1.8" SPI — **livre**: OLED I2C (Fase 01.1) substituiu o TFT SPI, GPIO1 disponível |
 | 2 | TFT DC (não usado) | strapping — **livre** pelo mesmo motivo acima |
-| 3 | TFT MOSI/SDA (não usado) | **livre** pelo mesmo motivo acima |
-| 4 | TFT SCK (não usado) | **livre** pelo mesmo motivo acima |
+| 3 | I2C SDA | **MPU6050** (0x68) + **HTU21D** (0x40) no mesmo barramento |
+| 4 | I2C SCL | ver nota de GPIO6/7 abaixo |
 | 5 | TFT CS (não usado) | **livre** pelo mesmo motivo acima |
-| 6 | I2C SDA | **MPU6050** (0x68) + **HTU21D** (0x40) no mesmo barramento |
-| 7 | I2C SCL | convenção do repo (AirQ usa 6/7) |
+| 6 | ❌ **não usar** | preso em LOW nesta placa — trava o boot |
+| 7 | ❌ **não usar** | preso em LOW nesta placa — trava o boot |
 | 8 | LED onboard | TFT BL → 3V3 direto (sem dimmer) |
 | 9 | botão (boot) | strapping — só entrada c/ pull-up |
 | 10 | DS18B20 (HW-07, indefinido) | 1-Wire, pull-up 4k7 |
 | 20 | GPS RX (← TX módulo) | ocupado |
 | 21 | GPS TX | ocupado |
+
+> ⚠️ **GPIO6/7 estão mortos nesta placa** (bancada 2026-08-14). A convenção do repo é SDA=6/SCL=7 (igual ao node AirQ) e o default em `gps_config.h` continua assim, mas o env `esp32-c3-supermini` sobrescreve para **3/4** via `build_flags`. Sintoma se voltar para 6/7: o boot para em `[I2C] scan sda=6 scl=7` e nunca chega ao `[HEALTH]` — `Wire.endTransmission()` bloqueia para sempre em 0x08 com o barramento preso em LOW, e `Wire.setTimeOut()` não segura (testado, o hang é abaixo da camada Wire). Numa placa nova, testar 6/7 antes de assumir 3/4.
 
 > ⚠️ **C3 fica 100% ocupado** com esse conjunto — e **HW-04 (saída NMEA 0183 p/ radar) NÃO cabe** (sem UART/pino sobrando). Conjunto completo + radar = voltar ao ESP32 DevKit clássico (escolha original, seção abaixo) quando houver placa funcional.
 

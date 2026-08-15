@@ -34,14 +34,20 @@ public:
     bool receiving() const;
 
     // Fase 01.1 (D-03): total satellites in view, from GSV sentence field 3
-    // ("total satellites in view"), covering all three talker IDs the two
-    // supported modules can emit (u-blox NEO-6M: GPGSV; ATGM336H GPS+BeiDou:
-    // GNGSV, possibly GLGSV). Returns the largest value among the talkers
-    // whose GSV data is still fresh (age < DEFAULT_GPS_FRESH_MS), or 0 when
-    // none is fresh. This is the only accessor in the firmware authorized to
-    // read GSV data -- gps_reader remains the sole owner of the TinyGPSPlus
-    // parser (see the class-level comment above); poll()'s Fix contract and
-    // every other accessor are unaffected.
+    // ("total satellites in view"), covering every talker ID the supported
+    // modules emit (u-blox NEO-6M: GPGSV; multi-GNSS AT6558/ATGM336H-class:
+    // GNGSV aggregated, or GPGSV/GLGSV/BDGSV per constellation).
+    //
+    // A receiver reports its constellations one of two ways, and mixing them
+    // up either double-counts or undercounts: GNGSV already carries the
+    // combined total, while GPGSV/GLGSV/BDGSV each carry only their own. So
+    // an aggregated GNGSV wins outright when fresh, and only in its absence
+    // are the per-constellation talkers summed. Returns 0 when none is fresh.
+    //
+    // This is the only accessor in the firmware authorized to read GSV data
+    // -- gps_reader remains the sole owner of the TinyGPSPlus parser (see the
+    // class-level comment above); poll()'s Fix contract and every other
+    // accessor are unaffected.
     uint8_t satsInView() const;
 
     void setRawEcho(bool on) { rawEcho_ = on; }
@@ -56,6 +62,7 @@ private:
     // and satsInView() above is logically read-only (const).
     mutable TinyGPSCustom gpgsvSatsInView_;
     mutable TinyGPSCustom glgsvSatsInView_;
+    mutable TinyGPSCustom bdgsvSatsInView_;
     mutable TinyGPSCustom gngsvSatsInView_;
 
     bool     rawEcho_ = true;

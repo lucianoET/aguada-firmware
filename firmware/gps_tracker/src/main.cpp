@@ -9,6 +9,7 @@
 
 #include <Arduino.h>
 #include <math.h>
+#include <string.h>
 #include "gps_config.h"
 #include "gps_types.h"
 #include "gps_reader.h"
@@ -19,6 +20,11 @@
 #include "mag_sensor.h"
 #include "env_sensor.h"
 #include "display.h"
+#include "net_config.h"
+#include "net_state.h"
+#include "net_store.h"
+#include "portal.h"
+#include "telemetry.h"
 
 #ifndef LED_ACTIVE_LOW
 #define LED_ACTIVE_LOW 0
@@ -365,6 +371,32 @@ void setup() {
 
     bool dispOk = display::begin();
     Serial.printf("[gps_tracker] OLED display: %s addr=0x%02X\n", dispOk ? "OK" : "not found", display::addr());
+
+    // Network comes up last: the AP + DNS + HTTP server and the WiFi stack
+    // all allocate, and doing that after the I2C probes above keeps the boot
+    // ordering of Fase 01.1 (GPS UART draining first, then peripherals)
+    // untouched. portal::begin() is what sets WIFI_AP_STA -- telemetry never
+    // changes the mode, so the field AP survives every station transition.
+    bool portalOk = portal::begin();
+    Serial.printf("[gps_tracker] portal captive: %s ssid=\"%s\" http://192.168.4.1/\n",
+                  portalOk ? "OK" : "FALHOU", portal::apSsid());
+
+    telemetry::begin(portal::creds());
+    if (net_store::haveWifi(portal::creds())) {
+        // Comprimentos, nunca o conteúdo: é o suficiente para apanhar um
+        // campo truncado ou com espaço a mais vindo do formulário, sem
+        // imprimir a senha na serial. Se o número não bater com o que foi
+        // digitado, o bug é no POST/NVS, não na credencial.
+        Serial.printf("[gps_tracker] wifi de casa: \"%s\" (ssid %u chars) senha=%s (%u chars)"
+                      " broker=%s:%u user=%s\n",
+                      portal::creds().wifi_ssid, (unsigned)strlen(portal::creds().wifi_ssid),
+                      portal::creds().wifi_pass[0] ? "definida" : "VAZIA",
+                      (unsigned)strlen(portal::creds().wifi_pass),
+                      portal::creds().mqtt_host, (unsigned)portal::creds().mqtt_port,
+                      portal::creds().mqtt_user[0] ? portal::creds().mqtt_user : "(anon)");
+    } else {
+        Serial.println("[gps_tracker] sem wifi configurado -- configurar em http://192.168.4.1/");
+    }
 }
 
 // Speed-unit conversion (D-04). Both functions branch only on the
@@ -424,6 +456,48 @@ static DisplayState buildDisplayState() {
     s.accel_online = i2c_bus::online(I2cModule::ACCEL);
     s.mag_online   = i2c_bus::online(I2cModule::MAG);
     s.env_online   = i2c_bus::online(I2cModule::ENV);
+
+    return s;
+}
+
+// Network sibling of buildDisplayState(): the sole producer of NetState, so
+// portal and telemetry stay as decoupled from the drivers as display is.
+// Uses the same freshness window, for the same reason -- a stale fix must
+// stop being published to HA and stop showing as a position on the captive
+// page, rather than pinning the tracker to where it last had sky.
+static NetState buildNetState() {
+    NetState s{};
+
+    bool haveFreshFix = everAccepted && (millis() - lastAcceptedAtMs) < DEFAULT_GPS_FRESH_MS;
+
+    s.have_fix     = haveFreshFix;
+    s.lat          = lastFix.lat;
+    s.lon          = lastFix.lon;
+    s.alt_m        = lastFix.alt_m;
+    s.speed_kmh    = lastFix.speed_kmh;
+    s.course_deg   = lastFix.course_deg;
+    s.hdop         = lastFix.hdop;
+    s.sats_used    = lastFix.sats;
+    s.sats_in_view = gpsReader.satsInView();
+    s.utc_unix     = lastFix.utc_unix;
+
+    bool fromCompass = false;
+    s.heading_deg = mag_sensor::arbitratedHeading(lastFix.speed_kmh, lastFix.course_deg,
+                                                   haveFreshFix, &fromCompass);
+    s.heading_from_compass = fromCompass;
+
+    EnvReading env = env_sensor::last();
+    s.temp_c    = env.temp_c;
+    s.hum_pct   = env.hum_pct;
+    s.env_valid = env.valid;
+
+    s.accel_g        = accel_sensor::magnitudeG();
+    s.cadence_moving = (cadence.state() == CadenceState::MOVING);
+
+    s.receiving_nmea = gpsReader.receiving();
+    s.uptime_s       = millis() / 1000;
+    s.accepted_fixes = gateCounters[static_cast<uint8_t>(GateResult::ACCEPT)];
+    s.emitted_fixes  = emitCount;
 
     return s;
 }
@@ -673,6 +747,19 @@ void loop() {
     // before the LED/[HEALTH] block -- the GPS pipeline never waits on I2C.
     i2cRecoverTick();
 
+    // Network last, for the same reason I2C runs after the GPS pass: neither
+    // portal nor telemetry may delay the UART drain. Both self-throttle and
+    // return immediately when there is nothing to do, and neither ever waits
+    // on an association or a broker socket (see telemetry.h).
+    {
+        NetState net = buildNetState();
+        portal::tick(net);
+        if (portal::configDirty()) {
+            telemetry::reload(portal::creds());
+        }
+        telemetry::tick(net);
+    }
+
     if (lastResult == GateResult::ACCEPT) {
         ledWrite(true);
     } else if (gpsReader.receiving()) {
@@ -700,7 +787,8 @@ void loop() {
             " disp=%s accel=%s mag=%s env=%s i2c_drops=%lu"
             " accel_g=%.2f accel_wakes=%lu"
             " hdg=%.0f hdg_src=%s mag_chip=%s temp=%.1fC hum=%.0f%%"
-            " sats_view=%u disp_addr=0x%02X\n",
+            " sats_view=%u disp_addr=0x%02X"
+            " ap=%s ap_ch=%u portal_polls=%lu sta=%s ip=%s sta_fails=%lu mqtt=%s pub=%lu\n",
             (unsigned long)gpsReader.bytesRead(),
             (unsigned long)gpsReader.passedChecksum(),
             (unsigned long)gpsReader.failedChecksum(),
@@ -728,7 +816,12 @@ void loop() {
             (unsigned long)accelWakeCount,
             hdgDeg, hdgFromCompass ? "mag" : "gps", mag_sensor::chipName(),
             envReading.temp_c, envReading.hum_pct,
-            gpsReader.satsInView(), display::addr());
+            gpsReader.satsInView(), display::addr(),
+            portal::apSsid(), (unsigned)portal::apChannel(), (unsigned long)portal::polls(),
+            telemetry::wifiConnected() ? "up" : "down", telemetry::staIp(),
+            (unsigned long)telemetry::staFailCount(),
+            telemetry::mqttConnected() ? "up" : "down",
+            (unsigned long)telemetry::published());
 
         if (mag_sensor::calActive()) {
             float xMin, xMax, yMin, yMax;

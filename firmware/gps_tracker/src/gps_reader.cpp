@@ -20,14 +20,18 @@ static int32_t daysFromCivil(int y, int m, int d) {
     return era * 146097 + static_cast<int32_t>(doe) - 719468;
 }
 
-// Registers the three GSV field-3 ("total satellites in view") custom
-// elements against gps_ -- the only place in the firmware allowed to
-// instantiate TinyGPSCustom (see gps_reader.h's class-level ownership
-// comment). GPGSV covers u-blox NEO-6M; GNGSV/GLGSV cover ATGM336H's
-// GPS+BeiDou (and, on some firmware, GLONASS) output.
+// Registers the GSV field-3 ("total satellites in view") custom elements
+// against gps_ -- the only place in the firmware allowed to instantiate
+// TinyGPSCustom (see gps_reader.h's class-level ownership comment). GPGSV
+// covers u-blox NEO-6M; GNGSV is the aggregated multi-GNSS form; GLGSV
+// (GLONASS) and BDGSV (BeiDou) are the per-constellation forms. BDGSV is
+// not hypothetical: the GY-GPS6MV2 boards on this bench carry a remarked
+// AT6558-class chip, not a real NEO-6M, and emit GPGSV + BDGSV with no
+// aggregated GNGSV at all -- without it every BeiDou satellite is invisible.
 GpsReader::GpsReader()
     : gpgsvSatsInView_(gps_, "GPGSV", 3),
       glgsvSatsInView_(gps_, "GLGSV", 3),
+      bdgsvSatsInView_(gps_, "BDGSV", 3),
       gngsvSatsInView_(gps_, "GNGSV", 3) {
 }
 
@@ -48,22 +52,31 @@ bool GpsReader::receiving() const {
 }
 
 uint8_t GpsReader::satsInView() const {
-    uint8_t best = 0;
+    // GNGSV is already the combined multi-GNSS total, so when it is fresh it
+    // is the answer -- adding the per-constellation talkers on top of it
+    // would count the same satellites twice.
+    if (gngsvSatsInView_.age() < DEFAULT_GPS_FRESH_MS) {
+        return static_cast<uint8_t>(atoi(gngsvSatsInView_.value()));
+    }
 
+    // No aggregate: each talker reports only its own constellation, so the
+    // total is their sum. Taking the max here instead would silently drop
+    // every constellation but the largest.
+    uint16_t total = 0;
     if (gpgsvSatsInView_.age() < DEFAULT_GPS_FRESH_MS) {
-        uint8_t v = static_cast<uint8_t>(atoi(gpgsvSatsInView_.value()));
-        if (v > best) best = v;
+        total += static_cast<uint16_t>(atoi(gpgsvSatsInView_.value()));
     }
     if (glgsvSatsInView_.age() < DEFAULT_GPS_FRESH_MS) {
-        uint8_t v = static_cast<uint8_t>(atoi(glgsvSatsInView_.value()));
-        if (v > best) best = v;
+        total += static_cast<uint16_t>(atoi(glgsvSatsInView_.value()));
     }
-    if (gngsvSatsInView_.age() < DEFAULT_GPS_FRESH_MS) {
-        uint8_t v = static_cast<uint8_t>(atoi(gngsvSatsInView_.value()));
-        if (v > best) best = v;
+    if (bdgsvSatsInView_.age() < DEFAULT_GPS_FRESH_MS) {
+        total += static_cast<uint16_t>(atoi(bdgsvSatsInView_.value()));
     }
 
-    return best;
+    // Accumulate in uint16_t and clamp: three constellations in view can
+    // plausibly exceed 255 only under a garbled field, but the return type
+    // must not wrap on one.
+    return total > 255 ? 255 : static_cast<uint8_t>(total);
 }
 
 bool GpsReader::poll(Fix &out) {
@@ -102,13 +115,28 @@ bool GpsReader::poll(Fix &out) {
     out.age_ms      = gps_.location.age();
     out.mono_ms     = millis();
 
-    if (gps_.date.isValid() && gps_.time.isValid() && gps_.date.year() >= DEFAULT_GPS_MIN_UTC_YEAR) {
-        out.utc_unix = static_cast<uint32_t>(daysFromCivil(gps_.date.year(), gps_.date.month(), gps_.date.day())) * 86400UL
-                     + static_cast<uint32_t>(gps_.time.hour()) * 3600UL
-                     + static_cast<uint32_t>(gps_.time.minute()) * 60UL
-                     + static_cast<uint32_t>(gps_.time.second());
-    } else {
-        out.utc_unix = 0;
+    // GPS week rollover: receivers with pre-2016 firmware wrap the 10-bit
+    // week number every 1024 weeks, so the time-of-day arrives correct but
+    // the date lands 7168 days in the past (bench, ATGM336H: 2026-08-14
+    // reported as 2006-12-29). Adding one epoch back and re-testing the
+    // DEFAULT_GPS_MIN_UTC_YEAR floor recovers the real date without ever
+    // promoting a pre-lock date: TinyGPSPlus's year-2000 default lands at
+    // 2019 after the shift and is still rejected. One epoch carries this to
+    // ~2045; the floor is what makes a second one a code change, not a
+    // silent wrong timestamp.
+    out.utc_unix = 0;
+    if (gps_.date.isValid() && gps_.time.isValid()) {
+        const int32_t minDays = daysFromCivil(DEFAULT_GPS_MIN_UTC_YEAR, 1, 1);
+        int32_t days = daysFromCivil(gps_.date.year(), gps_.date.month(), gps_.date.day());
+        if (days < minDays) {
+            days += GPS_ROLLOVER_DAYS;
+        }
+        if (days >= minDays) {
+            out.utc_unix = static_cast<uint32_t>(days) * 86400UL
+                         + static_cast<uint32_t>(gps_.time.hour()) * 3600UL
+                         + static_cast<uint32_t>(gps_.time.minute()) * 60UL
+                         + static_cast<uint32_t>(gps_.time.second());
+        }
     }
 
     return true;

@@ -41,10 +41,10 @@ Não há DHCP nem configuração em runtime. Para alterar qualquer um desses val
 
 ```bash
 # build
-/home/luc/Dev/aguada-firmware-main/.venv/bin/pio run -e node-cav-eth
+~/.platformio/penv/bin/pio run -e node-cav-eth
 
 # gravar (Nano usa bootloader antigo, 57600 baud)
-/home/luc/Dev/aguada-firmware-main/.venv/bin/pio run -e node-cav-eth -t upload --upload-port /dev/ttyUSB0
+~/.platformio/penv/bin/pio run -e node-cav-eth -t upload --upload-port /dev/ttyUSB0
 
 # monitor serial
 pio device monitor -b 9600

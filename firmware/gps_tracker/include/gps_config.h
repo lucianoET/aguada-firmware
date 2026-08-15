@@ -20,6 +20,10 @@
 #define DEFAULT_GPS_MIN_UTC_YEAR 2024   // reject pre-lock default GPS dates when deriving utc_unix
 #endif
 
+#ifndef GPS_ROLLOVER_DAYS
+#define GPS_ROLLOVER_DAYS 7168   // 1024 semanas — um epoch de week number (gps_reader.cpp)
+#endif
+
 #ifndef DEFAULT_GPS_HEALTH_PERIOD_MS
 #define DEFAULT_GPS_HEALTH_PERIOD_MS 5000   // [HEALTH] line print period
 #endif

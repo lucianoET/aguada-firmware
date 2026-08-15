@@ -66,7 +66,7 @@ docs/superpowers/ → design specs (e.g. RFID captive test)
 
 ## Build & Flash (PlatformIO)
 
-`pio` is NOT on PATH on this machine — use the venv binary `/home/luc/Dev/aguada-firmware-main/.venv/bin/pio` (or `.venv/bin/python -m platformio`). Commands below assume `pio` resolves to that.
+`pio` is NOT on PATH on this machine — use the global PlatformIO binary `~/.platformio/penv/bin/pio`. Commands below assume `pio` resolves to that.
 
 ```bash
 # Node — ultrasonic (ESP32-C3 SuperMini)
