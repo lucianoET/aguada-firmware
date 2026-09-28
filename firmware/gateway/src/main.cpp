@@ -267,13 +267,14 @@ static void cmd_config(uint16_t node_id, const JsonDocument &doc) {
 
     // Encode vbat config in spare fields (safe for CMD_CONFIG direction):
     //   sensor_id → vbat_pin   (0 = unchanged / disabled)
-    //   reserved  → vbat_enabled (0=false, 1=true)
+    //   reserved  → vbat_enabled (0=unchanged, 1=false, 2=true)
     //   distance_cm low byte  → vbat_div     (0 = unchanged)
     //   distance_cm high byte → num_sensors  (only if FLAG_CFG_NUM_SENSORS is set)
     if (doc["vbat_pin"].is<uint8_t>())
         pkt.sensor_id = doc["vbat_pin"].as<uint8_t>();
+    // reserved: 0=unchanged, 1=disable, 2=enable (0 must not clear vbat on nodes)
     if (doc["vbat_enabled"].is<bool>() || doc["vbat_enabled"].is<int>())
-        pkt.reserved  = doc["vbat_enabled"].as<bool>() ? 1 : 0;
+        pkt.reserved  = doc["vbat_enabled"].as<bool>() ? 2 : 1;
     uint8_t cfg_vbat_div = 0;
     if (doc["vbat_div"].is<uint8_t>())
         cfg_vbat_div = doc["vbat_div"].as<uint8_t>();

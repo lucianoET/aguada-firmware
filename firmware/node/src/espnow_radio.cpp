@@ -12,7 +12,7 @@ static uint8_t broadcast_mac[6] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 static recv_callback_t s_recv_cb = nullptr;
 static send_done_callback_t s_send_done_cb = nullptr;
 
-static void on_recv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+static void on_recv(const esp_now_recv_info_t *info, const uint8_t *data, int data_len) {
     if (data_len != sizeof(espnow_packet_t)) return;
 
     espnow_packet_t pkt;
@@ -25,11 +25,11 @@ static void on_recv(const uint8_t *mac_addr, const uint8_t *data, int data_len) 
         return;
     }
 
-    // IDF 4.x API: RSSI not available in ESP-NOW callback — keep value from packet
-    if (s_recv_cb) s_recv_cb(&pkt, mac_addr);
+    pkt.rssi = (int8_t)info->rx_ctrl->rssi;
+    if (s_recv_cb) s_recv_cb(&pkt, info->src_addr);
 }
 
-static void on_send(const uint8_t *mac_addr, esp_now_send_status_t status) {
+static void on_send(const wifi_tx_info_t *info, esp_now_send_status_t status) {
     if (s_send_done_cb) s_send_done_cb(status == ESP_NOW_SEND_SUCCESS);
 }
 

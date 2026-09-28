@@ -452,6 +452,8 @@ static void send_packet(uint8_t type, uint8_t sensor_id, uint16_t distance_cm, u
 
     if (pkt.vbat != -1 && pkt.vbat < VBAT_LOW_THRESHOLD)
         pkt.flags |= FLAG_LOW_BATTERY;
+    if (distance_cm == DISTANCE_ERROR)
+        pkt.flags |= FLAG_SENSOR_ERROR;
 
     espnow_send(&pkt);
 
@@ -510,12 +512,13 @@ static void on_recv(const espnow_packet_t *pkt, const uint8_t *src_mac) {
             ESP_LOGI(TAG, "CMD_CONFIG received, scheduling save...");
             // Gateway encodes vbat config in spare fields:
             //   pkt->sensor_id  → vbat_pin     (0 = don't update)
-            //   pkt->reserved   → vbat_enabled  (0=false, 1=true)
+            //   pkt->reserved   → vbat_enabled  (0=unchanged, 1=false, 2=true)
             //   pkt->distance_cm low byte  → vbat_div    (0 = don't update)
             //   pkt->distance_cm high byte → num_sensors (0,1,2) when FLAG_CFG_NUM_SENSORS is set
             if (pkt->sensor_id > 0)
                 g_cfg.vbat_pin = pkt->sensor_id;
-            g_cfg.vbat_enabled = (pkt->reserved != 0);
+            if (pkt->reserved != 0)
+                g_cfg.vbat_enabled = (pkt->reserved == 2);
             uint8_t cfg_vbat_div = (uint8_t)(pkt->distance_cm & 0xFF);
             if (cfg_vbat_div > 0 && cfg_vbat_div <= 8)
                 g_cfg.vbat_div = cfg_vbat_div;
@@ -662,6 +665,9 @@ static void sensor_tick(uint8_t idx) {
             send_packet(PKT_SENSOR, sid, DISTANCE_ERROR, 0);
             Serial.printf("S%d dist: ERR\n", sid);
         }
+        // Forget last good value: heartbeat_tick() skips DISTANCE_ERROR, so a dead
+        // sensor stops being reported as a frozen level. Next valid read resends.
+        g_last_sent_cm[idx] = DISTANCE_ERROR;
         return;
     }
 

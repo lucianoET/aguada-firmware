@@ -16,3 +16,4 @@ sdkconfig.old
 # precompiled headers / build artifacts
 *.gch
 firmware/shared/protocol
+secrets.ini

@@ -44,10 +44,10 @@ static const char *TAG = "gw_wifi";
 
 // ── Credenciais WiFi / MQTT ────────────────────────────────────────────────────
 #ifndef WIFI_SSID
-#define WIFI_SSID "luciano"
+#define WIFI_SSID ""
 #endif
 #ifndef WIFI_PASS
-#define WIFI_PASS "Luciano19852012"
+#define WIFI_PASS ""
 #endif
 #ifndef MQTT_BROKER
 #define MQTT_BROKER "192.168.0.177"
@@ -443,8 +443,9 @@ static void cmd_config(uint16_t node_id, const JsonDocument &doc) {
 
     if (doc["vbat_pin"].is<uint8_t>())
         pkt.sensor_id = doc["vbat_pin"].as<uint8_t>();
+    // reserved: 0=unchanged, 1=disable, 2=enable (0 must not clear vbat on nodes)
     if (doc["vbat_enabled"].is<bool>() || doc["vbat_enabled"].is<int>())
-        pkt.reserved  = doc["vbat_enabled"].as<bool>() ? 1 : 0;
+        pkt.reserved  = doc["vbat_enabled"].as<bool>() ? 2 : 1;
 
     uint8_t cfg_vbat_div = 0;
     if (doc["vbat_div"].is<uint8_t>()) cfg_vbat_div = doc["vbat_div"].as<uint8_t>();
