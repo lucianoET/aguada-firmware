@@ -49,6 +49,7 @@ firmware/
                     Phase 1: gps_reader → fix_gate → cadence, bench simulator GPS_BENCH_SIM.
                     Docs: firmware/gps_tracker/BENCH.md, gps_tracker_pinout.md
   rfid_test/      → standalone ID-12 RFID → captive portal test sketch (no ESP-NOW/NVS)
+  espnow_sniffer/ → diagnostic: promiscuous ESP-NOW sniffer, hops channels, prints every frame
   shared/         → protocol.h (canonical v3 packet struct)
   .old/           → retired variants (e.g. gateway-ethernet ENC28J60)
 

@@ -3,6 +3,6 @@
 # Uso: tools/sync_reservoirs.sh [destino]
 set -e
 SRC="$(cd "$(dirname "$0")" && pwd)/reservoirs.yaml"
-DST="${1:-$HOME/cmms-monorepo/cmms-aguada/backend/reservoirs.yaml}"
+DST="${1:-$(dirname "$SRC")/../../aguada-web/backend/reservoirs.yaml}"
 cp "$SRC" "$DST"
 cmp "$SRC" "$DST" && echo "ok: $DST"
