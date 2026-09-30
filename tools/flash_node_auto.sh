@@ -47,7 +47,7 @@ for PORT in $PORTS; do
     # Identifica qual node é
     case "$NODE_ID" in
         "0X7758") ALIAS="CON (Castelo de Consumo)" ;;
-        "0XEE02") ALIAS="CAV (Castelo de Incêndio)" ;;
+        "0XC9C4") ALIAS="CAV (Castelo de Incêndio)" ;;
         "0X2EC4") ALIAS="CB3 (Casa de Bombas Nº3)" ;;
         "0X9EAC") ALIAS="CIE (Cisterna IE)" ;;
         "0X3456") ALIAS="CBIF (Casa de Bombas IF)" ;;

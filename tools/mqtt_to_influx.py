@@ -47,6 +47,7 @@ TOPICS = [
     "aguada/+/heartbeat",    # HEARTBEAT
     "aguada/+/hello",        # HELLO
     "aguada/gateway/status", # GATEWAY_STATUS
+    "aguada/gateway/rx",     # linhas cruas (bridge.py / espelho WiFi do gateway)
 ]
 
 # ── Configuração de reservatórios ─────────────────────────────────────────────

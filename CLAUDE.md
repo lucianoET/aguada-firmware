@@ -147,7 +147,7 @@ ESP32-C3 + ENS160/AHT21 (I2C GPIO6/7, **CS→3V3 mandatory** else SPI mode), opt
 | node_id | alias | Reservoir | sensors |
 |---------|-------|-----------|---------|
 | 0x7758 | CON | Castelo de Consumo | 1 |
-| 0xEE02 | CAV | Castelo de Incêndio | 1 |
+| 0xC9C4 | CAV | Castelo de Incêndio | 1 |
 | 0x2EC4 | CB31/CB32 | Casa de Bombas Nº3 | 2 |
 | 0x9EAC | CIE1/CIE2 | Cisterna IE | 2 |
 | 0x3456 | CBIF1/CBIF2 | Casa de Bombas IF | 2 |

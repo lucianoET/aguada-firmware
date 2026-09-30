@@ -1,3 +1,8 @@
+# FONTE ÚNICA dos parâmetros de reservatório — usada pelo bridge.py (HA) e pelo
+# backend web (cmms-aguada, via RESERVOIRS_FILE ou cópia idêntica em backend/).
+# Depois de editar: tools/sync_reservoirs.sh
+#   also:    node_ids alternativos que alimentam o mesmo reservatório
+#   lat/lng: usados só pelo mapa do web
 reservoirs:
   # node_id must match exactly the hex string printed by the gateway (uppercase, "0x" prefix)
 
@@ -8,14 +13,20 @@ reservoirs:
       level_max_cm: 450
       volume_max_L: 80000
       sensor_offset_cm: 20
+      lat: -22.8382228
+      lng: -43.1080717
 
-  "0XEE02":
+  # CAV: node ESP-NOW (MAC 38:18:2B:8A:C9:C4) + node cabeado firmware/node-eth (0xEE02)
+  "0XC9C4":
     - sensor_id: 1
       alias: CAV
       name: Castelo de Incêndio
       level_max_cm: 450
       volume_max_L: 80000
       sensor_offset_cm: 20
+      lat: -22.8370961
+      lng: -43.1093818
+      also: ["0XEE02"]
 
   "0X2EC4":
     - sensor_id: 1
@@ -24,26 +35,34 @@ reservoirs:
       level_max_cm: 200
       volume_max_L: 40000
       sensor_offset_cm: 10
+      lat: -22.8384676
+      lng: -43.1083677
     - sensor_id: 2
       alias: CB32
       name: Casa de Bombas Nº3-2
       level_max_cm: 200
       volume_max_L: 40000
       sensor_offset_cm: 10
+      lat: -22.8384876
+      lng: -43.1083877
 
   "0X9EAC":
     - sensor_id: 1
       alias: CIE1
       name: Cisterna IE-1
-      level_max_cm: 200
+      level_max_cm: 240
       volume_max_L: 245000
       sensor_offset_cm: 10
+      lat: -22.838998
+      lng: -43.1080397
     - sensor_id: 2
       alias: CIE2
       name: Cisterna IE-2
-      level_max_cm: 200
+      level_max_cm: 240
       volume_max_L: 245000
       sensor_offset_cm: 10
+      lat: -22.83902
+      lng: -43.1080597
 
   "0X3456":
     - sensor_id: 1
@@ -52,12 +71,16 @@ reservoirs:
       level_max_cm: 200
       volume_max_L: 40000
       sensor_offset_cm: 10
+      lat: -22.8453673
+      lng: -43.1004556
     - sensor_id: 2
       alias: CBIF2
       name: Casa de Bombas IF-2
       level_max_cm: 200
       volume_max_L: 40000
       sensor_offset_cm: 10
+      lat: -22.8453873
+      lng: -43.1004756
 
   # ── ANI-01 nodes (Aguada Node Indoor — qualidade do ar) ─────────────────────
   # type: air_quality → bridge usa eco2/aqi, sem cálculo de nível/volume.

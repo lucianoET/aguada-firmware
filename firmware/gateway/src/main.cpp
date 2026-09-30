@@ -36,6 +36,10 @@ static const char *TAG = "gw";
 #define GATEWAY_STATUS_INTERVAL_MS 0
 #endif
 
+#ifndef GATEWAY_BAUD
+#define GATEWAY_BAUD 115200
+#endif
+
 #ifndef GATEWAY_JSON_FLUSH
 #define GATEWAY_JSON_FLUSH 1
 #endif
@@ -87,9 +91,56 @@ static const uint8_t *find_mac(uint16_t node_id) {
 
 // ── JSON output helpers ───────────────────────────────────────────────────────
 
-static void json_out(JsonDocument &doc) {
-    serializeJson(doc, Serial);
-    Serial.println();
+// ── Optional WiFi/MQTT mirror (USB stays the primary link) ────────────────────
+// Node packets are also published raw on aguada/gateway/rx, so bridge.py / the web
+// backend keep receiving if the USB link drops. Commands still come over USB only.
+#ifdef GATEWAY_WIFI_MIRROR
+#include <PubSubClient.h>
+#define MIRROR_TOPIC          "aguada/gateway/rx"
+#define MIRROR_MQTT_RETRY_MS  15000   // connect() blocks up to ~3 s when the broker is away
+
+static WiFiClient   s_net;
+static PubSubClient s_mqtt(s_net);
+static uint32_t     s_mqtt_retry_ms = 0;
+
+static void mirror_begin(void) {
+    if (strlen(WIFI_SSID) == 0 || strlen(MQTT_BROKER) == 0) return;
+    // One radio: the AP must sit on ESPNOW_CHANNEL anyway. Pinning the channel keeps
+    // the STA from scanning all channels (and dropping ESP-NOW) while the AP is away.
+    WiFi.begin(WIFI_SSID, WIFI_PASS, ESPNOW_CHANNEL);
+    WiFi.setSleep(false);   // modem sleep would miss ESP-NOW broadcasts between beacons
+    s_mqtt.setServer(MQTT_BROKER, MQTT_PORT);
+    s_mqtt.setBufferSize(512);
+}
+
+static void mirror_tick(void) {
+    if (WiFi.status() != WL_CONNECTED) return;
+    if (s_mqtt.connected()) { s_mqtt.loop(); return; }
+    if (s_mqtt_retry_ms != 0 && millis() - s_mqtt_retry_ms < MIRROR_MQTT_RETRY_MS) return;
+    s_mqtt_retry_ms = millis() | 1;
+    char id[32];
+    snprintf(id, sizeof(id), "aguada-gw-%02X%02X", s_gateway_mac[4], s_gateway_mac[5]);
+    const char *user = strlen(MQTT_USER) ? MQTT_USER : nullptr;
+    s_mqtt.connect(id, user, user ? MQTT_PASS : nullptr);
+}
+
+static void mirror_publish(const char *line, size_t n) {
+    if (s_mqtt.connected()) s_mqtt.publish(MIRROR_TOPIC, (const uint8_t *)line, n, false);
+}
+#else
+static inline void mirror_begin(void) {}
+static inline void mirror_tick(void) {}
+static inline void mirror_publish(const char *, size_t) {}
+#endif
+
+// mirror=true for node packets and gateway status (what bridge.py republishes too).
+static void json_out(JsonDocument &doc, bool mirror = false) {
+    char line[384];
+    size_t n = serializeJson(doc, line, sizeof(line) - 2);
+    if (mirror) mirror_publish(line, n);
+    line[n++] = '\r';
+    line[n++] = '\n';
+    Serial.write((const uint8_t *)line, n);
 #if GATEWAY_JSON_FLUSH
     Serial.flush();
 #endif
@@ -158,7 +209,7 @@ static void output_gateway_status(void) {
         doc["last_packet_age_s"] = nullptr;
     }
     doc["ts"] = unix_now();
-    json_out(doc);
+    json_out(doc, true);
     s_last_status_ms = millis();
 }
 
@@ -192,7 +243,7 @@ static void output_sensor(const espnow_packet_t *pkt) {
     doc["flags"]       = pkt->flags;
     doc["seq"]         = pkt->seq;
     doc["ts"]          = unix_now();
-    json_out(doc);
+    json_out(doc, true);
 }
 
 static void output_heartbeat(const espnow_packet_t *pkt) {
@@ -208,7 +259,7 @@ static void output_heartbeat(const espnow_packet_t *pkt) {
     doc["reserved"]    = pkt->reserved;  // used by SENSOR_ID_ENV: humidity 0-100
     doc["seq"]         = pkt->seq;
     doc["ts"]          = unix_now();
-    json_out(doc);
+    json_out(doc, true);
 }
 
 static void output_hello(const espnow_packet_t *pkt) {
@@ -224,7 +275,7 @@ static void output_hello(const espnow_packet_t *pkt) {
     set_vbat_json(doc, pkt->vbat);
     doc["flags"]       = pkt->flags;  // FLAG_BTN_HELLO=0x40 indicates button press
     doc["ts"]          = unix_now();
-    json_out(doc);
+    json_out(doc, true);
 }
 
 // ── ESP-NOW receive ───────────────────────────────────────────────────────────
@@ -363,9 +414,12 @@ static void serial_tick(void) {
 // ── Setup / Loop ──────────────────────────────────────────────────────────────
 
 void setup(void) {
-    Serial.begin(115200);
-    // Increase USB CDC RX buffer so large JSON commands (>256 bytes) are not truncated
+    // Buffers must be sized before begin() on Arduino 3.x (ignored after).
+    // RX: large JSON commands (>256 bytes). TX: two SENSOR lines arriving in the
+    // same ms (~260 bytes) overflowed the 128-byte UART FIFO and lost bytes.
     Serial.setRxBufferSize(1024);
+    Serial.setTxBufferSize(1024);
+    Serial.begin(GATEWAY_BAUD);
     delay(300);
 
     s_pkt_queue = xQueueCreate(PKT_QUEUE_LEN, sizeof(pkt_event_t));
@@ -375,6 +429,8 @@ void setup(void) {
     if (esp_wifi_get_mac(WIFI_IF_STA, s_gateway_mac) != ESP_OK) {
         WiFi.macAddress(s_gateway_mac);  // fallback
     }
+
+    mirror_begin();
 
     output_gateway_ready();
 #if GATEWAY_STATUS_INTERVAL_MS > 0
@@ -414,5 +470,6 @@ void loop(void) {
         }
     }
     serial_tick();
+    mirror_tick();
     delay(5);
 }

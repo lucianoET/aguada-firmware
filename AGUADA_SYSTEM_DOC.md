@@ -52,7 +52,7 @@ NODE-01  node_id=0x7758
 | node_id | MAC (fim) | alias(es) | Reservatório | level_max_cm | volume_max_L | sensor_offset_cm | n_sensors |
 |---------|-----------|-----------|-------------|-------------|-------------|-----------------|----------|
 | 0x7758 | `6B:77:58` | CON | Castelo de Consumo | 450 | 80000 | 20 | 1 |
-| 0xEE02 | `DD:EE:02` | CAV | Castelo de Incêndio | 450 | 80000 | 20 | 1 |
+| 0xC9C4 | `8A:C9:C4` | CAV | Castelo de Incêndio | 450 | 80000 | 20 | 1 |
 | 0x2EC4 | `50:2E:C4` | CB31 / CB32 | Casa de Bombas Nº3 | 200 / 200 | 40000 / 40000 | 10 / 10 | 2 |
 | 0x9EAC | `8B:9E:AC` | CIE1 / CIE2 | Cisterna IE | 200 / 200 | 245000 / 245000 | 10 / 10 | 2 |
 | 0x3456 | `12:34:56` | CBIF1 / CBIF2 | Casa de Bombas IF | 200 / 200 | 40000 / 40000 | 10 / 10 | 2 |

@@ -15,6 +15,7 @@ import os
 import sys
 import time
 import threading
+from collections import deque
 from pathlib import Path
 
 import serial
@@ -39,15 +40,27 @@ log = logging.getLogger("bridge")
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
+# alt node_id → canonical node_id ("also:" in reservoirs.yaml). Lets a second
+# node (e.g. the wired node-eth) feed the same reservoir/entities.
+# ponytail: dedup is keyed on the canonical id, so two nodes sharing a seq within
+# 120 s drop one reading — give them distinct ids if both must be logged.
+NODE_ALIASES: dict[str, str] = {}
+
+GATEWAY_ALIVE_S = 90   # > gateway status interval (60 s)
+GATEWAY_RX_TOPIC = "aguada/gateway/rx"  # raw gateway lines (serial republish + WiFi mirror)
+
 def load_reservoir_config(path: str) -> dict:
     with open(path) as f:
         data = yaml.safe_load(f)
     # Index: (node_id_str, sensor_id_int) → config dict
     index = {}
+    NODE_ALIASES.clear()
     for node_id_str, sensors in data.get("reservoirs", {}).items():
         for s in sensors:
             key = (node_id_str.upper(), int(s["sensor_id"]))
             index[key] = s
+            for alt in s.get("also", []):
+                NODE_ALIASES[str(alt).upper()] = node_id_str.upper()
     return index
 
 # ── Calculations ──────────────────────────────────────────────────────────────
@@ -731,6 +744,8 @@ class Bridge:
         # Prevents double-publish when same packet arrives via relay AND direct
         self._seen_seq: dict[tuple, float] = {}
         self._seen_seq_ttl = 120.0  # seconds
+        self._recent_lines: deque[str] = deque(maxlen=256)
+        self._dispatch_lock = threading.Lock()
         # Relay / env discovery tracking
         self._known_relays: dict[str, bool] = {}   # node_id → has_env_sensor
         self._relay_discovery_sent: set = set()
@@ -773,6 +788,10 @@ class Bridge:
             self._gateway_health_last_pub = now
 
     def _mark_gateway_offline(self, reason: str = ""):
+        # Serial down but lines still arriving over the WiFi mirror → gateway is alive.
+        # Without this the status flaps on every serial retry and HA entities go unavailable.
+        if reason != "bridge stopping" and time.time() - self._gateway_last_seen < GATEWAY_ALIVE_S:
+            return
         if self._gateway_online:
             ts_now = int(time.time())
             self._gateway_online = False
@@ -809,6 +828,8 @@ class Bridge:
             # Wired Ethernet nodes (e.g. node-eth) publish sensor JSON straight
             # to the broker instead of arriving over the gateway serial link.
             client.subscribe("aguada/raw/#")
+            # Gateway WiFi mirror: same JSON lines as the serial link (fallback path).
+            client.subscribe(GATEWAY_RX_TOPIC)
             publish_gateway_discovery(client)
 
             # Re-publish HA Discovery on every (re)connect to survive broker
@@ -839,6 +860,9 @@ class Bridge:
         Also routes wired Ethernet node sensor JSON (aguada/raw/#) into the
         existing serial-sensor pipeline."""
         topic = msg.topic
+        if topic == GATEWAY_RX_TOPIC:
+            self.dispatch(msg.payload.decode(errors="replace"), from_mqtt=True)
+            return
         try:
             payload = json.loads(msg.payload)
         except Exception:
@@ -851,6 +875,7 @@ class Bridge:
                 log.warning("Non-dict payload on %s", topic)
                 return
             node_id = str(payload.get("node_id", "")).upper()
+            node_id = NODE_ALIASES.get(node_id, node_id)
             if node_id not in self._configured_nodes:
                 log.warning("Unknown node_id %r on %s", node_id, topic)
                 return
@@ -961,6 +986,7 @@ class Bridge:
 
     def _handle_sensor(self, msg: dict):
         node_id   = msg["node_id"].upper()
+        node_id   = NODE_ALIASES.get(node_id, node_id)
         sensor_id = int(msg["sensor_id"])
         key       = (node_id, sensor_id)
 
@@ -1255,7 +1281,12 @@ class Bridge:
             log.debug("↺ startup: %s", line)
             self.dispatch(line)
 
-    def dispatch(self, line: str):
+    def dispatch(self, line: str, from_mqtt: bool = False):
+        """Handle one gateway JSON line, from serial (primary) or the MQTT mirror."""
+        with self._dispatch_lock:   # serial loop and paho thread both call in
+            self._dispatch(line, from_mqtt)
+
+    def _dispatch(self, line: str, from_mqtt: bool):
         line = self._normalize_serial_line(line)
         if not line:
             return
@@ -1265,10 +1296,19 @@ class Bridge:
             log.debug("Non-JSON line: %s", line[:80])
             return
 
+        # The same line can arrive twice: serial + gateway WiFi mirror, or our own
+        # republish echoed back. Lines carry seq/ts/uptime, so exact match = same packet.
+        if line in self._recent_lines:
+            return
+        self._recent_lines.append(line)
+
         # Any valid JSON from serial means gateway is alive
         self._mark_gateway_seen()
 
         t = msg.get("type", "")
+        # Raw gateway line for other consumers (web backend) — same packets, one source.
+        if not from_mqtt and t in ("SENSOR", "HEARTBEAT", "HELLO", "GATEWAY_STATUS"):
+            self.client.publish(GATEWAY_RX_TOPIC, line)
         try:
             if   t == "SENSOR":         self._handle_sensor(msg)
             elif t == "HEARTBEAT":      self._handle_heartbeat(msg)
