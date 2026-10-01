@@ -64,7 +64,53 @@ def test_out_of_range_is_sensor_error():
         assert [p for p in fake.published if p[0] == av] == [(av, "offline", True)]
 
 
+def read_lines(path):
+    return Path(path).read_text(encoding="utf-8").splitlines(keepends=True)
+
+
+def changed(before, after):
+    assert len(before) == len(after)
+    return [(i, a, b) for i, (a, b) in enumerate(zip(before, after)) if a != b]
+
+
+def test_yaml_update_scoped():
+    with tempfile.TemporaryDirectory() as d:
+        copy = Path(d) / "reservoirs.yaml"
+        shutil.copy(REAL, copy)
+        mode = copy.stat().st_mode
+        before = read_lines(copy)
+        assert bridge.update_reservoir_yaml(str(copy), "0XC9C4", "CAV", "level_max_cm", 460) is True
+        diff = changed(before, read_lines(copy))
+        assert len(diff) == 1 and diff[0][2] == "      level_max_cm: 460\n", diff
+        idx = bridge.load_reservoir_config(str(copy))
+        assert idx[("0XC9C4", 1)]["level_max_cm"] == 460
+        assert idx[("0X7758", 1)]["level_max_cm"] == 450
+        assert copy.stat().st_mode == mode
+
+        before = read_lines(copy)
+        assert bridge.update_reservoir_yaml(str(copy), "0X2EC4", "CB32", "sensor_offset_cm", 12) is True
+        diff = changed(before, read_lines(copy))
+        assert len(diff) == 1 and diff[0][2] == "      sensor_offset_cm: 12\n", diff
+        idx = bridge.load_reservoir_config(str(copy))
+        assert idx[("0X2EC4", 2)]["sensor_offset_cm"] == 12
+        assert idx[("0X2EC4", 1)]["sensor_offset_cm"] == 10
+
+
+def test_yaml_update_not_found():
+    with tempfile.TemporaryDirectory() as d:
+        copy = Path(d) / "reservoirs.yaml"
+        shutil.copy(REAL, copy)
+        orig = copy.read_bytes()
+        for args in (("0X7758", "CAV", "level_max_cm", 999),      # alias not under node
+                     ("0X9999", "CAV", "level_max_cm", 999),      # unknown node
+                     ("0X7758", "CON", "no_such_param", 999)):    # param line absent
+            assert bridge.update_reservoir_yaml(str(copy), *args) is False
+            assert copy.read_bytes() == orig
+
+
 if __name__ == "__main__":
     test_out_of_range_is_sensor_error()
+    test_yaml_update_scoped()
+    test_yaml_update_not_found()
     assert REAL.read_bytes() == REAL_BYTES, "real reservoirs.yaml was modified"
     print("ok")

@@ -12,7 +12,9 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
+import tempfile
 import time
 import threading
 from collections import deque
@@ -64,6 +66,67 @@ def load_reservoir_config(path: str) -> dict:
             for alt in s.get("also", []):
                 NODE_ALIASES[str(alt).upper()] = node_id_str.upper()
     return index
+
+def update_reservoir_yaml(path: str, node_id: str, alias: str, param: str, value: int) -> bool:
+    """Edit one `param: number` line in place so comments/formatting survive."""
+    real = os.path.realpath(path)
+    with open(real, encoding="utf-8", newline="") as f:
+        lines = f.read().splitlines(keepends=True)
+
+    def indent_of(line: str) -> int:
+        return len(line) - len(line.lstrip())
+
+    def blank_or_comment(line: str) -> bool:
+        t = line.strip()
+        return not t or t.startswith("#")
+
+    node_re = re.compile(r"^\s*[\"']?%s[\"']?\s*:\s*(#.*)?$" % re.escape(node_id), re.IGNORECASE)
+    alias_re = re.compile(r"^\s*(?:-\s+)?alias:\s*[\"']?%s[\"']?\s*(#.*)?$" % re.escape(alias))
+    item_re = re.compile(r"^\s*-\s")
+    param_re = re.compile(r"^(\s*(?:-\s+)?%s\s*:\s*)(-?\d+(?:\.\d+)?)(\s*(?:#.*)?)$" % re.escape(param))
+
+    target = None
+    start = next((i for i, l in enumerate(lines) if node_re.match(l.rstrip("\r\n"))), None)
+    if start is not None:
+        node_indent = indent_of(lines[start])
+        end = len(lines)
+        for i in range(start + 1, len(lines)):
+            if not blank_or_comment(lines[i]) and indent_of(lines[i]) <= node_indent:
+                end = i
+                break
+        a = next((i for i in range(start + 1, end) if alias_re.match(lines[i].rstrip("\r\n"))), None)
+        if a is not None:
+            s0 = next((i for i in range(a, start, -1) if item_re.match(lines[i])), None)
+            if s0 is not None:
+                item_indent = indent_of(lines[s0])
+                e0 = next((i for i in range(a + 1, end)
+                           if item_re.match(lines[i]) and indent_of(lines[i]) == item_indent), end)
+                for i in range(s0, e0):
+                    body = lines[i].rstrip("\r\n")
+                    m = param_re.match(body)
+                    if m:
+                        target = (i, m.group(1) + str(value) + m.group(3) + lines[i][len(body):])
+                        break
+    if target is None:
+        log.error("Config not persisted: %s/%s %s not found in %s", node_id, alias, param, real)
+        return False
+
+    lines[target[0]] = target[1]
+    tmp = None
+    try:
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(real), prefix=".reservoirs.", suffix=".tmp")
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
+            f.write("".join(lines))
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(tmp, os.stat(real).st_mode & 0o7777)  # mkstemp is 0600; keep readers working
+        os.replace(tmp, real)
+        return True
+    except Exception:
+        log.exception("Config not persisted: could not write %s", real)
+        if tmp and os.path.exists(tmp):
+            os.remove(tmp)
+        return False
 
 # ── Calculations ──────────────────────────────────────────────────────────────
 
