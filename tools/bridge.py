@@ -139,6 +139,9 @@ def mqtt_topic_state(node_id: str, sensor_id: int) -> str:
 def mqtt_topic_status(node_id: str) -> str:
     return f"aguada/{node_id}/status"
 
+def mqtt_topic_sensor_avail(node_id: str, sensor_id: int) -> str:
+    return f"aguada/{node_id}/{sensor_id}/availability"
+
 def mqtt_topic_balance(node_id: str, sensor_id: int) -> str:
     return f"aguada/{node_id}/{sensor_id}/balance"
 
@@ -284,11 +287,13 @@ def publish_discovery(client: mqtt.Client, node_id: str, sensor_id: int, cfg: di
     dev      = {"name": cfg.get("alias", alias), "identifiers": [f"aguada_{alias}"], "manufacturer": "Aguada"}
     state_tp = mqtt_topic_state(node_id, sensor_id)
     avail_tp = mqtt_topic_status(node_id)
+    sensor_avail_tp = mqtt_topic_sensor_avail(node_id, sensor_id)
 
     entities = [
         {
             "name": f"{name_pfx} - Nível",
             "uid":  f"{uid_pfx}_nivel",
+            "per_sensor": True,
             "oid":  f"aguada_{alias}_nivel",
             "vt":   "{{ value_json.level_cm }}",
             "uom":  "cm",
@@ -299,6 +304,7 @@ def publish_discovery(client: mqtt.Client, node_id: str, sensor_id: int, cfg: di
         {
             "name": f"{name_pfx} - Volume %",
             "uid":  f"{uid_pfx}_pct",
+            "per_sensor": True,
             "oid":  f"aguada_{alias}_pct",
             "vt":   "{{ value_json.pct }}",
             "uom":  "%",
@@ -309,6 +315,7 @@ def publish_discovery(client: mqtt.Client, node_id: str, sensor_id: int, cfg: di
         {
             "name": f"{name_pfx} - Volume",
             "uid":  f"{uid_pfx}_volume",
+            "per_sensor": True,
             "oid":  f"aguada_{alias}_volume",
             "vt":   "{{ value_json.volume_L }}",
             "uom":  "L",
@@ -319,6 +326,7 @@ def publish_discovery(client: mqtt.Client, node_id: str, sensor_id: int, cfg: di
         {
             "name": f"{name_pfx} - Distância",
             "uid":  f"{uid_pfx}_distancia",
+            "per_sensor": True,
             "oid":  f"aguada_{alias}_distancia",
             "vt":   "{{ value_json.distance_cm }}",
             "uom":  "cm",
@@ -366,10 +374,19 @@ def publish_discovery(client: mqtt.Client, node_id: str, sensor_id: int, cfg: di
             "state_topic":         state_tp,
             "value_template":      e["vt"],
             "device":              dev,
-            "availability_topic":       avail_tp,
-            "payload_available":        "online",
-            "payload_not_available":    "offline",
         }
+        if e.get("per_sensor"):
+            # Measurement entities also follow the per-sensor topic, so a failed
+            # sensor shows unavailable instead of a stale value (never mix with availability_topic).
+            payload["availability"] = [
+                {"topic": avail_tp, "payload_available": "online", "payload_not_available": "offline"},
+                {"topic": sensor_avail_tp, "payload_available": "online", "payload_not_available": "offline"},
+            ]
+            payload["availability_mode"] = "all"
+        else:
+            payload["availability_topic"] = avail_tp
+            payload["payload_available"] = "online"
+            payload["payload_not_available"] = "offline"
         if e.get("uom") is not None:
             payload["unit_of_measurement"] = e["uom"]
         if e.get("sc"):
@@ -744,6 +761,7 @@ class Bridge:
         # Prevents double-publish when same packet arrives via relay AND direct
         self._seen_seq: dict[tuple, float] = {}
         self._seen_seq_ttl = 120.0  # seconds
+        self._sensor_avail: dict[tuple, str] = {}  # (node_id, sensor_id) → last published "online"/"offline"
         self._recent_lines: deque[str] = deque(maxlen=256)
         self._dispatch_lock = threading.Lock()
         # Relay / env discovery tracking
@@ -984,6 +1002,14 @@ class Bridge:
 
     # ── Message processing ────────────────────────────────────────────────────
 
+    def _set_sensor_avail(self, node_id: str, sensor_id: int, state: str):
+        """Publish retained per-sensor availability, only on change (first call always publishes)."""
+        if self._sensor_avail.get((node_id, sensor_id)) == state:
+            return
+        self._sensor_avail[(node_id, sensor_id)] = state
+        self.client.publish(mqtt_topic_sensor_avail(node_id, sensor_id), state, retain=True)
+        log.info("Sensor %s/%d → %s", node_id, sensor_id, state)
+
     def _handle_sensor(self, msg: dict):
         node_id   = msg["node_id"].upper()
         node_id   = NODE_ALIASES.get(node_id, node_id)
@@ -1029,6 +1055,7 @@ class Bridge:
         # Spec: distance 0xFFFF or flags.sensor_error indicate invalid measurement
         if distance_cm <= 0 or distance_cm == 0xFFFF or (flags & 0x04):
             log.warning("Sensor error: %s/%d dist=%s flags=0x%02x", node_id, sensor_id, distance_cm_raw, flags)
+            self._set_sensor_avail(node_id, sensor_id, "offline")
             return
 
         calcs = calculate(distance_cm, cfg)
@@ -1047,6 +1074,7 @@ class Bridge:
         payload["ts_iso"] = ts_to_iso(payload["ts"])
 
         self.client.publish(mqtt_topic_state(node_id, sensor_id), json.dumps(payload), retain=True)
+        self._set_sensor_avail(node_id, sensor_id, "online")
         log.info("%-6s dist=%3dcm  level=%3dcm  pct=%5.1f%%  vol=%dL",
                  cfg.get("alias", key), distance_cm, calcs["level_cm"],
                  calcs["pct"], calcs["volume_L"])
