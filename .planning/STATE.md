@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-01)
 Phase: 01.1 (perifericos-i2c-e-display) — EXECUTING
 Plan: 4 of 4
 Status: Phase complete — ready for verification
-Last activity: 2026-09-30 — Completed quick task 260930-umi: bridge.py dedup de seq respeita TTL e zera no HELLO
+Last activity: 2026-10-01 — Completed quick task 261001-6ja: parâmetros de reservatório editáveis no HA
 
 Progress: [██████████] 100%
 
@@ -106,6 +106,7 @@ None yet.
 | 260930-umi | bridge.py: dedup de seq respeita TTL e zera no HELLO (node reiniciado tinha SENSOR descartado em silêncio → "offline" após 300 s) | 2026-09-30 | 219920c | [260930-umi-bridge-py-dedup-de-seq-ignora-ttl-e-desc](./quick/260930-umi-bridge-py-dedup-de-seq-ignora-ttl-e-desc/) |
 | 4 | CON (0x7758): HC-SR04 em TRIG=G4/ECHO=G3 no env con-ch11 + NVS apagado | 2026-10-01 | 6695251 | — |
 | 5 | CON (0x7758): HC-SR04 trocado para TRIG=G3/ECHO=G4 | 2026-10-01 | cfc7ead | — |
+| 261001-6ja | bridge.py: parâmetros de reservatório editáveis no HA (MQTT number → reservoirs.yaml) + leitura fora da faixa vira erro de sensor | 2026-10-01 | 745e928 | [261001-6ja-bridge-py-parametros-de-reservatorio-edi](./quick/261001-6ja-bridge-py-parametros-de-reservatorio-edi/) |
 
 ### Roadmap Evolution
 
