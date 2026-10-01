@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-08-01)
 Phase: 01.1 (perifericos-i2c-e-display) — EXECUTING
 Plan: 4 of 4
 Status: Phase complete — ready for verification
-Last activity: 2026-08-03 — Completed quick task 260803-l28: node ethernet cabeado (Nano+ENC28J60) + bridge.py aguada/raw/#
+Last activity: 2026-09-30 — Completed quick task 260930-t20: bridge.py disponibilidade por sensor no HA quando chega pacote de erro
 
 Progress: [██████████] 100%
 
@@ -102,6 +102,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260803-l28 | Node ethernet cabeado (Nano+ENC28J60+HC-SR04, MQTT aguada/raw, 0xEE02 CAV) + bridge.py aguada/raw/# | 2026-08-03 | 274b134 | [260803-l28-criar-node-ethernet-cabeado-aguada-firmw](./quick/260803-l28-criar-node-ethernet-cabeado-aguada-firmw/) |
+| 260930-t20 | bridge.py: disponibilidade por sensor no HA quando chega pacote de erro (aguada/{node}/{sid}/availability, availability_mode all em nivel/pct/volume/distancia) | 2026-09-30 | f30dd4a | [260930-t20-bridge-py-disponibilidade-por-sensor-no-](./quick/260930-t20-bridge-py-disponibilidade-por-sensor-no-/) |
 
 ### Roadmap Evolution
 
