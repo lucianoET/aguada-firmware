@@ -1016,10 +1016,11 @@ class Bridge:
         sensor_id = int(msg["sensor_id"])
         key       = (node_id, sensor_id)
 
-        # Deduplicate: same packet may arrive via relay AND direct path
+        # Deduplicate within TTL: same packet may arrive via relay AND direct path
         seq_key = (node_id, sensor_id, msg.get("seq", -1))
         now = time.time()
-        if seq_key in self._seen_seq:
+        seen_ts = self._seen_seq.get(seq_key)
+        if seen_ts is not None and now - seen_ts < self._seen_seq_ttl:
             log.debug("Dedup: skip duplicate %s sensor=%d seq=%s", node_id, sensor_id, msg.get("seq"))
             return
         self._seen_seq[seq_key] = now
@@ -1197,6 +1198,10 @@ class Bridge:
         self.tracker.seen(node_id)
         log.info("HELLO %s num_sensors=%d flags=0x%02x fw=%s",
                  node_id, num, flags, msg.get("fw_version"))
+
+        # Node booted: seq restarted, forget its old dedup entries
+        dedup_id = NODE_ALIASES.get(node_id, node_id)
+        self._seen_seq = {k: v for k, v in self._seen_seq.items() if k[0] != dedup_id}
 
         if num == 0:
             # Relay node — publish relay state and Discovery
