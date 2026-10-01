@@ -47,6 +47,8 @@ log = logging.getLogger("bridge")
 NODE_ALIASES: dict[str, str] = {}
 
 GATEWAY_ALIVE_S = 90   # > gateway status interval (60 s)
+# ponytail: tuning knob — a reading beyond level_max_cm + sensor_offset_cm + this margin is a sensor fault, not an empty tank.
+OUT_OF_RANGE_MARGIN_CM = 30
 GATEWAY_RX_TOPIC = "aguada/gateway/rx"  # raw gateway lines (serial republish + WiFi mirror)
 
 def load_reservoir_config(path: str) -> dict:
@@ -1056,6 +1058,12 @@ class Bridge:
         # Spec: distance 0xFFFF or flags.sensor_error indicate invalid measurement
         if distance_cm <= 0 or distance_cm == 0xFFFF or (flags & 0x04):
             log.warning("Sensor error: %s/%d dist=%s flags=0x%02x", node_id, sensor_id, distance_cm_raw, flags)
+            self._set_sensor_avail(node_id, sensor_id, "offline")
+            return
+
+        limit = cfg["level_max_cm"] + cfg["sensor_offset_cm"] + OUT_OF_RANGE_MARGIN_CM
+        if distance_cm > limit:
+            log.warning("Sensor out of range: %s/%d dist=%d > %d", node_id, sensor_id, distance_cm, limit)
             self._set_sensor_avail(node_id, sensor_id, "offline")
             return
 
