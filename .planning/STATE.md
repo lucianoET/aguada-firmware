@@ -6,9 +6,9 @@ current_phase: 01.1
 current_phase_name: perifericos-i2c-e-display
 status: verifying
 stopped_at: Completed 01.1-04-PLAN.md
-last_updated: "2026-08-03T10:26:19.757Z"
-last_activity: 2026-08-03
-last_activity_desc: Phase 01.1 execution started
+last_updated: "2026-10-01T02:58:52.023Z"
+last_activity: 2026-09-30
+last_activity_desc: "Completed quick task 260930-umi: bridge.py dedup de seq respeita TTL e zera no HELLO"
 progress:
   total_phases: 2
   completed_phases: 2
@@ -104,6 +104,7 @@ None yet.
 | 260803-l28 | Node ethernet cabeado (Nano+ENC28J60+HC-SR04, MQTT aguada/raw, 0xEE02 CAV) + bridge.py aguada/raw/# | 2026-08-03 | 274b134 | [260803-l28-criar-node-ethernet-cabeado-aguada-firmw](./quick/260803-l28-criar-node-ethernet-cabeado-aguada-firmw/) |
 | 260930-t20 | bridge.py: disponibilidade por sensor no HA quando chega pacote de erro (aguada/{node}/{sid}/availability, availability_mode all em nivel/pct/volume/distancia) | 2026-09-30 | f30dd4a | [260930-t20-bridge-py-disponibilidade-por-sensor-no-](./quick/260930-t20-bridge-py-disponibilidade-por-sensor-no-/) |
 | 260930-umi | bridge.py: dedup de seq respeita TTL e zera no HELLO (node reiniciado tinha SENSOR descartado em silêncio → "offline" após 300 s) | 2026-09-30 | 219920c | [260930-umi-bridge-py-dedup-de-seq-ignora-ttl-e-desc](./quick/260930-umi-bridge-py-dedup-de-seq-ignora-ttl-e-desc/) |
+| 4 | CON (0x7758): HC-SR04 em TRIG=G4/ECHO=G3 no env con-ch11 + NVS apagado | 2026-10-01 | 6695251 | — |
 
 ### Roadmap Evolution
 
