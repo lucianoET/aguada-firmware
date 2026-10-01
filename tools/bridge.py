@@ -51,6 +51,14 @@ NODE_ALIASES: dict[str, str] = {}
 GATEWAY_ALIVE_S = 90   # > gateway status interval (60 s)
 # ponytail: tuning knob — a reading beyond level_max_cm + sensor_offset_cm + this margin is a sensor fault, not an empty tank.
 OUT_OF_RANGE_MARGIN_CM = 30
+
+# Editable from HA: param -> (name suffix, entity suffix, unit, min, max, icon).
+# Single source for discovery, validation and the retained config state JSON.
+RESERVOIR_PARAMS = {
+    "level_max_cm":     ("Altura útil",     "altura_util",   "cm", 50, 1000,   "mdi:arrow-expand-vertical"),
+    "sensor_offset_cm": ("Offset do sensor", "offset_sensor", "cm", 0,  200,    "mdi:arrow-collapse-down"),
+    "volume_max_L":     ("Volume máximo",   "volume_maximo", "L",  1,  500000, "mdi:cup-water"),
+}
 GATEWAY_RX_TOPIC = "aguada/gateway/rx"  # raw gateway lines (serial republish + WiFi mirror)
 
 def load_reservoir_config(path: str) -> dict:
@@ -206,6 +214,9 @@ def mqtt_topic_status(node_id: str) -> str:
 
 def mqtt_topic_sensor_avail(node_id: str, sensor_id: int) -> str:
     return f"aguada/{node_id}/{sensor_id}/availability"
+
+def mqtt_topic_config(node_id: str, sensor_id: int) -> str:
+    return f"aguada/{node_id}/{sensor_id}/config"
 
 def mqtt_topic_balance(node_id: str, sensor_id: int) -> str:
     return f"aguada/{node_id}/{sensor_id}/balance"
@@ -464,6 +475,36 @@ def publish_discovery(client: mqtt.Client, node_id: str, sensor_id: int, cfg: di
         disc_topic = f"homeassistant/sensor/{e['uid']}/config"
         client.publish(disc_topic, json.dumps(payload), retain=True)
         log.debug("Discovery: %s", disc_topic)
+
+
+def publish_config_discovery(client: mqtt.Client, node_id: str, sensor_id: int, cfg: dict):
+    """Publish HA MQTT Discovery for the editable reservoir parameters (number boxes)."""
+    alias    = cfg.get("alias", f"{node_id}_{sensor_id}").lower()
+    name_pfx = cfg.get("name", alias)
+    dev      = {"name": cfg.get("alias", alias), "identifiers": [f"aguada_{alias}"], "manufacturer": "Aguada"}
+    config_tp = mqtt_topic_config(node_id, sensor_id)
+
+    for param, (label, ent, unit, lo, hi, icon) in RESERVOIR_PARAMS.items():
+        uid = f"aguada_{alias}_cfg_{param}"
+        # No availability keys: the boxes stay editable while the node is offline.
+        payload = {
+            "name":                f"{name_pfx} - {label}",
+            "unique_id":           uid,
+            "default_entity_id":   f"number.aguada_{alias}_{ent}",
+            "state_topic":         config_tp,
+            "value_template":      "{{ value_json.%s }}" % param,
+            "command_topic":       f"{config_tp}/{param}/set",
+            "min":                 lo,
+            "max":                 hi,
+            "step":                1,
+            "mode":                "box",
+            "entity_category":     "config",
+            "unit_of_measurement": unit,
+            "icon":                icon,
+            "device":              dev,
+        }
+        client.publish(f"homeassistant/number/{uid}/config", json.dumps(payload), retain=True)
+        log.debug("Discovery: homeassistant/number/%s/config", uid)
 
 
 def publish_relay_discovery(client: mqtt.Client, node_id: str):
@@ -913,6 +954,8 @@ class Bridge:
             client.subscribe("aguada/raw/#")
             # Gateway WiFi mirror: same JSON lines as the serial link (fallback path).
             client.subscribe(GATEWAY_RX_TOPIC)
+            # HA number edits of reservoir parameters.
+            client.subscribe("aguada/+/+/config/+/set")
             publish_gateway_discovery(client)
 
             # Re-publish HA Discovery on every (re)connect to survive broker
@@ -923,6 +966,8 @@ class Bridge:
                     self._discovery_sent.add(("ani", node_id, sensor_id))
                 else:
                     publish_discovery(client, node_id, sensor_id, cfg)
+                    publish_config_discovery(client, node_id, sensor_id, cfg)
+                    self._publish_reservoir_config(node_id, sensor_id, cfg)
                     self._discovery_sent.add((node_id, sensor_id))
             # Re-publish relay/env discovery for known relay nodes
             for node_id, has_env in self._known_relays.items():
@@ -945,6 +990,10 @@ class Bridge:
         topic = msg.topic
         if topic == GATEWAY_RX_TOPIC:
             self.dispatch(msg.payload.decode(errors="replace"), from_mqtt=True)
+            return
+        # Must precede json.loads: non-JSON payloads still need the state republish.
+        if topic.startswith("aguada/") and "/config/" in topic and topic.endswith("/set"):
+            self._handle_config_set(topic, msg.payload)
             return
         try:
             payload = json.loads(msg.payload)
@@ -974,6 +1023,54 @@ class Bridge:
             self._serial_write(json.dumps({**payload, "cmd": "CONFIG"}))
         elif topic == "aguada/cmd/ota":
             log.warning("OTA via MQTT not yet implemented")
+
+    def _publish_reservoir_config(self, node_id: str, sensor_id: int, cfg: dict):
+        """Retained current values of the editable parameters (HA number state)."""
+        state = {param: cfg.get(param) for param in RESERVOIR_PARAMS}
+        self.client.publish(mqtt_topic_config(node_id, sensor_id), json.dumps(state), retain=True)
+
+    def _handle_config_set(self, topic: str, payload: bytes):
+        """HA number edit: validate, apply in memory, persist to YAML, republish state."""
+        parts = topic.split("/")
+        if len(parts) != 6 or parts[3] != "config" or parts[5] != "set":
+            log.warning("Malformed config topic %s", topic)
+            return
+        node_id = parts[1].upper()
+        node_id = NODE_ALIASES.get(node_id, node_id)
+        try:
+            sensor_id = int(parts[2])
+        except ValueError:
+            log.warning("Malformed config topic %s", topic)
+            return
+        cfg = self.reservoirs.get((node_id, sensor_id))
+        if not cfg or cfg.get("type") == "air_quality":
+            log.warning("Config set for unknown reservoir %s/%s", node_id, parts[2])
+            return
+
+        param = parts[4]
+        if param not in RESERVOIR_PARAMS:
+            log.warning("Config set for unknown param %r on %s", param, cfg.get("alias"))
+            self._publish_reservoir_config(node_id, sensor_id, cfg)
+            return
+        lo, hi = RESERVOIR_PARAMS[param][3], RESERVOIR_PARAMS[param][4]
+        raw = payload.decode(errors="replace").strip()
+        try:
+            v = float(raw)
+        except ValueError:
+            log.warning("Config rejected: %s %s=%r (not a number)", cfg.get("alias"), param, raw)
+            self._publish_reservoir_config(node_id, sensor_id, cfg)
+            return
+        if not (lo <= v <= hi):  # written this way so NaN is rejected
+            log.warning("Config rejected: %s %s=%r (range %d..%d)", cfg.get("alias"), param, raw, lo, hi)
+            self._publish_reservoir_config(node_id, sensor_id, cfg)
+            return
+
+        new = int(round(v))
+        old = cfg.get(param)
+        cfg[param] = new  # same dict _handle_sensor reads: applies to the next reading
+        log.info("Config %s %s %s -> %s", cfg.get("alias"), param, old, new)
+        update_reservoir_yaml(self.args.config, node_id, cfg.get("alias", ""), param, new)
+        self._publish_reservoir_config(node_id, sensor_id, cfg)
 
     def _serial_write(self, line: str):
         with self._serial_lock:
