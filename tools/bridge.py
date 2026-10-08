@@ -60,6 +60,7 @@ RESERVOIR_PARAMS = {
     "volume_max_L":     ("Volume máximo",   "volume_maximo", "L",  1,  500000, "mdi:cup-water"),
 }
 GATEWAY_RX_TOPIC = "aguada/gateway/rx"  # raw gateway lines (serial republish + WiFi mirror)
+GATEWAY_CMD_TOPIC = "aguada/gateway/cmd"  # --port none: serial command lines go here (Ethernet gateway)
 
 def load_reservoir_config(path: str) -> dict:
     with open(path) as f:
@@ -863,6 +864,8 @@ class Bridge:
 
         self._serial: serial.Serial | None = None
         self._serial_lock = threading.Lock()
+        # --port none: no USB gateway; lines arrive on GATEWAY_RX_TOPIC, commands leave on GATEWAY_CMD_TOPIC.
+        self._mqtt_only = str(getattr(args, "port", "")).strip().lower() == "none"
         # Dedup cache: (node_id, sensor_id, seq) → timestamp
         # Prevents double-publish when same packet arrives via relay AND direct
         self._seen_seq: dict[tuple, float] = {}
@@ -1073,6 +1076,10 @@ class Bridge:
         self._publish_reservoir_config(node_id, sensor_id, cfg)
 
     def _serial_write(self, line: str):
+        if self._mqtt_only:
+            self.client.publish(GATEWAY_CMD_TOPIC, line)
+            log.debug("→ mqtt: %s", line)
+            return
         with self._serial_lock:
             if self._serial and self._serial.is_open:
                 self._serial.write((line + "\n").encode())
@@ -1535,30 +1542,36 @@ class Bridge:
 
         try:
             while True:
-                if not self._serial or not self._serial.is_open:
-                    if not self._open_serial():
-                        time.sleep(self._serial_reconnect_delay_s)
+                if self._mqtt_only:
+                    time.sleep(1.0)  # gateway lines arrive on the paho thread (_on_mqtt_message)
+                else:
+                    if not self._serial or not self._serial.is_open:
+                        if not self._open_serial():
+                            time.sleep(self._serial_reconnect_delay_s)
+                            continue
+                        last_timeout_check = time.time()
+
+                    ser = self._serial
+                    try:
+                        line = self._read_serial_line(ser)
+                    except serial.SerialException as e:
+                        log.error("Serial error: %s", e)
+                        self._reconnect_serial(f"serial error: {e}")
                         continue
-                    last_timeout_check = time.time()
 
-                ser = self._serial
-                try:
-                    line = self._read_serial_line(ser)
-                except serial.SerialException as e:
-                    log.error("Serial error: %s", e)
-                    self._reconnect_serial(f"serial error: {e}")
-                    continue
-
-                if line:
-                    log.debug("← %s", line)
-                    self.dispatch(line)
+                    if line:
+                        log.debug("← %s", line)
+                        self.dispatch(line)
 
                 # Check offline timeouts every 30s
                 now = time.time()
                 if now - last_timeout_check > 30:
                     self.tracker.check_timeouts()
                     if self._gateway_timeout_s > 0 and self._gateway_online and (now - self._gateway_last_seen > self._gateway_timeout_s):
-                        self._reconnect_serial(f"no serial data for {self._gateway_timeout_s}s")
+                        if self._mqtt_only:
+                            self._mark_gateway_offline(f"no data for {self._gateway_timeout_s}s")
+                        else:
+                            self._reconnect_serial(f"no serial data for {self._gateway_timeout_s}s")
                     last_timeout_check = now
 
         except KeyboardInterrupt:
@@ -1575,7 +1588,8 @@ class Bridge:
 
 def main():
     parser = argparse.ArgumentParser(description="Aguada Bridge v3.2")
-    parser.add_argument("--port",            default="/dev/ttyACM0")
+    parser.add_argument("--port",            default="/dev/ttyACM0",
+                        help="porta serial do gateway; 'none' = gateway Ethernet (só MQTT)")
     parser.add_argument("--baud",            default=115200, type=int)
     parser.add_argument("--mqtt",            default="localhost")
     parser.add_argument("--mqtt-port",       default=1883, type=int)
