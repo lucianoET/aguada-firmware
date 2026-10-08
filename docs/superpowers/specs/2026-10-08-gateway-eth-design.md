@@ -78,20 +78,23 @@ Teste: caso novo em `tools/test_bridge_dispatch.py` cobrindo (2) e o loop sem se
 
 1. Técnico aperta o botão (debounce 50 ms) → AP `aguada-gw-XXXX` (2 últimos bytes do MAC),
    WPA2, canal 11. LED acende fixo.
-2. Conecta o celular, abre `http://192.168.4.1`.
+2. Conecta o celular; DNS curinga faz o celular abrir a página sozinho (senão `http://192.168.4.1`).
 3. AP desliga após 10 min sem requisição HTTP (cada requisição renova). Novo aperto com AP
    ligado só renova o prazo. LED apaga.
 
-**`/` — status** (HTML inline, `fetch('/status.json')` a cada 2 s, mobile, tema escuro)
+Página única (`/`), padrão do portal do `gps_tracker`: `GET /api/state` a cada 2 s e
+`POST /api/config`. Tema claro/escuro pelo sistema.
 
-- Cabeçalho: link ETH (sem cabo / sem IP / IP), MQTT (conectado / tentando), uptime,
-  fw, tempo restante do AP.
+**Status**
+
+- Cabeçalho: link ETH (sem cabo / sem IP / IP), MQTT (conectado / tentando), relógio,
+  uptime, fw, contadores. Sem contagem do AP: o polling da página aberta renova o prazo.
 - Tabela de nodes: id, último tipo, `distance_cm`, RSSI, idade. Idade > 5 min em destaque.
 - Vazio: "nenhum pacote ainda". Erro de fetch: faixa "gateway sem resposta".
 - Tabela alimentada por um cache em RAM (até `NODE_CACHE_MAX`=20 nodes), atualizado no
   mesmo ponto onde o pacote vira JSON.
 
-**`/config` — formulário**
+**Configuração** (seção recolhível da mesma página)
 
 - Campos: DHCP ou IP fixo (IP, gateway, máscara, DNS), broker MQTT, porta, usuário,
   senha, senha do AP (mín. 8 caracteres, exigência do WPA2).
@@ -129,9 +132,11 @@ vêm do core.
    publicando; o dedupe por seq do bridge e do aguada-web absorve.)
 3. `mosquitto_pub -t aguada/gateway/cmd -m '{"cmd":"STATUS"}'` → `GATEWAY_STATUS` em rx.
 4. Cabo puxado e devolvido → reconecta sozinho, ESP-NOW não para (serial continua).
+   IP fixo pela página → reinicia e sobe com o IP novo.
 5. Botão → AP aparece, página carrega, tabela popula, config salva e reinicia; AP some
-   após 10 min parado.
-6. `pytest tools/test_bridge_dispatch.py`.
+   após 10 min parado. Pacotes continuam chegando com o AP ligando/desligando (troca
+   de modo STA ↔ AP_STA não pode derrubar o ESP-NOW).
+6. `.venv/bin/python tools/test_bridge_dispatch.py`.
 
 **Troca** (produção — avisar antes):
 

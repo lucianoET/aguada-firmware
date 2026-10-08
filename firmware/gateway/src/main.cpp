@@ -48,9 +48,19 @@ static constexpr const char *GATEWAY_USB_FW_VERSION = FW_VERSION GATEWAY_VERSION
 
 // ── Timestamp ─────────────────────────────────────────────────────────────────
 // No WiFi/NTP on gateway. bridge.py sends {"cmd":"SETTIME","ts":...} at startup.
+// GATEWAY_ETH: NTP pela Ethernet; SETTIME continua valendo até o NTP responder.
 static int64_t s_time_offset_s = 0;
 
+static bool ntp_synced(void) {
+#ifdef GATEWAY_ETH
+    return time(nullptr) > 1600000000;
+#else
+    return false;
+#endif
+}
+
 static uint32_t unix_now(void) {
+    if (ntp_synced()) return (uint32_t)time(nullptr);
     return (uint32_t)(s_time_offset_s + esp_timer_get_time() / 1000000LL);
 }
 
@@ -127,17 +137,133 @@ static void mirror_tick(void) {
 static void mirror_publish(const char *line, size_t n) {
     if (s_mqtt.connected()) s_mqtt.publish(MIRROR_TOPIC, (const uint8_t *)line, n, false);
 }
+static inline void mirror_note_rx(const espnow_packet_t *) {}
+#define MIRROR_ALL      0
+#define GW_PORT_NAME    "usb"
+
+// ── Ethernet (WT32-ETH01, env gateway-wt32-eth) ───────────────────────────────
+// Ethernet é o único link: toda linha JSON vai pra aguada/gateway/rx e os comandos
+// chegam em aguada/gateway/cmd no mesmo formato da serial (bridge.py --port none).
+// PHY/pinos vêm dos build flags ETH_PHY_* (ETH.begin() sem argumentos).
+#elif defined(GATEWAY_ETH)
+#include <ETH.h>
+#include <PubSubClient.h>
+#include "ap_portal.h"
+#define MIRROR_TOPIC          "aguada/gateway/rx"
+#define CMD_TOPIC             "aguada/gateway/cmd"
+#define MIRROR_MQTT_RETRY_MS  15000   // connect() bloqueia até ~3 s com o broker fora
+#define MIRROR_ALL            1
+#define GW_PORT_NAME          "eth"
+#ifndef LED_PIN
+#define LED_PIN               2       // LED externo opcional (a placa não tem LED de usuário)
+#endif
+
+static gw_cfg_t      s_cfg;
+static NetworkClient s_net;
+static PubSubClient  s_mqtt(s_net);
+static uint32_t      s_mqtt_retry_ms = 0;
+static bool          s_ntp_started = false;
+static uint32_t      s_led_blink_until = 0;
+
+static void process_cmd(const char *str);
+static void output_gateway_ready(void);
+static void output_gateway_status(void);
+
+static bool eth_up(void) { return ETH.linkUp() && ETH.hasIP(); }
+
+static void on_mqtt_cmd(char *, uint8_t *payload, unsigned int len) {
+    // Copia: as respostas de process_cmd() reaproveitam o buffer do PubSubClient.
+    static char buf[512];
+    if (len >= sizeof(buf)) { ESP_LOGW(TAG, "cmd MQTT longo demais (%u)", len); return; }
+    memcpy(buf, payload, len);
+    buf[len] = '\0';
+    process_cmd(buf);
+}
+
+static void fill_portal_state(JsonDocument &doc) {
+    gw_espnow_stats_t st = {};
+    gw_espnow_get_stats(&st);
+    doc["fw"]       = GATEWAY_USB_FW_VERSION;
+    doc["up"]       = millis() / 1000UL;
+    doc["eth_link"] = ETH.linkUp();
+    doc["eth_ip"]   = ETH.hasIP() ? ETH.localIP().toString() : String();
+    doc["eth_mbps"] = ETH.linkSpeed();
+    doc["mqtt"]     = s_mqtt.connected();
+    doc["time"]     = ntp_synced() || s_time_synced;
+    doc["rx"]       = st.rx_packets;
+    doc["crc"]      = st.crc_failures;
+    doc["drops"]    = s_queue_drops;
+}
+
+// Base: AP ligado = aceso; sem link ETH = 2 piscadas a cada 2 s; normal = apagado.
+// Pacote recebido inverte a base por 60 ms, então aparece nos dois casos.
+static void led_tick(void) {
+#if LED_PIN >= 0
+    uint32_t now = millis(), p = now % 2000U;
+    bool on = portal::ap_active() ? true
+            : !ETH.linkUp()       ? (p < 80U || (p >= 240U && p < 320U))
+            : false;
+    if ((int32_t)(s_led_blink_until - now) > 0) on = !on;
+    digitalWrite(LED_PIN, on ? HIGH : LOW);
+#endif
+}
+
+static void mirror_begin(void) {
+#if LED_PIN >= 0
+    pinMode(LED_PIN, OUTPUT);
+#endif
+    portal::load_cfg(s_cfg);
+    if (!ETH.begin()) ESP_LOGE(TAG, "ETH.begin falhou — confira ETH_PHY_* no env");
+    if (!s_cfg.dhcp) ETH.config(s_cfg.ip, s_cfg.gw, s_cfg.mask, s_cfg.dns);
+    s_mqtt.setServer(s_cfg.mqtt_host, s_cfg.mqtt_port);   // guarda o ponteiro: s_cfg é estático
+    s_mqtt.setBufferSize(512);
+    s_mqtt.setCallback(on_mqtt_cmd);
+    portal::begin(s_cfg, s_gateway_mac, fill_portal_state);
+}
+
+static void mirror_tick(void) {
+    portal::tick();
+    led_tick();
+    if (!eth_up()) return;
+    if (!s_ntp_started) { configTime(0, 0, "pool.ntp.org"); s_ntp_started = true; }
+    if (s_mqtt.connected()) { s_mqtt.loop(); return; }
+    if (s_mqtt_retry_ms != 0 && millis() - s_mqtt_retry_ms < MIRROR_MQTT_RETRY_MS) return;
+    s_mqtt_retry_ms = millis() | 1;
+    char id[32];
+    snprintf(id, sizeof(id), "aguada-gw-%02X%02X", s_gateway_mac[4], s_gateway_mac[5]);
+    const char *user = s_cfg.mqtt_user[0] ? s_cfg.mqtt_user : nullptr;
+    if (!s_mqtt.connect(id, user, user ? s_cfg.mqtt_pass : nullptr)) {
+        ESP_LOGW(TAG, "MQTT %s:%u falhou rc=%d", s_cfg.mqtt_host, s_cfg.mqtt_port, s_mqtt.state());
+        return;
+    }
+    s_mqtt.subscribe(CMD_TOPIC);
+    // A cada (re)conexão: bridge registra o gateway e responde com SETTIME.
+    output_gateway_ready();
+    output_gateway_status();
+}
+
+static void mirror_publish(const char *line, size_t n) {
+    if (s_mqtt.connected()) s_mqtt.publish(MIRROR_TOPIC, (const uint8_t *)line, n, false);
+}
+
+static void mirror_note_rx(const espnow_packet_t *pkt) {
+    portal::note_packet(pkt);
+    s_led_blink_until = millis() + 60;
+}
 #else
 static inline void mirror_begin(void) {}
 static inline void mirror_tick(void) {}
 static inline void mirror_publish(const char *, size_t) {}
+static inline void mirror_note_rx(const espnow_packet_t *) {}
+#define MIRROR_ALL      0
+#define GW_PORT_NAME    "usb"
 #endif
 
 // mirror=true for node packets and gateway status (what bridge.py republishes too).
 static void json_out(JsonDocument &doc, bool mirror = false) {
     char line[384];
     size_t n = serializeJson(doc, line, sizeof(line) - 2);
-    if (mirror) mirror_publish(line, n);
+    if (mirror || MIRROR_ALL) mirror_publish(line, n);
     line[n++] = '\r';
     line[n++] = '\n';
     Serial.write((const uint8_t *)line, n);
@@ -191,7 +317,7 @@ static void output_gateway_status(void) {
     doc["type"] = "GATEWAY_STATUS";
     doc["fw"] = GATEWAY_USB_FW_VERSION;
     doc["mac"] = mac_str;
-    doc["port"] = "usb";
+    doc["port"] = GW_PORT_NAME;
     doc["uptime_s"] = millis() / 1000UL;
     doc["free_heap"] = ESP.getFreeHeap();
     doc["rx_packets"] = stats.rx_packets;
@@ -201,7 +327,7 @@ static void output_gateway_status(void) {
     doc["channel"] = ESPNOW_CHANNEL;
     doc["connected"] = true;
     doc["sim_mode"] = false;
-    doc["time_synced"] = s_time_synced;
+    doc["time_synced"] = s_time_synced || ntp_synced();
     doc["ready_count"] = s_ready_sent;
     if (s_last_packet_ms > 0) {
         doc["last_packet_age_s"] = (millis() - s_last_packet_ms) / 1000UL;
@@ -459,6 +585,7 @@ void loop(void) {
     pkt_event_t evt;
     while (xQueueReceive(s_pkt_queue, &evt, 0) == pdTRUE) {
         cache_mac(evt.pkt.node_id, evt.src_mac);
+        mirror_note_rx(&evt.pkt);
         switch (evt.pkt.type) {
             case PKT_SENSOR:    output_sensor(&evt.pkt);    break;
             case PKT_HEARTBEAT: output_heartbeat(&evt.pkt); break;
