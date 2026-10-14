@@ -28,14 +28,37 @@
 #include "ani_web.h"
 #include "light_sensor.h"
 #include "sound_sensor.h"
+#include "co2_scd41.h"
+#include "probe_temp.h"
+#include "current_ct.h"
 
-// TEMT6000 ambient-light sensor (ANI/AirQ node). ADC1 pin on the C3 (GPIO0–4).
+// ── Pinagem AirQ / analisador de AC (ESP32-C3 SuperMini) ─────────────────────
+// Todos os periféricos abaixo são opcionais e detectados em runtime.
+//   GPIO0  livre (ADC1)          GPIO1  TC corrente (ADC1)    GPIO2  livre (strapping)
+//   GPIO3  TEMT6000 (ADC1)       GPIO4  sonda EXT (1-Wire)    GPIO5  INMP441 SD
+//   GPIO6/7 I2C (AHT21, ENS160, SCD41)                       GPIO8  LED  GPIO9 BOOT
+//   GPIO10 sonda SUP (1-Wire)    GPIO20 INMP441 SCK           GPIO21 INMP441 WS
+// ADC só em ADC1 (GPIO0–4): ADC2 não funciona com WiFi ligado.
 #ifndef DEFAULT_LIGHT_PIN
 #define DEFAULT_LIGHT_PIN 3
 #endif
-// KY-037/038 ambient-noise sensor (analog A0). ADC1 pin (GPIO0–4; not 3 = light).
-#ifndef DEFAULT_SOUND_PIN
-#define DEFAULT_SOUND_PIN 1
+#ifndef CT_PIN
+#define CT_PIN 1
+#endif
+#ifndef PROBE_EXT_PIN
+#define PROBE_EXT_PIN 4
+#endif
+#ifndef PROBE_SUP_PIN
+#define PROBE_SUP_PIN 10
+#endif
+#ifndef MIC_SD_PIN
+#define MIC_SD_PIN 5
+#endif
+#ifndef MIC_SCK_PIN
+#define MIC_SCK_PIN 20
+#endif
+#ifndef MIC_WS_PIN
+#define MIC_WS_PIN 21
 #endif
 #include "rgb_led.h"
 #include <WebServer.h>
@@ -55,7 +78,10 @@ static volatile bool g_config_save_pending = false;
 static AniReading    g_last_ani   = {};
 static uint32_t      g_last_ani_ms = 0;   // millis() of last captive-portal refresh
 static LightReading  g_last_light = {};   // TEMT6000 ambient light (ANI/AirQ node)
-static SoundReading  g_last_sound = {};   // KY-037/038 ambient noise (ANI/AirQ node)
+static SoundReading  g_last_sound = {};   // INMP441 ambient noise (ANI/AirQ node)
+static Co2Reading    g_last_co2   = {};   // SCD41 CO2 real (opcional)
+static CurrentReading g_last_ct   = {};   // TC da condensadora (opcional)
+static ProbeReading  g_last_probe[PROBE_COUNT] = {};   // sondas DS18B20 EXT / SUP
 static WebServer     g_httpd(80);
 static DNSServer     g_dns;
 
@@ -557,6 +583,60 @@ static void on_recv(const espnow_packet_t *pkt, const uint8_t *src_mac) {
 // ESP-NOW send cadence so the local page stays "live" without adding radio traffic.
 #define ANI_MEASURE_MS 8000
 
+// Envia um canal extra AirQ/AC (SENSOR_ID_0xF0..0xF6) como HEARTBEAT.
+// Canal nunca visto e sem leitura → não envia (a bridge só cria a entidade no HA
+// quando o periférico existe). Canal já visto que deixa de ler → DISTANCE_ERROR.
+static void send_ext(uint8_t sid, bool valid, uint32_t value, uint8_t extra) {
+    static bool seen[8] = {};
+    uint8_t idx = (uint8_t)(sid - SENSOR_ID_CO2);
+    if (idx >= 8) return;
+    if (!valid && !seen[idx]) return;
+    if (valid) seen[idx] = true;
+
+    espnow_packet_t pkt = {};
+    pkt.version     = PROTO_VERSION;
+    pkt.type        = PKT_HEARTBEAT;
+    pkt.node_id     = g_cfg.node_id;
+    pkt.sensor_id   = sid;
+    pkt.ttl         = g_cfg.ttl_max;
+    pkt.seq         = g_seq++;
+    pkt.distance_cm = valid ? (uint16_t)(value > 65000 ? 65000 : value) : DISTANCE_ERROR;
+    pkt.reserved    = valid ? extra : 0;
+    pkt.vbat        = read_vbat();
+    pkt.flags       = valid ? 0 : FLAG_SENSOR_ERROR;
+    esp_err_t err = espnow_send(&pkt);
+    if (err != ESP_OK) ESP_LOGW(TAG, "EXT TX sid=0x%02X falhou err=%d", sid, (int)err);
+    delay(20);   // espaçar a rajada: broadcast ESP-NOW não tem ACK nem fila grande
+}
+
+static void ani_service_web(void) {
+    g_dns.processNextRequest();
+    g_httpd.handleClient();
+}
+
+static uint32_t temp_enc(float t) {
+    int v = (int)lroundf(t * 10.0f) + 1000;
+    return v < 0 ? 0 : (uint32_t)v;
+}
+
+static void ani_send_extras(const AniReading &r) {
+    const ProbeReading &pe = g_last_probe[PROBE_EXT];
+    const ProbeReading &ps = g_last_probe[PROBE_SUP];
+    send_ext(SENSOR_ID_CO2,     g_last_co2.valid, g_last_co2.co2_ppm, 0);
+    send_ext(SENSOR_ID_T_EXT,   pe.valid, temp_enc(pe.temp_c), 0);
+    send_ext(SENSOR_ID_T_SUP,   ps.valid, temp_enc(ps.temp_c), 0);
+    send_ext(SENSOR_ID_CURRENT, g_last_ct.valid, (uint32_t)lroundf(g_last_ct.amps * 100.0f), 0);
+    send_ext(SENSOR_ID_LIGHT,   g_last_light.valid, g_last_light.lux, g_last_light.pct);
+    float pk = g_last_sound.peak_db;
+    send_ext(SENSOR_ID_SOUND,   g_last_sound.valid,
+             (uint32_t)lroundf(fmaxf(g_last_sound.db_spl, 0.0f) * 10.0f),
+             (uint8_t)(pk < 0 ? 0 : pk > 255 ? 255 : lroundf(pk)));
+    send_ext(SENSOR_ID_VOC,     r.valid, r.tvoc, r.aqi);
+    ESP_LOGI(TAG, "EXT TX co2=%u/%d ext=%.1f/%d sup=%.1f/%d I=%.2fA/%d db=%.1f/%d",
+             g_last_co2.co2_ppm, g_last_co2.valid, pe.temp_c, pe.valid, ps.temp_c, ps.valid,
+             g_last_ct.amps, g_last_ct.valid, g_last_sound.db_spl, g_last_sound.valid);
+}
+
 static void ani_tick(void) {
     static uint32_t last_measure_ms = 0;
     static uint32_t last_send_ms    = 0;
@@ -580,9 +660,20 @@ static void ani_tick(void) {
     g_last_light  = light_read();   // TEMT6000 — refresh every local tick too
     ESP_LOGI(TAG, "LIGHT raw=%u mv=%umV lux=%u pct=%u%%",
              g_last_light.raw, g_last_light.mv, g_last_light.lux, g_last_light.pct);
-    g_last_sound  = sound_read();   // KY-037/038 — sample audio window (~50ms)
-    ESP_LOGI(TAG, "SOUND mean=%u rms=%u vpp=%u db~%u",
-             g_last_sound.mean, g_last_sound.rms, g_last_sound.vpp, g_last_sound.db);
+    // Leituras lentas (~0.6 s no total): atender o portal entre elas para a página
+    // não "congelar" durante o tick.
+    g_last_sound  = sound_read();   // INMP441 — janela I2S (~0.35 s)
+    ani_service_web();
+    static uint8_t scd_retry = 0;   // SCD41 hot-plug: tentar de novo a cada ~2 min
+    if (!scd41_present() && ++scd_retry >= 15) { scd_retry = 0; scd41_init(); }
+    g_last_co2    = scd41_read();   // SCD41 — só se presente
+    g_last_ct     = current_read(); // TC — janela 200 ms, só se presente
+    ani_service_web();
+    probe_tick();                   // DS18B20 — lê conversão anterior, pede a próxima
+    for (int i = 0; i < PROBE_COUNT; i++) g_last_probe[i] = probe_get((ProbeId)i);
+
+    // Canais extra (SCD41, sondas, TC, luz, som, VOC) não dependem do AHT21/ENS160.
+    if (do_send) ani_send_extras(r);
 
     if (!r.valid) {
         ESP_LOGW(TAG, "ANI read failed");
@@ -773,7 +864,10 @@ void setup(void) {
             ESP_LOGW(TAG, "ANI: one or both sensors not detected on I2C bus");
         }
         light_init(DEFAULT_LIGHT_PIN);   // TEMT6000 ambient light (analog, ADC1)
-        sound_init(DEFAULT_SOUND_PIN);   // KY-037/038 ambient noise (analog, ADC1)
+        sound_init(MIC_SCK_PIN, MIC_WS_PIN, MIC_SD_PIN);   // INMP441 (I2S)
+        scd41_init();                    // SCD41 no mesmo I2C (Wire já iniciado por ani_init)
+        probe_init(PROBE_EXT_PIN, PROBE_SUP_PIN);          // DS18B20 EXT / SUP
+        current_init(CT_PIN);            // TC da condensadora (ADC1)
         relay_aux_init();
 
         // ── Captive portal AP ─────────────────────────────────────────────────
@@ -795,12 +889,18 @@ void setup(void) {
             uint32_t up_ms  = millis();
             uint32_t age_s  = g_last_ani_ms ? (up_ms - g_last_ani_ms) / 1000 : 0;
             bool     warmup = up_ms < 180000UL;   // ENS160 initial ~3 min startup
-            char buf[480];
+            const ProbeReading &pe = g_last_probe[PROBE_EXT];
+            const ProbeReading &ps = g_last_probe[PROBE_SUP];
+            char buf[900];
             snprintf(buf, sizeof(buf),
                 "{\"valid\":%s,\"eco2\":%u,\"aqi\":%u,\"tvoc\":%u,"
                 "\"temp_c\":%.1f,\"hum_pct\":%.0f,"
                 "\"light\":%s,\"lux\":%u,\"lpct\":%u,\"lraw\":%u,"
-                "\"sound\":%s,\"db\":%u,\"srms\":%u,\"svpp\":%u,"
+                "\"sound\":%s,\"db\":%.1f,\"dbpk\":%.1f,"
+                "\"scd\":%s,\"co2ok\":%s,\"co2\":%u,"
+                "\"pext\":%s,\"text_ok\":%s,\"t_ext\":%.2f,"
+                "\"psup\":%s,\"tsup_ok\":%s,\"t_sup\":%.2f,"
+                "\"ct\":%s,\"amps\":%.2f,\"ct_bias\":%u,\"ct_clip\":%s,"
                 "\"aht\":%s,\"ens\":%s,\"warmup\":%s,"
                 "\"node\":\"%04X\",\"fw\":\"%s\",\"up\":%lu,\"heap\":%lu,\"age\":%lu}",
                 g_last_ani.valid ? "true" : "false",
@@ -809,7 +909,13 @@ void setup(void) {
                 g_last_light.valid ? "true" : "false",
                 g_last_light.lux, g_last_light.pct, g_last_light.raw,
                 g_last_sound.valid ? "true" : "false",
-                g_last_sound.db, g_last_sound.rms, g_last_sound.vpp,
+                g_last_sound.db_spl, g_last_sound.peak_db,
+                scd41_present() ? "true" : "false",
+                g_last_co2.valid ? "true" : "false", g_last_co2.co2_ppm,
+                pe.present ? "true" : "false", pe.valid ? "true" : "false", pe.temp_c,
+                ps.present ? "true" : "false", ps.valid ? "true" : "false", ps.temp_c,
+                g_last_ct.present ? "true" : "false", g_last_ct.amps, g_last_ct.bias_mv,
+                g_last_ct.clipped ? "true" : "false",
                 aht_ok ? "true" : "false",
                 ens_ok ? "true" : "false",
                 warmup ? "true" : "false",
@@ -871,33 +977,6 @@ void loop(void) {
         g_httpd.handleClient();
         ani_tick();
         relay_aux_tick();
-#ifdef SOUND_DEBUG
-        // Raw A0 diagnostic — longer continuous read once per second.
-        // Reports DC bias (mean/mV), peak-to-peak, and avg sample-to-sample delta
-        // (AC activity). A powered KY mic biases ~1.65V (raw ~2048); avgdelta/vpp
-        // should jump when you clap.
-        static uint32_t s_snd_dbg_ms = 0;
-        if (millis() - s_snd_dbg_ms >= 1000) {
-            s_snd_dbg_ms = millis();
-            const int N = 4000;
-            uint16_t mn = 4095, mx = 0, prev = analogRead(DEFAULT_SOUND_PIN);
-            uint32_t sum = 0; uint64_t dsum = 0;
-            for (int i = 0; i < N; i++) {
-                uint16_t v = analogRead(DEFAULT_SOUND_PIN);
-                sum += v;
-                if (v < mn) mn = v;
-                if (v > mx) mx = v;
-                dsum += (v > prev) ? (v - prev) : (prev - v);
-                prev = v;
-            }
-            uint32_t mvsum = 0;
-            for (int i = 0; i < 16; i++) mvsum += analogReadMilliVolts(DEFAULT_SOUND_PIN);
-            Serial.printf("RAW n=%d min=%u max=%u mean=%lu mv=%lumV vpp=%u avgdelta=%.1f\n",
-                          N, mn, mx, (unsigned long)(sum / N),
-                          (unsigned long)(mvsum / 16), (uint16_t)(mx - mn),
-                          (float)dsum / N);
-        }
-#endif
     } else if (g_cfg.num_sensors > 0) {
         for (uint8_t i = 0; i < 2; i++) {
             sensor_tick(i);

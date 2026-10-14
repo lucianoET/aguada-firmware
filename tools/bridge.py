@@ -738,6 +738,96 @@ def publish_env_discovery(client: mqtt.Client, node_id: str):
         log.debug("Env Discovery: %s", disc_topic)
 
 
+# ── AirQ / analisador de ar-condicionado (canais 0xF0–0xF6) ──────────────────
+# O node ANI envia cada periférico opcional como HEARTBEAT com sensor_id próprio
+# (ver firmware/shared/protocol.h). Canal só aparece no HA quando chega o 1º valor
+# válido → periférico não ligado = sem entidade. distance_cm 0xFFFF = sem leitura.
+
+AIRQ_COMPRESSOR_ON_A = 1.0   # corrente acima disto = compressor ligado
+AIRQ_STALE_S = 400           # > 3 ciclos de envio (120 s): valor sem renovação → null
+
+
+def _airq_temp(raw: int) -> float:
+    return round((raw - 1000) / 10.0, 1)
+
+
+# sensor_id → (chave, nome, unidade, device_class, ícone, decode(distance_cm), chave_extra do reserved)
+AIRQ_CHANNELS = {
+    0xF0: ("co2",       "CO2 (SCD41)",                 "ppm", "carbon_dioxide", "mdi:molecule-co2",   lambda d: d,                   None),
+    0xF1: ("t_ext",     "Temperatura externa",         "°C",  "temperature",    "mdi:thermometer",    _airq_temp,                    None),
+    0xF2: ("t_sup",     "Temperatura de insuflamento", "°C",  "temperature",    "mdi:thermometer-low", _airq_temp,                   None),
+    0xF3: ("current_a", "Corrente da condensadora",    "A",   "current",        "mdi:current-ac",     lambda d: round(d / 100.0, 2), None),
+    0xF4: ("lux",       "Luminosidade",                "lx",  "illuminance",    "mdi:brightness-5",   lambda d: d,                   "lux_pct"),
+    0xF5: ("sound_db",  "Ruído (dB SPL)",              "dB",  "sound_pressure", "mdi:volume-high",    lambda d: round(d / 10.0, 1),  "sound_peak_db"),
+    0xF6: ("tvoc",      "TVOC",                        "ppb", "volatile_organic_compounds_parts", "mdi:air-filter", lambda d: d,     "aqi"),
+}
+
+# Entidades derivadas, publicadas quando a sua dependência aparece pela 1ª vez.
+AIRQ_DERIVED = {
+    "t_sup":     [("dt_c", "ΔT ambiente − insuflamento", "°C", None, "mdi:delta")],
+    "tvoc":      [("aqi",  "AQI (ENS160)", None, "aqi", "mdi:air-filter")],
+    "sound_db":  [("sound_peak_db", "Ruído pico", "dB", "sound_pressure", "mdi:volume-vibrate")],
+}
+
+
+def airq_state_topic(node_id: str) -> str:
+    return f"aguada/{node_id}/airq/state"
+
+
+def airq_device(node_id: str, alias: str | None) -> dict:
+    nid = node_id.replace("0X", "").replace("0x", "").lower()
+    return {
+        "name":         f"AirQ {alias or node_id}",
+        "identifiers":  [f"aguada_airq_{nid}"],
+        "manufacturer": "Luctronics / Aguada",
+        "model":        "AirQ — qualidade do ar + analisador de AC",
+    }
+
+
+def publish_airq_entity(client: mqtt.Client, node_id: str, alias: str | None,
+                        key: str, name: str, uom, dc, icon: str):
+    nid = node_id.replace("0X", "").replace("0x", "").lower()
+    uid = f"aguada_airq_{nid}_{key}"
+    payload = {
+        "name":                  name,
+        "unique_id":             uid,
+        "state_topic":           airq_state_topic(node_id),
+        # null no JSON → "None" → HA mostra "desconhecido" (sensor sem leitura)
+        "value_template":        f"{{{{ value_json.{key} }}}}",
+        "state_class":           "measurement",
+        "device":                airq_device(node_id, alias),
+        "availability_topic":    mqtt_topic_status(node_id),
+        "payload_available":     "online",
+        "payload_not_available": "offline",
+        "icon":                  icon,
+    }
+    if uom:
+        payload["unit_of_measurement"] = uom
+    if dc:
+        payload["device_class"] = dc
+    client.publish(f"homeassistant/sensor/{uid}/config", json.dumps(payload), retain=True)
+
+
+def publish_airq_compressor(client: mqtt.Client, node_id: str, alias: str | None):
+    nid = node_id.replace("0X", "").replace("0x", "").lower()
+    uid = f"aguada_airq_{nid}_compressor"
+    payload = {
+        "name":                  "Compressor",
+        "unique_id":             uid,
+        "state_topic":           airq_state_topic(node_id),
+        "value_template":        "{{ value_json.compressor_on }}",
+        "payload_on":            "True",
+        "payload_off":           "False",
+        "device_class":          "running",
+        "device":                airq_device(node_id, alias),
+        "availability_topic":    mqtt_topic_status(node_id),
+        "payload_available":     "online",
+        "payload_not_available": "offline",
+        "icon":                  "mdi:hvac",
+    }
+    client.publish(f"homeassistant/binary_sensor/{uid}/config", json.dumps(payload), retain=True)
+
+
 # ── Online/offline tracking ───────────────────────────────────────────────────
 
 class NodeTracker:
@@ -878,6 +968,10 @@ class Bridge:
         self._relay_discovery_sent: set = set()
         self._env_discovery_sent: set = set()
         self._button_off_timers: dict[str, threading.Timer] = {}
+        # AirQ: último valor de cada canal por node + entidades já anunciadas no HA
+        self._airq: dict[str, dict] = {}
+        self._airq_disc: set[tuple] = set()   # (node_id, key)
+        self._airq_ts: dict[str, dict] = {}   # node_id → {key: time da última leitura válida}
 
         # Gateway presence tracking (USB serial + JSON activity)
         self._gateway_online = False
@@ -977,6 +1071,9 @@ class Bridge:
                 publish_relay_discovery(client, node_id)
                 if has_env:
                     publish_env_discovery(client, node_id)
+            # AirQ: re-anunciar as entidades já vistas (broker pode ter perdido os retained)
+            for node_id, key in list(self._airq_disc):
+                self._airq_publish_discovery(node_id, key)
             # Prevent stale retained online states after bridge restart.
             known_nodes = set(self._configured_nodes) | set(self._known_relays.keys())
             self.tracker.sync_statuses(known_nodes)
@@ -1297,10 +1394,93 @@ class Bridge:
         if self._influx:
             self._influx.write_ani(node_id, sensor_id, cfg.get("alias", ""), payload)
 
+    # ── AirQ ────────────────────────────────────────────────────────────────
+
+    def _airq_alias(self, node_id: str) -> str | None:
+        for (nid, _sid), cfg in self.reservoirs.items():
+            if nid == node_id and cfg.get("type") == "air_quality":
+                return cfg.get("alias")
+        return None
+
+    def _airq_publish_discovery(self, node_id: str, key: str):
+        alias = self._airq_alias(node_id)
+        if key == "compressor_on":
+            publish_airq_compressor(self.client, node_id, alias)
+            return
+        for _sid, (k, name, uom, dc, icon, _dec, _xk) in AIRQ_CHANNELS.items():
+            if k == key:
+                publish_airq_entity(self.client, node_id, alias, k, name, uom, dc, icon)
+                return
+        for derived in AIRQ_DERIVED.values():
+            for k, name, uom, dc, icon in derived:
+                if k == key:
+                    publish_airq_entity(self.client, node_id, alias, k, name, uom, dc, icon)
+                    return
+
+    def _airq_announce(self, node_id: str, key: str):
+        if (node_id, key) in self._airq_disc:
+            return
+        self._airq_disc.add((node_id, key))
+        self._airq_publish_discovery(node_id, key)
+        log.info("AirQ %s: nova entidade %s", node_id, key)
+
+    def _airq_touch(self, node_id: str, *keys: str):
+        now = time.time()
+        ts = self._airq_ts.setdefault(node_id, {})
+        for k in keys:
+            ts[k] = now
+
+    def _airq_publish_state(self, node_id: str, msg: dict | None = None):
+        st = self._airq[node_id]
+        # Node calado (reboot, rádio, sensor morto sem 0xFFFF): não deixar valores
+        # velhos a alimentar o ΔT / compressor_on como se fossem actuais.
+        now = time.time()
+        for k, t0 in self._airq_ts.get(node_id, {}).items():
+            if now - t0 > AIRQ_STALE_S:
+                st[k] = None
+        t_amb, t_sup, amps = st.get("t_amb"), st.get("t_sup"), st.get("current_a")
+        st["compressor_on"] = (amps >= AIRQ_COMPRESSOR_ON_A) if amps is not None else None
+        # ΔT só tem significado com o compressor a trabalhar (ou sem TC para o saber)
+        if t_amb is None or t_sup is None or st["compressor_on"] is False:
+            st["dt_c"] = None
+        else:
+            st["dt_c"] = round(t_amb - t_sup, 1)
+        if msg is not None:
+            st["rssi"] = msg.get("rssi", 0)
+            st["ts"] = msg.get("ts", int(time.time()))
+            st["ts_iso"] = ts_to_iso(st["ts"])
+        self._publish_json(airq_state_topic(node_id), st, retain=True)
+
+    def _handle_airq_channel(self, node_id: str, sensor_id: int, msg: dict):
+        key, _name, _uom, _dc, _icon, decode, extra_key = AIRQ_CHANNELS[sensor_id]
+        st = self._airq.setdefault(node_id, {})
+        raw = msg.get("distance_cm", 0xFFFF)
+        try:
+            raw = int(raw)
+        except (TypeError, ValueError):
+            raw = 0xFFFF
+        valid = raw not in (0xFFFF, -1)
+        st[key] = decode(raw) if valid else None
+        if extra_key:
+            st[extra_key] = int(msg.get("reserved", 0) or 0) if valid else None
+        if valid:
+            self._airq_touch(node_id, key, *([extra_key] if extra_key else []))
+            self._airq_announce(node_id, key)
+            for k, *_ in AIRQ_DERIVED.get(key, []):
+                self._airq_announce(node_id, k)
+            if key == "current_a":
+                self._airq_announce(node_id, "compressor_on")
+        log.info("AIRQ   %-6s %s=%s", node_id, key, st[key])
+        self._airq_publish_state(node_id, msg)
+
     def _handle_heartbeat(self, msg: dict):
         node_id   = msg["node_id"].upper()
         sensor_id = int(msg.get("sensor_id", 0))
         self.tracker.seen(node_id)
+
+        if sensor_id in AIRQ_CHANNELS:
+            self._handle_airq_channel(node_id, sensor_id, msg)
+            return
 
         # SENSOR_ID_ENV (0xFE): relay I2C env telemetry
         # Encoding: distance_cm = (int)(temp_c*10)+1000, reserved = humidity%
@@ -1321,6 +1501,12 @@ class Bridge:
             self.client.publish(f"aguada/{node_id}/env/state", json.dumps(env_payload), retain=True)
             log.info("ENV    %-6s  T=%5.1f°C  H=%3d%%  rssi=%d",
                      node_id, temp_c, hum_pct, msg.get("rssi", 0))
+
+            # Node AirQ: a T ambiente (AHT21) é a referência do ΔT com o insuflamento
+            if node_id in self._airq:
+                self._airq[node_id]["t_amb"] = temp_c
+                self._airq_touch(node_id, "t_amb")
+                self._airq_publish_state(node_id)
 
             # Also refresh relay state (has fresh rssi/vbat)
             relay_payload = {"rssi": msg.get("rssi", 0), "vbat": vbat,
