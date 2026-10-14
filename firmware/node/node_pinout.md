@@ -133,27 +133,34 @@ ESP32-C3            TEMT6000
 > Evitar GPIO2 (strapping). GPIO4 também é ADC1 mas é o pino recomendado para vbat.
 > Pino configurável via build flag `DEFAULT_LIGHT_PIN`.
 
-**Sensor de som KY-037 / KY-038 (opcional, modo ANI-01):**
+**Analisador de ar-condicionado + extras (opcionais, modo ANI-01, detecção automática):**
 
-Microfone electret com saída analógica (A0). Ligar a um pino **ADC1** diferente do da luz.
-**Alimentar a 3.3 V** (não 5 V) para os picos do A0 ficarem dentro do ADC.
-
-| Sinal | GPIO | Destino |
-|-------|------|---------|
-| A0 (analógico) | **1** (ADC1_CH1) | saída de áudio |
-| VCC | 3V3 | ⚠ 3.3 V |
-| GND | GND | massa |
-| D0 | — | não usado |
+| Periférico | GPIO | Ligação |
+|---|---|---|
+| SCD41 (CO₂ real) | 6 / 7 | mesmo I2C do AHT21/ENS160, endereço 0x62 |
+| DS18B20 sonda EXT | **4** | DQ + pull-up 4k7 → 3V3, cabo 3 vias |
+| DS18B20 sonda SUP | **10** | idem |
+| TC SCT-013 | **1** (ADC1) | bias 3V3─10k─┬─6k8─GND + 10 µF; jack P2 com comutação → GND sem plugue |
+| INMP441 SD | **5** | entrada (pull-down interno) |
+| INMP441 SCK | **20** | U0RXD — confirmar que o SuperMini expõe |
+| INMP441 WS | **21** | U0TXD |
+| INMP441 L/R | GND | canal esquerdo |
 
 ```
-ESP32-C3            KY-037 / KY-038
-  3V3 ───────────── + / VCC
-  GND ───────────── G / GND
-   G1 ───────────── A0
+ESP32-C3            INMP441              DS18B20 (x2)          SCT-013 (jack P2)
+  3V3 ───────────── VDD                    VDD ── 3V3            tip ──── G1
+  GND ───────────── GND, L/R               GND ── GND            sleeve ─ bias 1.34 V
+   G20 ──────────── SCK                    DQ ─┬─ G4 (EXT)
+   G21 ──────────── WS                         └─ 4k7 → 3V3
+   G5  ──────────── SD                     (SUP idêntica em G10)
 ```
 
-> Nível sonoro **relativo** (não dB SPL calibrado). Pino via `DEFAULT_SOUND_PIN`,
-> calibração via `SOUND_DB_OFFSET`.
+![Caixa central AirQ](docs/airq_wiring_core.svg)
+
+![Portas do analisador de AC](docs/airq_wiring_ac.svg)
+
+> KY-037/038 removido em 2026-10 (substituído pelo INMP441, que dá dB SPL real).
+> Detalhes, faixa do TC e diagnóstico ΔT: [`Node AirQ.md`](../../Node%20AirQ.md).
 
 ---
 
@@ -252,7 +259,9 @@ Qualquer pino pode ser sobrescrito adicionando flags em `platformio.ini`:
 | `DEFAULT_I2C_SCL_PIN` | 7 | 22 | I2C SCL |
 | `DEFAULT_LED_PIN` | 8 | 2 | LED / WS2812B DIN |
 | `DEFAULT_LIGHT_PIN` | 3 | — | TEMT6000 SIG (ADC1, modo ANI-01) |
-| `DEFAULT_SOUND_PIN` | 1 | — | KY-037/038 A0 (ADC1, modo ANI-01) |
+| `CT_PIN` | 1 | — | TC SCT-013 (ADC1, modo ANI-01) |
+| `PROBE_EXT_PIN` / `PROBE_SUP_PIN` | 4 / 10 | — | sondas DS18B20 (modo ANI-01) |
+| `MIC_SCK_PIN` / `MIC_WS_PIN` / `MIC_SD_PIN` | 20 / 21 / 5 | — | INMP441 I2S (modo ANI-01) |
 | `DEFAULT_SENSOR_TYPE` | 0 | 0 | 0=ultrassônico 1=ANI-01 |
 | `DEFAULT_NUM_SENSORS` | 1 | 1 | 0=relay 1=1sensor 2=2sensores |
 | `DEFAULT_RELAY_ENABLED` | 0 | 0 | 1=relay+sensor simultâneos |

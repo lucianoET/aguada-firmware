@@ -1,51 +1,42 @@
-# TODO — Node AirQ
+# TODO — Node AirQ (qualidade do ar + analisador de AC)
 
-Trabalho pendente do node de qualidade do ar (ESP32-C3 + AHT21 + ENS160 + TEMT6000 + KY-037).
-Ver visão geral em [`Node AirQ.md`](Node%20AirQ.md).
+Visão geral em [`Node AirQ.md`](Node%20AirQ.md).
 
-## 🔴 Bloqueador atual — KY-037/038 (som)
+## 🔴 Validação em bancada (código pronto e a compilar, falta hardware)
 
-- [ ] **Corrigir alimentação/ligação do KY-037/038.** Diagnóstico (leitura raw longa do A0):
-      bias DC preso em **~150 mV** (esperado ~1.65 V = Vcc/2) e `avgΔ` plano ~2.5 sem reação
-      a palmas → o módulo **não está a ser alimentado** ou o A0 não chega ao GPIO1.
-  - [ ] Medir VCC↔GND do módulo (deve dar ~3.3 V); confirmar LED de power aceso.
-  - [ ] Confirmar fio do **GPIO1 no A0** (não D0) e GND comum.
-  - [ ] (Alternativa) testar no **GPIO0** para descartar o GPIO1.
-- [ ] Após corrigir: validar resposta (com `SOUND_DEBUG`, `mean`→~2000 e `avgΔ` dispara com som).
-- [ ] **Calibrar `SOUND_DB_OFFSET`** para o silêncio ficar ~35–40.
-- [ ] Gravar a **versão final sem `SOUND_DEBUG`** (remover/baixar log de telemetria de som).
+- [ ] **Confirmar GPIO20/21 expostos** no SuperMini usado (serigrafia RX/TX). Se não,
+      mover INMP441 SCK/WS por build flag (`MIC_SCK_PIN`/`MIC_WS_PIN`) para 0/2.
+- [ ] **INMP441:** L/R→GND; ver no serial `Leq=… dB SPL` ~30–40 em silêncio e a subir
+      com palmas. Sem mic: pill "falha" e nada enviado. Se tiver sonómetro, acertar
+      `MIC_DB_OFFSET`.
+- [ ] **SCD41:** log `SCD41 OK serial=…`; CO₂ exterior ~420 ppm, sobe ao respirar perto.
+- [ ] **DS18B20 EXT/SUP:** ligar/desligar a quente → secção "Ar-condicionado" aparece/
+      some; trocar as sondas de porta → nomes acompanham a porta.
+- [ ] **TC:** montar bias 10k/6k8 + 10 µF e jack com comutação. Sem plugue → sem card;
+      com plugue em vazio → ~0 A; carga conhecida (ex. ferro 1000 W ≈ 4.5 A em 220 V)
+      → conferir com alicate amperímetro e ajustar `CT_AMPS_PER_VOLT`/`CT_NOISE_MV`.
+- [ ] **AHT21:** medir desvio contra termómetro de referência (aquecimento do ENS160).
+      Se > 1 °C, decidir: offset em firmware ou 3ª sonda no retorno do ar.
+- [ ] **Rajada de rádio:** 8–9 pacotes por ciclo — confirmar no gateway que nenhum se perde.
 
-## 🟠 Integração Home Assistant (luz + som)
+## 🟠 Gateway
 
-- [ ] Publicar **luz (lux)** e **som (dB rel.)** via ESP-NOW → MQTT → HA.
-  - [ ] Definir `sensor_id` novos no protocolo v3 (ex.: luz, som) sem quebrar os 16 bytes.
-  - [ ] Encoder no node + parse no `tools/bridge.py` + MQTT Discovery.
-  - [ ] Entidades no Home Assistant.
+- [ ] Reflash dos gateways: o JSON de SENSOR agora inclui `reserved` (AQI). Antes disto
+      o AQI do pacote sid 1 chegava sempre 0 à bridge. (O AQI também vem no canal
+      `0xF6`, que já funciona sem reflash.)
+- [ ] Registar o node AirQ real em `tools/reservoirs.yaml` (`type: air_quality`) — sem isso
+      o pacote eCO₂ (sid 1) é descartado pela bridge. Os canais 0xF0–0xF6 não precisam.
 
-## 🟡 Calibração / qualidade
+## 🟡 Evolução
 
-- [ ] **TEMT6000:** afinar a constante de lux contra um luxímetro de referência
-      (atualmente estimativa não calibrada; ~200 mV ≈ 41 lux no teste).
-- [ ] Confirmar que a amostragem extra (luz + som ~66 ms/tick) não afeta mesh/relay.
-
-## 🟢 UI / captive page
-
-- [ ] Com 4 componentes a página passou de "1 ecrã" — tornar os containers de sensor
-      **recolhíveis** (ou compactar) para voltar a caber num ecrã de telemóvel.
-- [ ] (Opcional) renomear SSID do AP `ANI-…` → `ARQ-…` para coerência com o nome AirQ.
-
-## ⚪ Futuro
-
-- [ ] Deep sleep: incompatível com amostragem contínua de luz/som e com relay — avaliar.
+- [ ] Ponderação A no INMP441 (filtro IIR) para dB(A) comparável a NR-15/NBR 10152.
 - [ ] Persistir baseline do ENS160 em NVS (reduz warmup entre reboots).
+- [ ] SCD41: avaliar desligar ASC em salas que nunca ventilam (ASC assume 400 ppm/semana).
+- [ ] Bridge: ciclo de trabalho e kWh estimado do compressor (integração da corrente).
+- [ ] Integração com o PMOC: vincular node_id ↔ equipamento (TAG) e anexar histórico ΔT.
+- [ ] Renomear SSID `ANI-…` → `ARQ-…` (coerência com o nome AirQ).
 
----
+## Histórico
 
-### Estado dos sensores (resumo)
-
-| Sensor | Estado |
-|---|---|
-| AHT21 (T/H) | ✅ validado |
-| ENS160 (eCO₂/TVOC/AQI) | ✅ validado |
-| TEMT6000 (luz) | ✅ validado |
-| KY-037/038 (som) | 🔴 ligado, não lê (alimentação) |
+- 2026-10-14 — KY-037/038 removido (nunca leu: alimentação/ligação), substituído por
+  INMP441 I2S. Luz e som passam a ir por ESP-NOW/MQTT (canais 0xF4/0xF5).
