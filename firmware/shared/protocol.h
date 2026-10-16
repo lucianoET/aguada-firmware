@@ -127,6 +127,20 @@ typedef enum : uint8_t {
                                        //   distance_cm = (int)(temp_c*10)+1000
                                        //   reserved    = humidity % (0-100)
 
+// AirQ / analisador de ar-condicionado — canais extra do node ANI, enviados como
+// PKT_HEARTBEAT (o gateway repassa distance_cm + reserved sem interpretar, por isso
+// não exige reflash do gateway). Canal ausente = não é enviado; canal que já foi
+// visto e deixou de ler = distance_cm DISTANCE_ERROR (0xFFFF).
+// Temperaturas usam a mesma codificação do ENV: distance_cm = (int)(T*10)+1000.
+#define SENSOR_ID_CO2        0xF0      // SCD41 NDIR: distance_cm = CO2 ppm (real)
+#define SENSOR_ID_T_EXT      0xF1      // DS18B20 sonda EXT (ar de entrada da condensadora)
+#define SENSOR_ID_T_SUP      0xF2      // DS18B20 sonda SUP (ar de insuflamento da evaporadora)
+#define SENSOR_ID_CURRENT    0xF3      // TC (SCT-013): distance_cm = corrente RMS em 0.01 A
+#define SENSOR_ID_LIGHT      0xF4      // TEMT6000: distance_cm = lux, reserved = % relativo
+#define SENSOR_ID_SOUND      0xF5      // INMP441: distance_cm = dB SPL*10 (janela 0.26 s),
+                                       //   reserved = pico dB SPL (uint8)
+#define SENSOR_ID_VOC        0xF6      // ENS160: distance_cm = TVOC ppb, reserved = AQI 1-5
+
 #define DISTANCE_ERROR      0xFFFF
 
 typedef struct __attribute__((packed)) {

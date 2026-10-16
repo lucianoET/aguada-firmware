@@ -119,6 +119,50 @@ tr:last-child td{border-bottom:none}
   <!-- body do node: um container por sensor -->
   <div class="node-bd">
 
+    <!-- analisador de ar-condicionado (só aparece com sondas e/ou TC ligados) -->
+    <div class="sensor" id="acbox" style="display:none">
+      <div class="sensor-hd"><b>Ar-condicionado</b><span>· sondas DS18B20 + TC</span><span class="pill" id="d_ac">—</span></div>
+      <div class="cards">
+        <div class="card hl" id="c_dt">
+          <span class="cl">ΔT · ambiente − insuflamento</span>
+          <div class="bodyr">
+            <div class="nums"><span class="cv" id="dt">—</span><span class="cu">°C</span></div>
+            <svg class="spark" id="dtk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg>
+          </div>
+          <span class="cs" id="dts" style="margin-left:0"></span>
+        </div>
+        <div class="card" id="c_sup">
+          <span class="cl">Insuflamento (sonda SUP)</span>
+          <div class="bodyr"><div class="nums"><span class="cv" id="tsup">—</span><span class="cu">°C</span></div>
+            <svg class="spark" id="tsupk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
+        </div>
+        <div class="card" id="c_ext">
+          <span class="cl">Externo · entrada da condensadora (sonda EXT)</span>
+          <div class="bodyr"><div class="nums"><span class="cv" id="text">—</span><span class="cu">°C</span></div>
+            <svg class="spark" id="textk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
+        </div>
+        <div class="card" id="c_ct">
+          <span class="cl">Corrente da condensadora (TC)</span>
+          <div class="bodyr"><div class="nums"><span class="cv" id="amps">—</span><span class="cu">A</span><span class="cs" id="cmp"></span></div>
+            <svg class="spark" id="ampsk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- sensor SCD41 (CO2 real, opcional) -->
+    <div class="sensor" id="scdbox" style="display:none">
+      <div class="sensor-hd"><b>SCD41</b><span>· CO₂ real (NDIR)</span><span class="pill" id="d_scd">—</span></div>
+      <div class="cards">
+        <div class="card hl">
+          <span class="cl">CO₂ · limite RE 09/2003: 1000 ppm</span>
+          <div class="bodyr">
+            <div class="nums"><span class="cv" id="co2">—</span><span class="cu">ppm</span><span class="cs" id="co2s"></span></div>
+            <svg class="spark" id="co2k" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- sensor AHT21 -->
     <div class="sensor">
       <div class="sensor-hd"><b>AHT21</b><span>· Temperatura e humidade</span><span class="pill" id="d_aht">—</span></div>
@@ -152,7 +196,7 @@ tr:last-child td{border-bottom:none}
           </div>
         </div>
         <div class="card hl">
-          <span class="cl">eCO₂ · CO₂ equivalente</span>
+          <span class="cl">eCO₂ · estimado por VOC (não vale p/ RE 09)</span>
           <div class="bodyr">
             <div class="nums"><span class="cv" id="eco2">—</span><span class="cu">ppm</span><span class="cs" id="eco2s"></span></div>
             <svg class="spark" id="eco2k" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg>
@@ -227,16 +271,17 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
-    <!-- sensor KY-037/038 -->
+    <!-- sensor INMP441 -->
     <div class="sensor">
-      <div class="sensor-hd"><b>KY-037</b><span>· Ruído ambiente</span><span class="pill" id="d_snd">—</span></div>
+      <div class="sensor-hd"><b>INMP441</b><span>· Ruído ambiente</span><span class="pill" id="d_snd">—</span></div>
       <div class="cards">
         <div class="card">
-          <span class="cl">Nível sonoro (relativo)</span>
+          <span class="cl">Nível sonoro · dB SPL (Z, janela 0,26 s)</span>
           <div class="bodyr">
-            <div class="nums"><span class="cv" id="db">—</span><span class="cu">dB~</span><span class="cs" id="dbs"></span></div>
+            <div class="nums"><span class="cv" id="db">—</span><span class="cu">dB</span><span class="cs" id="dbs"></span></div>
             <svg class="spark" id="dbk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg>
           </div>
+          <span class="cu">pico <b id="dbpk">—</b> dB</span>
         </div>
       </div>
     </div>
@@ -256,7 +301,18 @@ tr:last-child td{border-bottom:none}
 <script>
 var AL=['','Excelente','Bom','Moderado','Mau','Muito mau'];
 var MAXPTS=40;
-var H={eco2:[],tvoc:[],temp:[],hum:[],lux:[],db:[]};
+var H={eco2:[],tvoc:[],temp:[],hum:[],lux:[],db:[],co2:[],dt:[],tsup:[],text:[],amps:[]};
+var CMP_ON_A=1.0;   // corrente acima disto = compressor ligado
+function show(id,on){$e(id).style.display=on?'':'none';}
+// Diagnóstico pelo ΔT (ambiente − insuflamento). on: true/false/null (sem TC).
+function dti(dt,tsup,on){
+  if(tsup<2)return{l:'Risco de congelamento da serpentina',c:'r'};
+  if(on===false)return{l:'Compressor desligado — ΔT não avaliado',c:''};
+  if(dt<6)return{l:'Baixo — ver carga de gás / condensadora',c:'p'};
+  if(dt<8)return{l:'Abaixo do esperado (8–14 °C)',c:'m'};
+  if(dt<=14)return{l:'Normal',c:'g'};
+  return{l:'Alto — ver filtro / vazão de ar',c:'p'};}
+function setVal(id,v,dec,col){var el=$e(id);el.textContent=v===null?'—':v.toFixed(dec);el.className='cv'+(col?' '+col:'');}
 var lastOk=0,lastAge=0;
 
 function $e(id){return document.getElementById(id);}
@@ -313,13 +369,45 @@ function upd(d){
     push('lux',d.lux|0);spark('luxk',H.lux,L.c);
   }
 
-  // KY-037/038 — independente dos sensores I2C
+  // INMP441 — independente dos sensores I2C
   setPill('d_snd',!!d.sound);
   if(d.sound){
-    var S=s2i(d.db|0);
-    var de=$e('db');de.textContent=d.db;de.className='cv';de.style.color=S.c;
+    var S=s2i(d.db);
+    var de=$e('db');de.textContent=d.db.toFixed(1);de.className='cv';de.style.color=S.c;
     var ds=$e('dbs');ds.textContent=S.l;ds.className='cs';ds.style.color=S.c;
-    push('db',d.db|0);spark('dbk',H.db,S.c);
+    $e('dbpk').textContent=d.dbpk.toFixed(0);
+    push('db',d.db);spark('dbk',H.db,S.c);
+  }
+
+  // SCD41 — CO2 real (secção só aparece se o sensor existir)
+  show('scdbox',!!d.scd);
+  if(d.scd){
+    setPill('d_scd',!!d.co2ok);
+    if(d.co2ok){var c=e2i(d.co2);sv('co2',d.co2,c.c);$e('co2s').textContent=c.l;$e('co2s').className='cs '+c.c;
+      push('co2',d.co2);spark('co2k',H.co2,d.co2<600?'#16a34a':d.co2<1000?'#d97706':'#dc2626');}
+  }
+
+  // Analisador de AC — secção só aparece com alguma sonda ou TC
+  var anyAc=d.pext||d.psup||d.ct;
+  show('acbox',anyAc);
+  if(anyAc){
+    show('c_sup',d.psup);show('c_ext',d.pext);show('c_ct',d.ct);
+    var tsup=d.tsup_ok?d.t_sup:null, text=d.text_ok?d.t_ext:null, amps=d.ct?d.amps:null;
+    var on=amps===null?null:amps>=CMP_ON_A;
+    setVal('tsup',tsup,1);setVal('text',text,1);setVal('amps',amps,2);
+    if(tsup!==null){push('tsup',tsup);spark('tsupk',H.tsup,'#0ea5e9');}
+    if(text!==null){push('text',text);spark('textk',H.text,'#ea580c');}
+    if(amps!==null){push('amps',amps);spark('ampsk',H.amps,'#4f46e5');
+      $e('cmp').textContent=(on?'compressor ligado':'compressor desligado')+(d.ct_clip?' · TC SATURADO':'');
+      $e('cmp').className='cs '+(d.ct_clip?'r':on?'g':'');}
+    var dtOk=tsup!==null&&d.valid;
+    show('c_dt',d.psup);
+    if(dtOk){
+      var dt=d.temp_c-tsup,D=dti(dt,tsup,on);
+      setVal('dt',dt,1,D.c);$e('dts').textContent=D.l;$e('dts').className='cs '+D.c;
+      push('dt',dt);spark('dtk',H.dt,'#4f46e5');
+    }else{setVal('dt',null,1);$e('dts').textContent='sem leitura de ambiente/insuflamento';}
+    setPill('d_ac',(!d.psup||d.tsup_ok)&&(!d.pext||d.text_ok));
   }
 
   if(!d.valid){setDot('warn','sensor sem leitura');return;}

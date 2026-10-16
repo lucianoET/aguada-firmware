@@ -294,6 +294,7 @@ static void publish_sensor(const espnow_packet_t *pkt) {
     doc["rssi"]        = pkt->rssi;
     set_vbat_json(doc, pkt->vbat);
     doc["flags"]       = pkt->flags;
+    doc["reserved"]    = pkt->reserved;  // ANI (FLAG_IS_AIR_QUALITY): AQI 1-5
     doc["seq"]         = pkt->seq;
     doc["ts"]          = unix_now();
 

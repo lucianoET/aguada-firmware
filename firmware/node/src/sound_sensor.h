@@ -2,24 +2,20 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// KY-037 / KY-038 — electret microphone + LM393. We use the ANALOG output (A0),
-// which carries the raw audio waveform biased around ~Vcc/2. Read on an ADC1 pin
-// (GPIO0–4 on the ESP32-C3). Power the module at 3.3 V so peaks stay within the ADC.
+// INMP441 — microfone MEMS digital I2S (substitui o KY-037/038 analógico).
+// Ligação: VDD 3V3, GND, L/R → GND (canal esquerdo), SCK/WS/SD nos GPIO abaixo.
+// Saída já digital e com sensibilidade de fábrica (-26 dBFS @ 94 dB SPL, ±1 dB),
+// por isso o nível é dB SPL real (ponderação Z — sem filtro A; não é sonómetro
+// classe 1/2, mas é comparável entre nodes sem calibração individual).
 //
-// This is NOT a calibrated dB-SPL meter: it samples A0 over a short window and
-// derives RMS / peak-to-peak amplitude, mapped to a RELATIVE "dB-like" level for
-// ambient-comfort indication only.
+// Detecção: SD tem pull-down; sem microfone o I2S lê zeros → valid=false.
 typedef struct {
-    uint16_t mean;   // DC bias of the window (ADC counts) — ~2048 if biased at Vcc/2
-    uint16_t rms;    // RMS amplitude (ADC counts around the DC bias)
-    uint16_t vpp;    // peak-to-peak amplitude (ADC counts)
-    uint8_t  db;     // relative level, "dB-like" (uncalibrated)
-    bool     valid;
+    float db_spl;    // nível RMS de uma janela de 0.26 s por tick (amostra, não Leq contínuo), dB SPL (Z)
+    float peak_db;   // pico da janela, dB SPL
+    bool  valid;
 } SoundReading;
 
-// Configure the ADC pin (12-bit, full-range attenuation).
-void sound_init(uint8_t adc_pin);
+void sound_init(int8_t sck_pin, int8_t ws_pin, int8_t sd_pin);   // -1 = desactivado
 
-// Sample the analog output over a short window and return rms/vpp/db.
-// Blocks for a few tens of ms while sampling.
+// Lê uma janela de áudio. Bloqueia ~0.35 s (descarte do buffer DMA + janela).
 SoundReading sound_read(void);

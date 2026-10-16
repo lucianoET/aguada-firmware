@@ -40,6 +40,20 @@ def test_dispatch_dedupes_lines():
     assert len(b.client.published) == 1  # never republish what came from MQTT
 
 
+def test_mqtt_only_commands_go_to_broker():
+    b = bridge.Bridge.__new__(bridge.Bridge)
+    b.client = FakeClient()
+    b._mqtt_only = True
+    b._serial_write('{"cmd":"SETTIME","ts":1}')
+    assert b.client.published == [bridge.GATEWAY_CMD_TOPIC]
+
+    b._mqtt_only = False
+    b._serial = None
+    b._serial_lock = threading.Lock()
+    b._serial_write('{"cmd":"SETTIME","ts":1}')  # USB mode without a port: dropped, not published
+    assert b.client.published == [bridge.GATEWAY_CMD_TOPIC]
+
+
 def test_node_alias_maps_to_canonical():
     idx = bridge.load_reservoir_config(str(Path(__file__).parent / "reservoirs.yaml"))
     assert bridge.NODE_ALIASES.get("0XEE02") == "0XC9C4"
@@ -48,5 +62,6 @@ def test_node_alias_maps_to_canonical():
 
 if __name__ == "__main__":
     test_dispatch_dedupes_lines()
+    test_mqtt_only_commands_go_to_broker()
     test_node_alias_maps_to_canonical()
     print("ok")

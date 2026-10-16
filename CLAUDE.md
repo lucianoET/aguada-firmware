@@ -139,7 +139,7 @@ Packet types: `0x01 SENSOR`, `0x02 HEARTBEAT`, `0x03 HELLO`, `0x10 CMD_CONFIG`, 
 
 ## Node AirQ (ANI-01)
 
-ESP32-C3 + ENS160/AHT21 (I2C GPIO6/7, **CS→3V3 mandatory** else SPI mode), optional TEMT6000 light (GPIO3/ADC1) and KY-037 sound (GPIO1/ADC1, feed 3.3 V). Serves captive portal on WiFi AP `ANI-{node_id}` → `http://192.168.4.1` (phone-first, per-hardware-component cards, sparklines). Local sampling (8 s) decoupled from ESP-NOW send (120 s). Light/sound are captive-portal-only so far — not yet in ESP-NOW/MQTT. ADC pins must be ADC1 (GPIO0–4); ADC2 dies with WiFi on.
+ESP32-C3 + ENS160/AHT21 (I2C GPIO6/7, **CS→3V3 mandatory** else SPI mode). Also an **air-conditioner analyzer**: optional, runtime-detected SCD41 (real CO₂, I2C 0x62), DS18B20 probes EXT (GPIO4) / SUP supply-air (GPIO10), SCT-013 current clamp (GPIO1/ADC1, bias ~1.34 V), TEMT6000 light (GPIO3/ADC1), INMP441 I2S mic (SCK20/WS21/SD5; replaced the KY-037). Extra channels travel as HEARTBEAT `sensor_id 0xF0–0xF6` (see `protocol.h`); bridge merges them into `aguada/{id}/airq/state` and derives ΔT + compressor_on. Serves captive portal on WiFi AP `ANI-{node_id}` → `http://192.168.4.1`. Local sampling (8 s) decoupled from ESP-NOW send (120 s). ADC pins must be ADC1 (GPIO0–4); ADC2 dies with WiFi on. Full doc: `Node AirQ.md`; bridge test: `python tools/test_airq_channels.py`.
 
 ---
 

@@ -626,7 +626,25 @@ Pacote 2: PKT_HEARTBEAT, sensor_id=0xFE (SENSOR_ID_ENV)
   (encoding idêntico ao relay I2C env existente)
 ```
 
-TVOC fica disponível localmente (log serial), mas não é transmitido pelo protocolo v3 (diferido para PKT_AIR_QUALITY v2 com pacote estendido de 22 bytes).
+### Canais extra AirQ / analisador de AC (2026-10)
+
+Periféricos opcionais (detecção em runtime), cada um num `PKT_HEARTBEAT` com
+`sensor_id` próprio. O gateway repassa `distance_cm` + `reserved` sem interpretar
+(sem reflash). Canal nunca visto → não é enviado; visto e sem leitura → `0xFFFF`.
+
+| sensor_id | Periférico | `distance_cm` | `reserved` |
+|---|---|---|---|
+| `0xF0` SENSOR_ID_CO2 | SCD41 | CO₂ ppm (NDIR) | — |
+| `0xF1` SENSOR_ID_T_EXT | DS18B20 entrada da condensadora | T×10+1000 | — |
+| `0xF2` SENSOR_ID_T_SUP | DS18B20 insuflamento | T×10+1000 | — |
+| `0xF3` SENSOR_ID_CURRENT | TC SCT-013 | corrente ×100 (0.01 A) | — |
+| `0xF4` SENSOR_ID_LIGHT | TEMT6000 | lux | % relativo |
+| `0xF5` SENSOR_ID_SOUND | INMP441 | dB SPL ×10 | pico dB SPL |
+| `0xF6` SENSOR_ID_VOC | ENS160 | TVOC ppb | AQI 1–5 |
+
+A bridge junta tudo em `aguada/{node_id}/airq/state` e deriva `dt_c` (T ambiente do
+pacote 0xFE − T insuflamento) e `compressor_on` (corrente ≥ 1 A). Entidades HA só são
+criadas no 1º valor válido de cada canal. Detalhe: [`Node AirQ.md`](Node%20AirQ.md).
 
 ### LED RGB (WS2812B)
 

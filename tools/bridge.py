@@ -12,7 +12,9 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
+import tempfile
 import time
 import threading
 from collections import deque
@@ -47,7 +49,18 @@ log = logging.getLogger("bridge")
 NODE_ALIASES: dict[str, str] = {}
 
 GATEWAY_ALIVE_S = 90   # > gateway status interval (60 s)
+# ponytail: tuning knob — a reading beyond level_max_cm + sensor_offset_cm + this margin is a sensor fault, not an empty tank.
+OUT_OF_RANGE_MARGIN_CM = 30
+
+# Editable from HA: param -> (name suffix, entity suffix, unit, min, max, icon).
+# Single source for discovery, validation and the retained config state JSON.
+RESERVOIR_PARAMS = {
+    "level_max_cm":     ("Altura útil",     "altura_util",   "cm", 50, 1000,   "mdi:arrow-expand-vertical"),
+    "sensor_offset_cm": ("Offset do sensor", "offset_sensor", "cm", 0,  200,    "mdi:arrow-collapse-down"),
+    "volume_max_L":     ("Volume máximo",   "volume_maximo", "L",  1,  500000, "mdi:cup-water"),
+}
 GATEWAY_RX_TOPIC = "aguada/gateway/rx"  # raw gateway lines (serial republish + WiFi mirror)
+GATEWAY_CMD_TOPIC = "aguada/gateway/cmd"  # --port none: serial command lines go here (Ethernet gateway)
 
 def load_reservoir_config(path: str) -> dict:
     with open(path) as f:
@@ -62,6 +75,67 @@ def load_reservoir_config(path: str) -> dict:
             for alt in s.get("also", []):
                 NODE_ALIASES[str(alt).upper()] = node_id_str.upper()
     return index
+
+def update_reservoir_yaml(path: str, node_id: str, alias: str, param: str, value: int) -> bool:
+    """Edit one `param: number` line in place so comments/formatting survive."""
+    real = os.path.realpath(path)
+    with open(real, encoding="utf-8", newline="") as f:
+        lines = f.read().splitlines(keepends=True)
+
+    def indent_of(line: str) -> int:
+        return len(line) - len(line.lstrip())
+
+    def blank_or_comment(line: str) -> bool:
+        t = line.strip()
+        return not t or t.startswith("#")
+
+    node_re = re.compile(r"^\s*[\"']?%s[\"']?\s*:\s*(#.*)?$" % re.escape(node_id), re.IGNORECASE)
+    alias_re = re.compile(r"^\s*(?:-\s+)?alias:\s*[\"']?%s[\"']?\s*(#.*)?$" % re.escape(alias))
+    item_re = re.compile(r"^\s*-\s")
+    param_re = re.compile(r"^(\s*(?:-\s+)?%s\s*:\s*)(-?\d+(?:\.\d+)?)(\s*(?:#.*)?)$" % re.escape(param))
+
+    target = None
+    start = next((i for i, l in enumerate(lines) if node_re.match(l.rstrip("\r\n"))), None)
+    if start is not None:
+        node_indent = indent_of(lines[start])
+        end = len(lines)
+        for i in range(start + 1, len(lines)):
+            if not blank_or_comment(lines[i]) and indent_of(lines[i]) <= node_indent:
+                end = i
+                break
+        a = next((i for i in range(start + 1, end) if alias_re.match(lines[i].rstrip("\r\n"))), None)
+        if a is not None:
+            s0 = next((i for i in range(a, start, -1) if item_re.match(lines[i])), None)
+            if s0 is not None:
+                item_indent = indent_of(lines[s0])
+                e0 = next((i for i in range(a + 1, end)
+                           if item_re.match(lines[i]) and indent_of(lines[i]) == item_indent), end)
+                for i in range(s0, e0):
+                    body = lines[i].rstrip("\r\n")
+                    m = param_re.match(body)
+                    if m:
+                        target = (i, m.group(1) + str(value) + m.group(3) + lines[i][len(body):])
+                        break
+    if target is None:
+        log.error("Config not persisted: %s/%s %s not found in %s", node_id, alias, param, real)
+        return False
+
+    lines[target[0]] = target[1]
+    tmp = None
+    try:
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(real), prefix=".reservoirs.", suffix=".tmp")
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
+            f.write("".join(lines))
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(tmp, os.stat(real).st_mode & 0o7777)  # mkstemp is 0600; keep readers working
+        os.replace(tmp, real)
+        return True
+    except Exception:
+        log.exception("Config not persisted: could not write %s", real)
+        if tmp and os.path.exists(tmp):
+            os.remove(tmp)
+        return False
 
 # ── Calculations ──────────────────────────────────────────────────────────────
 
@@ -141,6 +215,9 @@ def mqtt_topic_status(node_id: str) -> str:
 
 def mqtt_topic_sensor_avail(node_id: str, sensor_id: int) -> str:
     return f"aguada/{node_id}/{sensor_id}/availability"
+
+def mqtt_topic_config(node_id: str, sensor_id: int) -> str:
+    return f"aguada/{node_id}/{sensor_id}/config"
 
 def mqtt_topic_balance(node_id: str, sensor_id: int) -> str:
     return f"aguada/{node_id}/{sensor_id}/balance"
@@ -401,6 +478,36 @@ def publish_discovery(client: mqtt.Client, node_id: str, sensor_id: int, cfg: di
         log.debug("Discovery: %s", disc_topic)
 
 
+def publish_config_discovery(client: mqtt.Client, node_id: str, sensor_id: int, cfg: dict):
+    """Publish HA MQTT Discovery for the editable reservoir parameters (number boxes)."""
+    alias    = cfg.get("alias", f"{node_id}_{sensor_id}").lower()
+    name_pfx = cfg.get("name", alias)
+    dev      = {"name": cfg.get("alias", alias), "identifiers": [f"aguada_{alias}"], "manufacturer": "Aguada"}
+    config_tp = mqtt_topic_config(node_id, sensor_id)
+
+    for param, (label, ent, unit, lo, hi, icon) in RESERVOIR_PARAMS.items():
+        uid = f"aguada_{alias}_cfg_{param}"
+        # No availability keys: the boxes stay editable while the node is offline.
+        payload = {
+            "name":                f"{name_pfx} - {label}",
+            "unique_id":           uid,
+            "default_entity_id":   f"number.aguada_{alias}_{ent}",
+            "state_topic":         config_tp,
+            "value_template":      "{{ value_json.%s }}" % param,
+            "command_topic":       f"{config_tp}/{param}/set",
+            "min":                 lo,
+            "max":                 hi,
+            "step":                1,
+            "mode":                "box",
+            "entity_category":     "config",
+            "unit_of_measurement": unit,
+            "icon":                icon,
+            "device":              dev,
+        }
+        client.publish(f"homeassistant/number/{uid}/config", json.dumps(payload), retain=True)
+        log.debug("Discovery: homeassistant/number/%s/config", uid)
+
+
 def publish_relay_discovery(client: mqtt.Client, node_id: str):
     """Publish HA MQTT Discovery for a relay node: RSSI, battery, button event."""
     nid_short = node_id.replace("0X", "").replace("0x", "").lower()
@@ -631,6 +738,96 @@ def publish_env_discovery(client: mqtt.Client, node_id: str):
         log.debug("Env Discovery: %s", disc_topic)
 
 
+# ── AirQ / analisador de ar-condicionado (canais 0xF0–0xF6) ──────────────────
+# O node ANI envia cada periférico opcional como HEARTBEAT com sensor_id próprio
+# (ver firmware/shared/protocol.h). Canal só aparece no HA quando chega o 1º valor
+# válido → periférico não ligado = sem entidade. distance_cm 0xFFFF = sem leitura.
+
+AIRQ_COMPRESSOR_ON_A = 1.0   # corrente acima disto = compressor ligado
+AIRQ_STALE_S = 400           # > 3 ciclos de envio (120 s): valor sem renovação → null
+
+
+def _airq_temp(raw: int) -> float:
+    return round((raw - 1000) / 10.0, 1)
+
+
+# sensor_id → (chave, nome, unidade, device_class, ícone, decode(distance_cm), chave_extra do reserved)
+AIRQ_CHANNELS = {
+    0xF0: ("co2",       "CO2 (SCD41)",                 "ppm", "carbon_dioxide", "mdi:molecule-co2",   lambda d: d,                   None),
+    0xF1: ("t_ext",     "Temperatura externa",         "°C",  "temperature",    "mdi:thermometer",    _airq_temp,                    None),
+    0xF2: ("t_sup",     "Temperatura de insuflamento", "°C",  "temperature",    "mdi:thermometer-low", _airq_temp,                   None),
+    0xF3: ("current_a", "Corrente da condensadora",    "A",   "current",        "mdi:current-ac",     lambda d: round(d / 100.0, 2), None),
+    0xF4: ("lux",       "Luminosidade",                "lx",  "illuminance",    "mdi:brightness-5",   lambda d: d,                   "lux_pct"),
+    0xF5: ("sound_db",  "Ruído (dB SPL)",              "dB",  "sound_pressure", "mdi:volume-high",    lambda d: round(d / 10.0, 1),  "sound_peak_db"),
+    0xF6: ("tvoc",      "TVOC",                        "ppb", "volatile_organic_compounds_parts", "mdi:air-filter", lambda d: d,     "aqi"),
+}
+
+# Entidades derivadas, publicadas quando a sua dependência aparece pela 1ª vez.
+AIRQ_DERIVED = {
+    "t_sup":     [("dt_c", "ΔT ambiente − insuflamento", "°C", None, "mdi:delta")],
+    "tvoc":      [("aqi",  "AQI (ENS160)", None, "aqi", "mdi:air-filter")],
+    "sound_db":  [("sound_peak_db", "Ruído pico", "dB", "sound_pressure", "mdi:volume-vibrate")],
+}
+
+
+def airq_state_topic(node_id: str) -> str:
+    return f"aguada/{node_id}/airq/state"
+
+
+def airq_device(node_id: str, alias: str | None) -> dict:
+    nid = node_id.replace("0X", "").replace("0x", "").lower()
+    return {
+        "name":         f"AirQ {alias or node_id}",
+        "identifiers":  [f"aguada_airq_{nid}"],
+        "manufacturer": "Luctronics / Aguada",
+        "model":        "AirQ — qualidade do ar + analisador de AC",
+    }
+
+
+def publish_airq_entity(client: mqtt.Client, node_id: str, alias: str | None,
+                        key: str, name: str, uom, dc, icon: str):
+    nid = node_id.replace("0X", "").replace("0x", "").lower()
+    uid = f"aguada_airq_{nid}_{key}"
+    payload = {
+        "name":                  name,
+        "unique_id":             uid,
+        "state_topic":           airq_state_topic(node_id),
+        # null no JSON → "None" → HA mostra "desconhecido" (sensor sem leitura)
+        "value_template":        f"{{{{ value_json.{key} }}}}",
+        "state_class":           "measurement",
+        "device":                airq_device(node_id, alias),
+        "availability_topic":    mqtt_topic_status(node_id),
+        "payload_available":     "online",
+        "payload_not_available": "offline",
+        "icon":                  icon,
+    }
+    if uom:
+        payload["unit_of_measurement"] = uom
+    if dc:
+        payload["device_class"] = dc
+    client.publish(f"homeassistant/sensor/{uid}/config", json.dumps(payload), retain=True)
+
+
+def publish_airq_compressor(client: mqtt.Client, node_id: str, alias: str | None):
+    nid = node_id.replace("0X", "").replace("0x", "").lower()
+    uid = f"aguada_airq_{nid}_compressor"
+    payload = {
+        "name":                  "Compressor",
+        "unique_id":             uid,
+        "state_topic":           airq_state_topic(node_id),
+        "value_template":        "{{ value_json.compressor_on }}",
+        "payload_on":            "True",
+        "payload_off":           "False",
+        "device_class":          "running",
+        "device":                airq_device(node_id, alias),
+        "availability_topic":    mqtt_topic_status(node_id),
+        "payload_available":     "online",
+        "payload_not_available": "offline",
+        "icon":                  "mdi:hvac",
+    }
+    client.publish(f"homeassistant/binary_sensor/{uid}/config", json.dumps(payload), retain=True)
+
+
 # ── Online/offline tracking ───────────────────────────────────────────────────
 
 class NodeTracker:
@@ -757,6 +954,8 @@ class Bridge:
 
         self._serial: serial.Serial | None = None
         self._serial_lock = threading.Lock()
+        # --port none: no USB gateway; lines arrive on GATEWAY_RX_TOPIC, commands leave on GATEWAY_CMD_TOPIC.
+        self._mqtt_only = str(getattr(args, "port", "")).strip().lower() == "none"
         # Dedup cache: (node_id, sensor_id, seq) → timestamp
         # Prevents double-publish when same packet arrives via relay AND direct
         self._seen_seq: dict[tuple, float] = {}
@@ -769,6 +968,10 @@ class Bridge:
         self._relay_discovery_sent: set = set()
         self._env_discovery_sent: set = set()
         self._button_off_timers: dict[str, threading.Timer] = {}
+        # AirQ: último valor de cada canal por node + entidades já anunciadas no HA
+        self._airq: dict[str, dict] = {}
+        self._airq_disc: set[tuple] = set()   # (node_id, key)
+        self._airq_ts: dict[str, dict] = {}   # node_id → {key: time da última leitura válida}
 
         # Gateway presence tracking (USB serial + JSON activity)
         self._gateway_online = False
@@ -848,6 +1051,8 @@ class Bridge:
             client.subscribe("aguada/raw/#")
             # Gateway WiFi mirror: same JSON lines as the serial link (fallback path).
             client.subscribe(GATEWAY_RX_TOPIC)
+            # HA number edits of reservoir parameters.
+            client.subscribe("aguada/+/+/config/+/set")
             publish_gateway_discovery(client)
 
             # Re-publish HA Discovery on every (re)connect to survive broker
@@ -858,12 +1063,17 @@ class Bridge:
                     self._discovery_sent.add(("ani", node_id, sensor_id))
                 else:
                     publish_discovery(client, node_id, sensor_id, cfg)
+                    publish_config_discovery(client, node_id, sensor_id, cfg)
+                    self._publish_reservoir_config(node_id, sensor_id, cfg)
                     self._discovery_sent.add((node_id, sensor_id))
             # Re-publish relay/env discovery for known relay nodes
             for node_id, has_env in self._known_relays.items():
                 publish_relay_discovery(client, node_id)
                 if has_env:
                     publish_env_discovery(client, node_id)
+            # AirQ: re-anunciar as entidades já vistas (broker pode ter perdido os retained)
+            for node_id, key in list(self._airq_disc):
+                self._airq_publish_discovery(node_id, key)
             # Prevent stale retained online states after bridge restart.
             known_nodes = set(self._configured_nodes) | set(self._known_relays.keys())
             self.tracker.sync_statuses(known_nodes)
@@ -880,6 +1090,10 @@ class Bridge:
         topic = msg.topic
         if topic == GATEWAY_RX_TOPIC:
             self.dispatch(msg.payload.decode(errors="replace"), from_mqtt=True)
+            return
+        # Must precede json.loads: non-JSON payloads still need the state republish.
+        if topic.startswith("aguada/") and "/config/" in topic and topic.endswith("/set"):
+            self._handle_config_set(topic, msg.payload)
             return
         try:
             payload = json.loads(msg.payload)
@@ -910,7 +1124,59 @@ class Bridge:
         elif topic == "aguada/cmd/ota":
             log.warning("OTA via MQTT not yet implemented")
 
+    def _publish_reservoir_config(self, node_id: str, sensor_id: int, cfg: dict):
+        """Retained current values of the editable parameters (HA number state)."""
+        state = {param: cfg.get(param) for param in RESERVOIR_PARAMS}
+        self.client.publish(mqtt_topic_config(node_id, sensor_id), json.dumps(state), retain=True)
+
+    def _handle_config_set(self, topic: str, payload: bytes):
+        """HA number edit: validate, apply in memory, persist to YAML, republish state."""
+        parts = topic.split("/")
+        if len(parts) != 6 or parts[3] != "config" or parts[5] != "set":
+            log.warning("Malformed config topic %s", topic)
+            return
+        node_id = parts[1].upper()
+        node_id = NODE_ALIASES.get(node_id, node_id)
+        try:
+            sensor_id = int(parts[2])
+        except ValueError:
+            log.warning("Malformed config topic %s", topic)
+            return
+        cfg = self.reservoirs.get((node_id, sensor_id))
+        if not cfg or cfg.get("type") == "air_quality":
+            log.warning("Config set for unknown reservoir %s/%s", node_id, parts[2])
+            return
+
+        param = parts[4]
+        if param not in RESERVOIR_PARAMS:
+            log.warning("Config set for unknown param %r on %s", param, cfg.get("alias"))
+            self._publish_reservoir_config(node_id, sensor_id, cfg)
+            return
+        lo, hi = RESERVOIR_PARAMS[param][3], RESERVOIR_PARAMS[param][4]
+        raw = payload.decode(errors="replace").strip()
+        try:
+            v = float(raw)
+        except ValueError:
+            log.warning("Config rejected: %s %s=%r (not a number)", cfg.get("alias"), param, raw)
+            self._publish_reservoir_config(node_id, sensor_id, cfg)
+            return
+        if not (lo <= v <= hi):  # written this way so NaN is rejected
+            log.warning("Config rejected: %s %s=%r (range %d..%d)", cfg.get("alias"), param, raw, lo, hi)
+            self._publish_reservoir_config(node_id, sensor_id, cfg)
+            return
+
+        new = int(round(v))
+        old = cfg.get(param)
+        cfg[param] = new  # same dict _handle_sensor reads: applies to the next reading
+        log.info("Config %s %s %s -> %s", cfg.get("alias"), param, old, new)
+        update_reservoir_yaml(self.args.config, node_id, cfg.get("alias", ""), param, new)
+        self._publish_reservoir_config(node_id, sensor_id, cfg)
+
     def _serial_write(self, line: str):
+        if self._mqtt_only:
+            self.client.publish(GATEWAY_CMD_TOPIC, line)
+            log.debug("→ mqtt: %s", line)
+            return
         with self._serial_lock:
             if self._serial and self._serial.is_open:
                 self._serial.write((line + "\n").encode())
@@ -1016,10 +1282,11 @@ class Bridge:
         sensor_id = int(msg["sensor_id"])
         key       = (node_id, sensor_id)
 
-        # Deduplicate: same packet may arrive via relay AND direct path
+        # Deduplicate within TTL: same packet may arrive via relay AND direct path
         seq_key = (node_id, sensor_id, msg.get("seq", -1))
         now = time.time()
-        if seq_key in self._seen_seq:
+        seen_ts = self._seen_seq.get(seq_key)
+        if seen_ts is not None and now - seen_ts < self._seen_seq_ttl:
             log.debug("Dedup: skip duplicate %s sensor=%d seq=%s", node_id, sensor_id, msg.get("seq"))
             return
         self._seen_seq[seq_key] = now
@@ -1055,6 +1322,12 @@ class Bridge:
         # Spec: distance 0xFFFF or flags.sensor_error indicate invalid measurement
         if distance_cm <= 0 or distance_cm == 0xFFFF or (flags & 0x04):
             log.warning("Sensor error: %s/%d dist=%s flags=0x%02x", node_id, sensor_id, distance_cm_raw, flags)
+            self._set_sensor_avail(node_id, sensor_id, "offline")
+            return
+
+        limit = cfg["level_max_cm"] + cfg["sensor_offset_cm"] + OUT_OF_RANGE_MARGIN_CM
+        if distance_cm > limit:
+            log.warning("Sensor out of range: %s/%d dist=%d > %d", node_id, sensor_id, distance_cm, limit)
             self._set_sensor_avail(node_id, sensor_id, "offline")
             return
 
@@ -1121,10 +1394,93 @@ class Bridge:
         if self._influx:
             self._influx.write_ani(node_id, sensor_id, cfg.get("alias", ""), payload)
 
+    # ── AirQ ────────────────────────────────────────────────────────────────
+
+    def _airq_alias(self, node_id: str) -> str | None:
+        for (nid, _sid), cfg in self.reservoirs.items():
+            if nid == node_id and cfg.get("type") == "air_quality":
+                return cfg.get("alias")
+        return None
+
+    def _airq_publish_discovery(self, node_id: str, key: str):
+        alias = self._airq_alias(node_id)
+        if key == "compressor_on":
+            publish_airq_compressor(self.client, node_id, alias)
+            return
+        for _sid, (k, name, uom, dc, icon, _dec, _xk) in AIRQ_CHANNELS.items():
+            if k == key:
+                publish_airq_entity(self.client, node_id, alias, k, name, uom, dc, icon)
+                return
+        for derived in AIRQ_DERIVED.values():
+            for k, name, uom, dc, icon in derived:
+                if k == key:
+                    publish_airq_entity(self.client, node_id, alias, k, name, uom, dc, icon)
+                    return
+
+    def _airq_announce(self, node_id: str, key: str):
+        if (node_id, key) in self._airq_disc:
+            return
+        self._airq_disc.add((node_id, key))
+        self._airq_publish_discovery(node_id, key)
+        log.info("AirQ %s: nova entidade %s", node_id, key)
+
+    def _airq_touch(self, node_id: str, *keys: str):
+        now = time.time()
+        ts = self._airq_ts.setdefault(node_id, {})
+        for k in keys:
+            ts[k] = now
+
+    def _airq_publish_state(self, node_id: str, msg: dict | None = None):
+        st = self._airq[node_id]
+        # Node calado (reboot, rádio, sensor morto sem 0xFFFF): não deixar valores
+        # velhos a alimentar o ΔT / compressor_on como se fossem actuais.
+        now = time.time()
+        for k, t0 in self._airq_ts.get(node_id, {}).items():
+            if now - t0 > AIRQ_STALE_S:
+                st[k] = None
+        t_amb, t_sup, amps = st.get("t_amb"), st.get("t_sup"), st.get("current_a")
+        st["compressor_on"] = (amps >= AIRQ_COMPRESSOR_ON_A) if amps is not None else None
+        # ΔT só tem significado com o compressor a trabalhar (ou sem TC para o saber)
+        if t_amb is None or t_sup is None or st["compressor_on"] is False:
+            st["dt_c"] = None
+        else:
+            st["dt_c"] = round(t_amb - t_sup, 1)
+        if msg is not None:
+            st["rssi"] = msg.get("rssi", 0)
+            st["ts"] = msg.get("ts", int(time.time()))
+            st["ts_iso"] = ts_to_iso(st["ts"])
+        self._publish_json(airq_state_topic(node_id), st, retain=True)
+
+    def _handle_airq_channel(self, node_id: str, sensor_id: int, msg: dict):
+        key, _name, _uom, _dc, _icon, decode, extra_key = AIRQ_CHANNELS[sensor_id]
+        st = self._airq.setdefault(node_id, {})
+        raw = msg.get("distance_cm", 0xFFFF)
+        try:
+            raw = int(raw)
+        except (TypeError, ValueError):
+            raw = 0xFFFF
+        valid = raw not in (0xFFFF, -1)
+        st[key] = decode(raw) if valid else None
+        if extra_key:
+            st[extra_key] = int(msg.get("reserved", 0) or 0) if valid else None
+        if valid:
+            self._airq_touch(node_id, key, *([extra_key] if extra_key else []))
+            self._airq_announce(node_id, key)
+            for k, *_ in AIRQ_DERIVED.get(key, []):
+                self._airq_announce(node_id, k)
+            if key == "current_a":
+                self._airq_announce(node_id, "compressor_on")
+        log.info("AIRQ   %-6s %s=%s", node_id, key, st[key])
+        self._airq_publish_state(node_id, msg)
+
     def _handle_heartbeat(self, msg: dict):
         node_id   = msg["node_id"].upper()
         sensor_id = int(msg.get("sensor_id", 0))
         self.tracker.seen(node_id)
+
+        if sensor_id in AIRQ_CHANNELS:
+            self._handle_airq_channel(node_id, sensor_id, msg)
+            return
 
         # SENSOR_ID_ENV (0xFE): relay I2C env telemetry
         # Encoding: distance_cm = (int)(temp_c*10)+1000, reserved = humidity%
@@ -1145,6 +1501,12 @@ class Bridge:
             self.client.publish(f"aguada/{node_id}/env/state", json.dumps(env_payload), retain=True)
             log.info("ENV    %-6s  T=%5.1f°C  H=%3d%%  rssi=%d",
                      node_id, temp_c, hum_pct, msg.get("rssi", 0))
+
+            # Node AirQ: a T ambiente (AHT21) é a referência do ΔT com o insuflamento
+            if node_id in self._airq:
+                self._airq[node_id]["t_amb"] = temp_c
+                self._airq_touch(node_id, "t_amb")
+                self._airq_publish_state(node_id)
 
             # Also refresh relay state (has fresh rssi/vbat)
             relay_payload = {"rssi": msg.get("rssi", 0), "vbat": vbat,
@@ -1197,6 +1559,10 @@ class Bridge:
         self.tracker.seen(node_id)
         log.info("HELLO %s num_sensors=%d flags=0x%02x fw=%s",
                  node_id, num, flags, msg.get("fw_version"))
+
+        # Node booted: seq restarted, forget its old dedup entries
+        dedup_id = NODE_ALIASES.get(node_id, node_id)
+        self._seen_seq = {k: v for k, v in self._seen_seq.items() if k[0] != dedup_id}
 
         if num == 0:
             # Relay node — publish relay state and Discovery
@@ -1362,30 +1728,36 @@ class Bridge:
 
         try:
             while True:
-                if not self._serial or not self._serial.is_open:
-                    if not self._open_serial():
-                        time.sleep(self._serial_reconnect_delay_s)
+                if self._mqtt_only:
+                    time.sleep(1.0)  # gateway lines arrive on the paho thread (_on_mqtt_message)
+                else:
+                    if not self._serial or not self._serial.is_open:
+                        if not self._open_serial():
+                            time.sleep(self._serial_reconnect_delay_s)
+                            continue
+                        last_timeout_check = time.time()
+
+                    ser = self._serial
+                    try:
+                        line = self._read_serial_line(ser)
+                    except serial.SerialException as e:
+                        log.error("Serial error: %s", e)
+                        self._reconnect_serial(f"serial error: {e}")
                         continue
-                    last_timeout_check = time.time()
 
-                ser = self._serial
-                try:
-                    line = self._read_serial_line(ser)
-                except serial.SerialException as e:
-                    log.error("Serial error: %s", e)
-                    self._reconnect_serial(f"serial error: {e}")
-                    continue
-
-                if line:
-                    log.debug("← %s", line)
-                    self.dispatch(line)
+                    if line:
+                        log.debug("← %s", line)
+                        self.dispatch(line)
 
                 # Check offline timeouts every 30s
                 now = time.time()
                 if now - last_timeout_check > 30:
                     self.tracker.check_timeouts()
                     if self._gateway_timeout_s > 0 and self._gateway_online and (now - self._gateway_last_seen > self._gateway_timeout_s):
-                        self._reconnect_serial(f"no serial data for {self._gateway_timeout_s}s")
+                        if self._mqtt_only:
+                            self._mark_gateway_offline(f"no data for {self._gateway_timeout_s}s")
+                        else:
+                            self._reconnect_serial(f"no serial data for {self._gateway_timeout_s}s")
                     last_timeout_check = now
 
         except KeyboardInterrupt:
@@ -1402,7 +1774,8 @@ class Bridge:
 
 def main():
     parser = argparse.ArgumentParser(description="Aguada Bridge v3.2")
-    parser.add_argument("--port",            default="/dev/ttyACM0")
+    parser.add_argument("--port",            default="/dev/ttyACM0",
+                        help="porta serial do gateway; 'none' = gateway Ethernet (só MQTT)")
     parser.add_argument("--baud",            default=115200, type=int)
     parser.add_argument("--mqtt",            default="localhost")
     parser.add_argument("--mqtt-port",       default=1883, type=int)
