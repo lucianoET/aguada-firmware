@@ -738,7 +738,7 @@ def publish_env_discovery(client: mqtt.Client, node_id: str):
         log.debug("Env Discovery: %s", disc_topic)
 
 
-# ── AirQ / analisador de ar-condicionado (canais 0xF0–0xF6) ──────────────────
+# ── AirQ / analisador de ar-condicionado (canais 0xF0–0xF7) ──────────────────
 # O node ANI envia cada periférico opcional como HEARTBEAT com sensor_id próprio
 # (ver firmware/shared/protocol.h). Canal só aparece no HA quando chega o 1º valor
 # válido → periférico não ligado = sem entidade. distance_cm 0xFFFF = sem leitura.
@@ -758,15 +758,17 @@ AIRQ_CHANNELS = {
     0xF2: ("t_sup",     "Temperatura de insuflamento", "°C",  "temperature",    "mdi:thermometer-low", _airq_temp,                   None),
     0xF3: ("current_a", "Corrente da condensadora",    "A",   "current",        "mdi:current-ac",     lambda d: round(d / 100.0, 2), None),
     0xF4: ("lux",       "Luminosidade",                "lx",  "illuminance",    "mdi:brightness-5",   lambda d: d,                   "lux_pct"),
-    0xF5: ("sound_db",  "Ruído (dB SPL)",              "dB",  "sound_pressure", "mdi:volume-high",    lambda d: round(d / 10.0, 1),  "sound_peak_db"),
+    0xF5: ("sound_db",  "Ruído (dB(A))",               "dBA",  "sound_pressure", "mdi:volume-high",    lambda d: round(d / 10.0, 1),  "sound_peak_db"),
     0xF6: ("tvoc",      "TVOC",                        "ppb", "volatile_organic_compounds_parts", "mdi:air-filter", lambda d: d,     "aqi"),
+    0xF7: ("t_ret",     "Temperatura de retorno",      "°C",  "temperature",    "mdi:thermometer",    _airq_temp,                    None),
 }
 
 # Entidades derivadas, publicadas quando a sua dependência aparece pela 1ª vez.
 AIRQ_DERIVED = {
-    "t_sup":     [("dt_c", "ΔT ambiente − insuflamento", "°C", None, "mdi:delta")],
+    # ΔT da evaporadora: retorno (sonda RET) − insuflamento; sem RET, ambiente (AHT21) − insuflamento
+    "t_sup":     [("dt_c", "ΔT evaporadora (retorno − insuflamento)", "°C", None, "mdi:delta")],
     "tvoc":      [("aqi",  "AQI (ENS160)", None, "aqi", "mdi:air-filter")],
-    "sound_db":  [("sound_peak_db", "Ruído pico", "dB", "sound_pressure", "mdi:volume-vibrate")],
+    "sound_db":  [("sound_peak_db", "Ruído pico (dB(A))", "dBA", "sound_pressure", "mdi:volume-vibrate")],
 }
 
 
@@ -972,6 +974,10 @@ class Bridge:
         self._airq: dict[str, dict] = {}
         self._airq_disc: set[tuple] = set()   # (node_id, key)
         self._airq_ts: dict[str, dict] = {}   # node_id → {key: time da última leitura válida}
+        # Última T do ENV (AHT21) de qualquer node: (temp_c, time). Se o ENV chega antes do
+        # 1º canal AirQ (ex.: bridge reiniciou), o node ainda não é "AirQ" — guardar aqui
+        # e semear t_amb quando o primeiro canal aparecer, em vez de perder a leitura.
+        self._env_last: dict[str, tuple[float, float]] = {}
 
         # Gateway presence tracking (USB serial + JSON activity)
         self._gateway_online = False
@@ -1438,13 +1444,17 @@ class Bridge:
         for k, t0 in self._airq_ts.get(node_id, {}).items():
             if now - t0 > AIRQ_STALE_S:
                 st[k] = None
-        t_amb, t_sup, amps = st.get("t_amb"), st.get("t_sup"), st.get("current_a")
+        t_ret, t_amb = st.get("t_ret"), st.get("t_amb")
+        t_sup, amps = st.get("t_sup"), st.get("current_a")
         st["compressor_on"] = (amps >= AIRQ_COMPRESSOR_ON_A) if amps is not None else None
+        # Referência do ΔT: sonda de retorno se houver; senão o AHT21 da caixa (aproximação)
+        t_ref = t_ret if t_ret is not None else t_amb
+        st["dt_ref"] = "ret" if t_ret is not None else ("amb" if t_amb is not None else None)
         # ΔT só tem significado com o compressor a trabalhar (ou sem TC para o saber)
-        if t_amb is None or t_sup is None or st["compressor_on"] is False:
+        if t_ref is None or t_sup is None or st["compressor_on"] is False:
             st["dt_c"] = None
         else:
-            st["dt_c"] = round(t_amb - t_sup, 1)
+            st["dt_c"] = round(t_ref - t_sup, 1)
         if msg is not None:
             st["rssi"] = msg.get("rssi", 0)
             st["ts"] = msg.get("ts", int(time.time()))
@@ -1453,7 +1463,13 @@ class Bridge:
 
     def _handle_airq_channel(self, node_id: str, sensor_id: int, msg: dict):
         key, _name, _uom, _dc, _icon, decode, extra_key = AIRQ_CHANNELS[sensor_id]
+        new_node = node_id not in self._airq
         st = self._airq.setdefault(node_id, {})
+        if new_node:
+            env = self._env_last.get(node_id)
+            if env is not None and time.time() - env[1] <= AIRQ_STALE_S:
+                st["t_amb"] = env[0]
+                self._airq_ts.setdefault(node_id, {})["t_amb"] = env[1]
         raw = msg.get("distance_cm", 0xFFFF)
         try:
             raw = int(raw)
@@ -1503,6 +1519,8 @@ class Bridge:
                      node_id, temp_c, hum_pct, msg.get("rssi", 0))
 
             # Node AirQ: a T ambiente (AHT21) é a referência do ΔT com o insuflamento
+            # (guardada sempre — o node pode ainda não ter mandado nenhum canal AirQ)
+            self._env_last[node_id] = (temp_c, time.time())
             if node_id in self._airq:
                 self._airq[node_id]["t_amb"] = temp_c
                 self._airq_touch(node_id, "t_amb")

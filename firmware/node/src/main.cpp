@@ -35,9 +35,9 @@
 // ── Pinagem AirQ / analisador de AC (ESP32-C3 SuperMini) ─────────────────────
 // Todos os periféricos abaixo são opcionais e detectados em runtime.
 //   GPIO0  livre (ADC1)          GPIO1  TC corrente (ADC1)    GPIO2  livre (strapping)
-//   GPIO3  TEMT6000 (ADC1)       GPIO4  sonda EXT (1-Wire)    GPIO5  INMP441 SD
-//   GPIO6/7 I2C (AHT21, ENS160, SCD41)                       GPIO8  LED  GPIO9 BOOT
-//   GPIO10 sonda SUP (1-Wire)    GPIO20 INMP441 SCK           GPIO21 INMP441 WS
+//   GPIO3  TEMT6000 (ADC1)       GPIO4  sondas EXT/SUP/RET (1-Wire, 1 fio)
+//   GPIO5  INMP441 SD            GPIO6/7 I2C (AHT21, ENS160, SCD41)
+//   GPIO8  LED  GPIO9 BOOT       GPIO10 livre  GPIO20 INMP441 SCK  GPIO21 INMP441 WS
 // ADC só em ADC1 (GPIO0–4): ADC2 não funciona com WiFi ligado.
 #ifndef DEFAULT_LIGHT_PIN
 #define DEFAULT_LIGHT_PIN 3
@@ -45,11 +45,8 @@
 #ifndef CT_PIN
 #define CT_PIN 1
 #endif
-#ifndef PROBE_EXT_PIN
-#define PROBE_EXT_PIN 4
-#endif
-#ifndef PROBE_SUP_PIN
-#define PROBE_SUP_PIN 10
+#ifndef PROBE_PIN
+#define PROBE_PIN 4          // barramento 1-Wire único das sondas EXT e SUP
 #endif
 #ifndef MIC_SD_PIN
 #define MIC_SD_PIN 5
@@ -622,9 +619,11 @@ static uint32_t temp_enc(float t) {
 static void ani_send_extras(const AniReading &r) {
     const ProbeReading &pe = g_last_probe[PROBE_EXT];
     const ProbeReading &ps = g_last_probe[PROBE_SUP];
+    const ProbeReading &pr = g_last_probe[PROBE_RET];
     send_ext(SENSOR_ID_CO2,     g_last_co2.valid, g_last_co2.co2_ppm, 0);
     send_ext(SENSOR_ID_T_EXT,   pe.valid, temp_enc(pe.temp_c), 0);
     send_ext(SENSOR_ID_T_SUP,   ps.valid, temp_enc(ps.temp_c), 0);
+    send_ext(SENSOR_ID_T_RET,   pr.valid, temp_enc(pr.temp_c), 0);
     send_ext(SENSOR_ID_CURRENT, g_last_ct.valid, (uint32_t)lroundf(g_last_ct.amps * 100.0f), 0);
     send_ext(SENSOR_ID_LIGHT,   g_last_light.valid, g_last_light.lux, g_last_light.pct);
     float pk = g_last_sound.peak_db;
@@ -632,8 +631,9 @@ static void ani_send_extras(const AniReading &r) {
              (uint32_t)lroundf(fmaxf(g_last_sound.db_spl, 0.0f) * 10.0f),
              (uint8_t)(pk < 0 ? 0 : pk > 255 ? 255 : lroundf(pk)));
     send_ext(SENSOR_ID_VOC,     r.valid, r.tvoc, r.aqi);
-    ESP_LOGI(TAG, "EXT TX co2=%u/%d ext=%.1f/%d sup=%.1f/%d I=%.2fA/%d db=%.1f/%d",
+    ESP_LOGI(TAG, "EXT TX co2=%u/%d ext=%.1f/%d sup=%.1f/%d ret=%.1f/%d I=%.2fA/%d db=%.1f/%d",
              g_last_co2.co2_ppm, g_last_co2.valid, pe.temp_c, pe.valid, ps.temp_c, ps.valid,
+             pr.temp_c, pr.valid,
              g_last_ct.amps, g_last_ct.valid, g_last_sound.db_spl, g_last_sound.valid);
 }
 
@@ -692,6 +692,8 @@ static void ani_tick(void) {
             pkt.vbat        = read_vbat();
             pkt.flags       = FLAG_SENSOR_ERROR | FLAG_IS_AIR_QUALITY;
             espnow_send(&pkt);
+            // AHT21 independe do ENS160: T/H continuam indo para a bridge/HA
+            if (r.th_valid) send_relay_env(r.temp_c, r.hum_pct);
         }
         return;
     }
@@ -866,7 +868,7 @@ void setup(void) {
         light_init(DEFAULT_LIGHT_PIN);   // TEMT6000 ambient light (analog, ADC1)
         sound_init(MIC_SCK_PIN, MIC_WS_PIN, MIC_SD_PIN);   // INMP441 (I2S)
         scd41_init();                    // SCD41 no mesmo I2C (Wire já iniciado por ani_init)
-        probe_init(PROBE_EXT_PIN, PROBE_SUP_PIN);          // DS18B20 EXT / SUP
+        probe_init(PROBE_PIN);           // DS18B20 EXT + SUP no mesmo barramento
         current_init(CT_PIN);            // TC da condensadora (ADC1)
         relay_aux_init();
 
@@ -891,19 +893,22 @@ void setup(void) {
             bool     warmup = up_ms < 180000UL;   // ENS160 initial ~3 min startup
             const ProbeReading &pe = g_last_probe[PROBE_EXT];
             const ProbeReading &ps = g_last_probe[PROBE_SUP];
-            char buf[900];
+            const ProbeReading &pr = g_last_probe[PROBE_RET];
+            char buf[1000];
             snprintf(buf, sizeof(buf),
-                "{\"valid\":%s,\"eco2\":%u,\"aqi\":%u,\"tvoc\":%u,"
+                "{\"valid\":%s,\"thv\":%s,\"eco2\":%u,\"aqi\":%u,\"tvoc\":%u,"
                 "\"temp_c\":%.1f,\"hum_pct\":%.0f,"
                 "\"light\":%s,\"lux\":%u,\"lpct\":%u,\"lraw\":%u,"
                 "\"sound\":%s,\"db\":%.1f,\"dbpk\":%.1f,"
                 "\"scd\":%s,\"co2ok\":%s,\"co2\":%u,"
                 "\"pext\":%s,\"text_ok\":%s,\"t_ext\":%.2f,"
                 "\"psup\":%s,\"tsup_ok\":%s,\"t_sup\":%.2f,"
+                "\"pret\":%s,\"tret_ok\":%s,\"t_ret\":%.2f,\"pbus\":%u,"
                 "\"ct\":%s,\"amps\":%.2f,\"ct_bias\":%u,\"ct_clip\":%s,"
                 "\"aht\":%s,\"ens\":%s,\"warmup\":%s,"
                 "\"node\":\"%04X\",\"fw\":\"%s\",\"up\":%lu,\"heap\":%lu,\"age\":%lu}",
                 g_last_ani.valid ? "true" : "false",
+                g_last_ani.th_valid ? "true" : "false",
                 g_last_ani.eco2, g_last_ani.aqi, g_last_ani.tvoc,
                 g_last_ani.temp_c, g_last_ani.hum_pct,
                 g_last_light.valid ? "true" : "false",
@@ -914,6 +919,8 @@ void setup(void) {
                 g_last_co2.valid ? "true" : "false", g_last_co2.co2_ppm,
                 pe.present ? "true" : "false", pe.valid ? "true" : "false", pe.temp_c,
                 ps.present ? "true" : "false", ps.valid ? "true" : "false", ps.temp_c,
+                pr.present ? "true" : "false", pr.valid ? "true" : "false", pr.temp_c,
+                (unsigned)probe_bus_count(),
                 g_last_ct.present ? "true" : "false", g_last_ct.amps, g_last_ct.bias_mv,
                 g_last_ct.clipped ? "true" : "false",
                 aht_ok ? "true" : "false",
@@ -928,6 +935,37 @@ void setup(void) {
         });
         g_httpd.on("/", HTTP_GET, []() {
             g_httpd.send_P(200, "text/html; charset=utf-8", ANI_WEB_HTML);
+        });
+        // Sondas no mesmo barramento: papel EXT/SUP é por ROM — botão para corrigir
+        // POST /probe_swap?a=0&b=1  (0=EXT 1=SUP 2=RET)
+        g_httpd.on("/probe_swap", HTTP_POST, []() {
+            int a = g_httpd.hasArg("a") ? g_httpd.arg("a").toInt() : PROBE_EXT;
+            int b = g_httpd.hasArg("b") ? g_httpd.arg("b").toInt() : PROBE_SUP;
+            if (a < 0 || b < 0 || a >= PROBE_COUNT || b >= PROBE_COUNT || a == b) {
+                g_httpd.send(400, "application/json", "{\"ok\":false}");
+                return;
+            }
+            probe_swap((ProbeId)a, (ProbeId)b);
+            for (int i = 0; i < PROBE_COUNT; i++) g_last_probe[i] = probe_get((ProbeId)i);
+            g_httpd.send(200, "application/json", "{\"ok\":true}");
+        });
+        // Identificador de sondas: lista do barramento a 1 Hz + atribuição de papel
+        g_httpd.on("/probes", HTTP_GET, []() {
+            char pbuf[640];
+            probe_ident_json(pbuf, sizeof(pbuf));
+            g_httpd.send(200, "application/json", pbuf);
+        });
+        g_httpd.on("/probe_ident", HTTP_POST, []() {
+            if (g_httpd.arg("on") == "0") probe_ident_stop(); else probe_ident_start();
+            g_httpd.send(200, "application/json", "{\"ok\":true}");
+        });
+        g_httpd.on("/probe_assign", HTTP_POST, []() {
+            String rs = g_httpd.arg("role");
+            int role = rs.length() == 1 && isDigit(rs[0]) ? rs.toInt() : -1;
+            bool ok = role >= 0 && role < PROBE_COUNT &&
+                      probe_assign(g_httpd.arg("rom").c_str(), (ProbeId)role);
+            if (ok) for (int i = 0; i < PROBE_COUNT; i++) g_last_probe[i] = probe_get((ProbeId)i);
+            g_httpd.send(ok ? 200 : 400, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
         });
         g_httpd.onNotFound([]() {
             g_httpd.sendHeader("Location", "http://192.168.4.1/");
@@ -976,6 +1014,7 @@ void loop(void) {
         g_dns.processNextRequest();
         g_httpd.handleClient();
         ani_tick();
+        probe_ident_tick();   // identificador de sondas (só com o modo ligado)
         relay_aux_tick();
     } else if (g_cfg.num_sensors > 0) {
         for (uint8_t i = 0; i < 2; i++) {

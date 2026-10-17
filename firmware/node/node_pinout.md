@@ -138,8 +138,7 @@ ESP32-C3            TEMT6000
 | Periférico | GPIO | Ligação |
 |---|---|---|
 | SCD41 (CO₂ real) | 6 / 7 | mesmo I2C do AHT21/ENS160, endereço 0x62 |
-| DS18B20 sonda EXT | **4** | DQ + pull-up 4k7 → 3V3, cabo 3 vias |
-| DS18B20 sonda SUP | **10** | idem |
+| DS18B20 sondas EXT + SUP + RET | **4** | mesmo DQ (barramento 1-Wire), **um** pull-up 4k7 → 3V3; papel por ID ROM (NVS) |
 | TC SCT-013 | **1** (ADC1) | bias 3V3─10k─┬─6k8─GND + 10 µF; jack P2 com comutação → GND sem plugue |
 | INMP441 SD | **5** | entrada (pull-down interno) |
 | INMP441 SCK | **20** | U0RXD — confirmar que o SuperMini expõe |
@@ -152,14 +151,14 @@ ESP32-C3            INMP441              DS18B20 (x2)          SCT-013 (jack P2)
   GND ───────────── GND, L/R               GND ── GND            sleeve ─ bias 1.34 V
    G20 ──────────── SCK                    DQ ─┬─ G4 (EXT)
    G21 ──────────── WS                         └─ 4k7 → 3V3
-   G5  ──────────── SD                     (SUP idêntica em G10)
+   G5  ──────────── SD                     (SUP e RET no MESMO G4)   
 ```
 
 ![Caixa central AirQ](docs/airq_wiring_core.svg)
 
 ![Portas do analisador de AC](docs/airq_wiring_ac.svg)
 
-> KY-037/038 removido em 2026-10 (substituído pelo INMP441, que dá dB SPL real).
+> KY-037/038 removido em 2026-10 (substituído pelo INMP441, que dá nível absoluto em dB(A)).
 > Detalhes, faixa do TC e diagnóstico ΔT: [`Node AirQ.md`](../../Node%20AirQ.md).
 
 ---
@@ -260,7 +259,7 @@ Qualquer pino pode ser sobrescrito adicionando flags em `platformio.ini`:
 | `DEFAULT_LED_PIN` | 8 | 2 | LED / WS2812B DIN |
 | `DEFAULT_LIGHT_PIN` | 3 | — | TEMT6000 SIG (ADC1, modo ANI-01) |
 | `CT_PIN` | 1 | — | TC SCT-013 (ADC1, modo ANI-01) |
-| `PROBE_EXT_PIN` / `PROBE_SUP_PIN` | 4 / 10 | — | sondas DS18B20 (modo ANI-01) |
+| `PROBE_PIN` | 4 | — | barramento das sondas DS18B20 EXT/SUP/RET (modo ANI-01) |
 | `MIC_SCK_PIN` / `MIC_WS_PIN` / `MIC_SD_PIN` | 20 / 21 / 5 | — | INMP441 I2S (modo ANI-01) |
 | `DEFAULT_SENSOR_TYPE` | 0 | 0 | 0=ultrassônico 1=ANI-01 |
 | `DEFAULT_NUM_SENSORS` | 1 | 1 | 0=relay 1=1sensor 2=2sensores |

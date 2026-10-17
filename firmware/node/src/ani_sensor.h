@@ -8,7 +8,8 @@ typedef struct {
     uint8_t  aqi;       // UBA AQI index 1–5 (1=excellent … 5=unhealthy); 0=unavailable
     float    temp_c;    // temperature in °C (AHT21)
     float    hum_pct;   // relative humidity in % (AHT21)
-    bool     valid;
+    bool     valid;     // ENS160 com medição válida (eCO2 ≥ 400)
+    bool     th_valid;  // AHT21 leu nesta rodada — T/H valem mesmo com ENS160 falhando
 } AniReading;
 
 // Initialise I2C bus and both sensors. Returns true if both respond on the bus.

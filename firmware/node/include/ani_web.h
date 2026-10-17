@@ -49,6 +49,14 @@ body{background:var(--bg);color:var(--t);font-family:system-ui,-apple-system,san
 .sensor-hd b{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;color:var(--t);font-weight:800}
 .sensor-hd span{font-size:.62rem;color:var(--mu);font-weight:600}
 .sensor-hd .pill{margin-left:auto}
+.btn{padding:4px 10px;border:1px solid var(--b);border-radius:6px;background:var(--s);color:var(--t);font:inherit;font-size:.72rem;cursor:pointer;margin-left:auto}
+.prow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 8px;border:1px solid var(--b);border-radius:8px;margin-top:6px;font-size:.78rem}
+.prow.hot{border-color:#dc2626;background:rgba(220,38,38,.08)}
+.pid{font:700 1rem ui-monospace,Menlo,monospace;letter-spacing:.06em}
+.prow .pt{margin-left:auto;font-variant-numeric:tabular-nums}
+.prow .pd{min-width:52px;text-align:right;font-variant-numeric:tabular-nums;color:var(--mu)}
+.prow.hot .pd{color:#dc2626;font-weight:700}
+.prow select{font:inherit}
 .cards{display:flex;flex-direction:column;gap:7px}
 
 /* ── Metric cards ───────────────────────────────────────────────── */
@@ -124,7 +132,7 @@ tr:last-child td{border-bottom:none}
       <div class="sensor-hd"><b>Ar-condicionado</b><span>· sondas DS18B20 + TC</span><span class="pill" id="d_ac">—</span></div>
       <div class="cards">
         <div class="card hl" id="c_dt">
-          <span class="cl">ΔT · ambiente − insuflamento</span>
+          <span class="cl" id="dtl">ΔT · retorno − insuflamento</span>
           <div class="bodyr">
             <div class="nums"><span class="cv" id="dt">—</span><span class="cu">°C</span></div>
             <svg class="spark" id="dtk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg>
@@ -136,6 +144,11 @@ tr:last-child td{border-bottom:none}
           <div class="bodyr"><div class="nums"><span class="cv" id="tsup">—</span><span class="cu">°C</span></div>
             <svg class="spark" id="tsupk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
         </div>
+        <div class="card" id="c_ret">
+          <span class="cl">Retorno · ar que entra na evaporadora (sonda RET)</span>
+          <div class="bodyr"><div class="nums"><span class="cv" id="tret">—</span><span class="cu">°C</span></div>
+            <svg class="spark" id="tretk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
+        </div>
         <div class="card" id="c_ext">
           <span class="cl">Externo · entrada da condensadora (sonda EXT)</span>
           <div class="bodyr"><div class="nums"><span class="cv" id="text">—</span><span class="cu">°C</span></div>
@@ -145,6 +158,21 @@ tr:last-child td{border-bottom:none}
           <span class="cl">Corrente da condensadora (TC)</span>
           <div class="bodyr"><div class="nums"><span class="cv" id="amps">—</span><span class="cu">A</span><span class="cs" id="cmp"></span></div>
             <svg class="spark" id="ampsk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
+        </div>
+      </div>
+      <div id="swapbox" style="display:none;margin-top:8px">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="cl" style="margin:0">Identificar sondas</span>
+            <span id="idst" style="font-size:.7rem;color:var(--mu)"></span>
+            <button type="button" class="btn" id="idbtn" onclick="identToggle()">iniciar</button>
+          </div>
+          <div id="idhelp" style="display:none;font-size:.72rem;color:var(--mu);margin:6px 0 2px">
+            Segure <b>uma</b> sonda na mão (~20 s). A que subir fica em destaque: escolha o papel,
+            clique em <b>atribuir</b> e cole a etiqueta com o ID. Solte, espere voltar e passe à próxima.
+            <a href="#" onclick="identReset();return false">zerar referência</a>
+          </div>
+          <div id="idlist"></div>
         </div>
       </div>
     </div>
@@ -276,7 +304,7 @@ tr:last-child td{border-bottom:none}
       <div class="sensor-hd"><b>INMP441</b><span>· Ruído ambiente</span><span class="pill" id="d_snd">—</span></div>
       <div class="cards">
         <div class="card">
-          <span class="cl">Nível sonoro · dB SPL (Z, janela 0,26 s)</span>
+          <span class="cl">Nível sonoro · dB(A) (janela 0,26 s)</span>
           <div class="bodyr">
             <div class="nums"><span class="cv" id="db">—</span><span class="cu">dB</span><span class="cs" id="dbs"></span></div>
             <svg class="spark" id="dbk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg>
@@ -301,7 +329,7 @@ tr:last-child td{border-bottom:none}
 <script>
 var AL=['','Excelente','Bom','Moderado','Mau','Muito mau'];
 var MAXPTS=40;
-var H={eco2:[],tvoc:[],temp:[],hum:[],lux:[],db:[],co2:[],dt:[],tsup:[],text:[],amps:[]};
+var H={eco2:[],tvoc:[],temp:[],hum:[],lux:[],db:[],co2:[],dt:[],tsup:[],text:[],tret:[],amps:[]};
 var CMP_ON_A=1.0;   // corrente acima disto = compressor ligado
 function show(id,on){$e(id).style.display=on?'':'none';}
 // Diagnóstico pelo ΔT (ambiente − insuflamento). on: true/false/null (sem TC).
@@ -388,43 +416,92 @@ function upd(d){
   }
 
   // Analisador de AC — secção só aparece com alguma sonda ou TC
-  var anyAc=d.pext||d.psup||d.ct;
+  var anyAc=d.pext||d.psup||d.pret||d.pbus>0||d.ct;
   show('acbox',anyAc);
   if(anyAc){
-    show('c_sup',d.psup);show('c_ext',d.pext);show('c_ct',d.ct);
-    var tsup=d.tsup_ok?d.t_sup:null, text=d.text_ok?d.t_ext:null, amps=d.ct?d.amps:null;
+    show('c_sup',d.psup);show('c_ext',d.pext);show('c_ret',d.pret);show('c_ct',d.ct);show('swapbox',d.pext||d.psup||d.pret||d.pbus>0);if(idTimer===null)identPoll();
+    var tsup=d.tsup_ok?d.t_sup:null, text=d.text_ok?d.t_ext:null, tret=d.tret_ok?d.t_ret:null, amps=d.ct?d.amps:null;
     var on=amps===null?null:amps>=CMP_ON_A;
-    setVal('tsup',tsup,1);setVal('text',text,1);setVal('amps',amps,2);
+    setVal('tsup',tsup,1);setVal('text',text,1);setVal('tret',tret,1);setVal('amps',amps,2);
+    if(tret!==null){push('tret',tret);spark('tretk',H.tret,'#d97706');}
     if(tsup!==null){push('tsup',tsup);spark('tsupk',H.tsup,'#0ea5e9');}
     if(text!==null){push('text',text);spark('textk',H.text,'#ea580c');}
     if(amps!==null){push('amps',amps);spark('ampsk',H.amps,'#4f46e5');
       $e('cmp').textContent=(on?'compressor ligado':'compressor desligado')+(d.ct_clip?' · TC SATURADO':'');
       $e('cmp').className='cs '+(d.ct_clip?'r':on?'g':'');}
-    var dtOk=tsup!==null&&d.valid;
+    // ΔT da evaporadora: retorno (sonda RET) − insuflamento; sem RET usa o AHT21 da caixa
+    var tref=tret!==null?tret:(d.thv?d.temp_c:null);
+    $e('dtl').textContent='ΔT · '+(tret!==null?'retorno':'ambiente (caixa)')+' − insuflamento';
+    var dtOk=tsup!==null&&tref!==null;
     show('c_dt',d.psup);
     if(dtOk){
-      var dt=d.temp_c-tsup,D=dti(dt,tsup,on);
+      var dt=tref-tsup,D=dti(dt,tsup,on);
       setVal('dt',dt,1,D.c);$e('dts').textContent=D.l;$e('dts').className='cs '+D.c;
       push('dt',dt);spark('dtk',H.dt,'#4f46e5');
-    }else{setVal('dt',null,1);$e('dts').textContent='sem leitura de ambiente/insuflamento';}
-    setPill('d_ac',(!d.psup||d.tsup_ok)&&(!d.pext||d.text_ok));
+    }else{setVal('dt',null,1);$e('dts').textContent='sem leitura de retorno/insuflamento';}
+    setPill('d_ac',(!d.psup||d.tsup_ok)&&(!d.pext||d.text_ok)&&(!d.pret||d.tret_ok));
   }
 
-  if(!d.valid){setDot('warn','sensor sem leitura');return;}
+  if(d.thv){
+    sv('temp',parseFloat(d.temp_c).toFixed(1),null);
+    sv('hum',Math.round(d.hum_pct),null);
+    push('temp',parseFloat(d.temp_c));push('hum',d.hum_pct);
+    spark('tempk',H.temp,'#4f46e5');
+    spark('humk',H.hum,hc(d.hum_pct));
+  }
+  if(!d.valid){setDot('warn',d.thv?'ENS160 sem leitura (T/H ok)':'sensor sem leitura');return;}
 
-  sv('temp',parseFloat(d.temp_c).toFixed(1),null);
-  sv('hum',Math.round(d.hum_pct),null);
   setAqi(d.aqi|0);
   var i=e2i(d.eco2);sv('eco2',d.eco2,i.c);$e('eco2s').textContent=i.l;$e('eco2s').className='cs '+i.c;
   var t=t2i(d.tvoc);sv('tvoc',d.tvoc,t.c);$e('tvocs').textContent=t.l;$e('tvocs').className='cs '+t.c;
 
-  push('temp',parseFloat(d.temp_c));push('hum',d.hum_pct);push('eco2',d.eco2);push('tvoc',d.tvoc);
-  spark('tempk',H.temp,'#4f46e5');
-  spark('humk',H.hum,hc(d.hum_pct));
+  push('eco2',d.eco2);push('tvoc',d.tvoc);
   spark('eco2k',H.eco2,d.eco2<600?'#16a34a':d.eco2<1000?'#d97706':'#dc2626');
   spark('tvock',H.tvoc,d.tvoc<150?'#16a34a':d.tvoc<500?'#d97706':'#dc2626');
 }
 
+var idTimer=null,psel={};
+function identToggle(){
+  var on=idTimer===null;
+  fetch('/probe_ident?on='+(on?1:0),{method:'POST'}).then(function(){if(on)identStart();else identEnd();}).catch(function(){});
+}
+function identStart(){show('idhelp',true);$e('idbtn').textContent='parar';if(idTimer===null)idTimer=setInterval(identPoll,1000);identPoll();}
+function identEnd(){if(idTimer!==null){clearInterval(idTimer);idTimer=null;}show('idhelp',false);$e('idbtn').textContent='iniciar';$e('idst').textContent='';identPoll();}
+function identReset(){fetch('/probe_ident?on=1',{method:'POST'}).then(identPoll).catch(function(){});}
+function identAssign(rom,i){
+  var r=$e('ps'+i).value;
+  if(r===''){$e('idst').textContent='escolha o papel';return;}
+  fetch('/probe_assign?rom='+rom+'&role='+r,{method:'POST'}).then(function(res){
+    $e('idst').textContent=res.ok?'atribuído ✓':'falhou';delete psel[rom];identPoll();
+    return fetch('/data').then(function(x){return x.json();}).then(upd);
+  }).catch(function(){});
+}
+function identPoll(){
+  fetch('/probes').then(function(r){return r.json();}).then(function(p){
+    if(p.ident&&idTimer===null){identStart();return;}
+    if(!p.ident&&idTimer!==null){identEnd();return;}
+    if(p.ident){var m=Math.floor(p.left/60),s=p.left%60;$e('idst').textContent='ligado · '+m+':'+(s<10?'0':'')+s;}
+    var ae=document.activeElement;
+    if(ae&&ae.tagName==='SELECT'&&$e('idlist').contains(ae))return;   // não fechar o menu aberto
+    // destaque: maior subida ≥ 1 °C e ≥ 0,5 °C acima da 2ª
+    var best=-1,bd=-99,sd=-99;
+    p.dev.forEach(function(d,i){if(!d.ok)return;if(d.d>bd){sd=bd;bd=d.d;best=i;}else if(d.d>sd)sd=d.d;});
+    var hot=(p.ident&&bd>=1.0&&bd-sd>=0.5)?best:-1;
+    var h=p.dev.length?'':'<div style="font-size:.75rem;color:var(--mu);margin-top:6px">nenhuma sonda no barramento</div>';
+    p.dev.forEach(function(d,i){
+      var cur=psel[d.rom]!==undefined?psel[d.rom]:({EXT:'0',SUP:'1',RET:'2'})[d.role];
+      var opt=function(v,n){return '<option value="'+v+'"'+(cur===v?' selected':'')+'>'+n+'</option>';};
+      h+='<div class="prow'+(i===hot?' hot':'')+'" title="ROM '+d.rom+'"><span class="pid">'+d.rom.substr(2,4)+'</span>'
+        +'<span style="color:var(--mu)">'+(d.role||'sem papel')+(i===hot?' · <b style="color:#dc2626">ESTA</b>':'')+'</span>'
+        +'<span class="pt">'+(d.ok?d.t.toFixed(2)+' °C':'—')+'</span>'
+        +'<span class="pd">'+(p.ident&&d.ok?(d.d>=0?'+':'')+d.d.toFixed(2):'')+'</span>'
+        +'<span style="display:flex;gap:6px;margin-left:auto"><select id="ps'+i+'" onchange="psel[\''+d.rom+'\']=this.value">'
+        +(cur===undefined?'<option value="" selected>papel…</option>':'')+opt('0','EXT')+opt('1','SUP')+opt('2','RET')+'</select>'
+        +'<button type="button" class="btn" style="margin:0" onclick="identAssign(\''+d.rom+'\','+i+')">atribuir</button></span></div>';
+    });
+    $e('idlist').innerHTML=h;
+  }).catch(function(){});
+}
 function tick(){
   if(lastOk===0)return;
   var dt=(Date.now()-lastOk)/1000;

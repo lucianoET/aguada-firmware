@@ -6,12 +6,16 @@ Visão geral em [`Node AirQ.md`](Node%20AirQ.md).
 
 - [ ] **Confirmar GPIO20/21 expostos** no SuperMini usado (serigrafia RX/TX). Se não,
       mover INMP441 SCK/WS por build flag (`MIC_SCK_PIN`/`MIC_WS_PIN`) para 0/2.
-- [ ] **INMP441:** L/R→GND; ver no serial `Leq=… dB SPL` ~30–40 em silêncio e a subir
-      com palmas. Sem mic: pill "falha" e nada enviado. Se tiver sonómetro, acertar
-      `MIC_DB_OFFSET`.
+- [ ] **INMP441 (dB(A), 32 kHz, >>9):** comparar `nível=… dB(A)` do serial com app de
+      sonómetro no celular (ex. NIOSH SLM) lado a lado, em silêncio e com fala; diferença
+      constante → `MIC_DB_OFFSET`. Tapar o furo do mic com o dedo: o nível tem de cair
+      (se não cair, é interferência elétrica, não som). Bancada 17/10: 67–72 dB(A).
 - [ ] **SCD41:** log `SCD41 OK serial=…`; CO₂ exterior ~420 ppm, sobe ao respirar perto.
 - [ ] **DS18B20 EXT/SUP:** ligar/desligar a quente → secção "Ar-condicionado" aparece/
-      some; trocar as sondas de porta → nomes acompanham a porta.
+      some; ligar uma a uma: 1ª vira EXT, 2ª SUP, 3ª RET (log `sonda nova … → papel`);
+      reboot mantém os papéis; "Identificar sondas" no portal: aquecer uma a uma,
+      atribuir papel, etiquetar com o ID de 4 hex; com RET o
+      card ΔT diz "retorno − insuflamento" e o HA ganha `t_ret`.
 - [ ] **TC:** montar bias 10k/6k8 + 10 µF e jack com comutação. Sem plugue → sem card;
       com plugue em vazio → ~0 A; carga conhecida (ex. ferro 1000 W ≈ 4.5 A em 220 V)
       → conferir com alicate amperímetro e ajustar `CT_AMPS_PER_VOLT`/`CT_NOISE_MV`.

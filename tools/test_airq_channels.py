@@ -1,4 +1,4 @@
-"""Self-check: canais AirQ / analisador de AC (sensor_id 0xF0–0xF6) chegam como
+"""Self-check: canais AirQ / analisador de AC (sensor_id 0xF0–0xF7) chegam como
 HEARTBEAT, viram aguada/{node}/airq/state e só criam entidade no HA quando o
 periférico existe (1º valor válido). Run: python tools/test_airq_channels.py"""
 import json
@@ -41,6 +41,7 @@ def make_bridge():
     b._airq = {}
     b._airq_disc = set()
     b._airq_ts = {}
+    b._env_last = {}
     b._known_relays = {}
     b._relay_discovery_sent = set()
     b._env_discovery_sent = set()
@@ -124,6 +125,41 @@ def test_stale_ambient_does_not_feed_delta_t():
     b._handle_heartbeat(hb(0xF2, 1000 + 131))
     st = b.client.last_state()
     assert st["t_amb"] is None and st["dt_c"] is None and st["t_sup"] == 13.1
+
+
+def test_delta_t_prefers_return_probe():
+    b = make_bridge()
+    b._handle_heartbeat(hb(0xF2, 1000 + 130))            # insuflamento 13.0 °C
+    b._handle_heartbeat(hb(0xFE, 1000 + 290, 60))       # AHT21 da caixa 29.0 °C (aquecido)
+    st = b.client.last_state()
+    assert st["dt_ref"] == "amb" and st["dt_c"] == 16.0
+    b._handle_heartbeat(hb(0xF7, 1000 + 245))            # retorno 24.5 °C
+    st = b.client.last_state()
+    assert st["t_ret"] == 24.5 and st["dt_ref"] == "ret" and st["dt_c"] == 11.5
+    assert b.client.topics("homeassistant/sensor/aguada_airq_0494_t_ret/")
+    b._handle_heartbeat(hb(0xF7, 0xFFFF))                # sonda RET some → volta ao AHT21
+    st = b.client.last_state()
+    assert st["t_ret"] is None and st["dt_ref"] == "amb" and st["dt_c"] == 16.0
+
+
+def test_env_before_first_airq_channel_is_kept():
+    # bridge reiniciou: o ENV (AHT21) chega antes de qualquer canal AirQ do node
+    b = make_bridge()
+    b._handle_heartbeat(hb(0xFE, 1000 + 245, 55))       # ambiente 24.5 °C
+    assert NODE not in b._airq                          # ainda não é "AirQ"
+    b._handle_heartbeat(hb(0xF2, 1000 + 130))            # 1º canal: insuflamento 13.0 °C
+    st = b.client.last_state()
+    assert st["t_amb"] == 24.5 and st["dt_ref"] == "amb" and st["dt_c"] == 11.5, st
+
+
+def test_old_env_is_not_seeded():
+    b = make_bridge()
+    b._handle_heartbeat(hb(0xFE, 1000 + 245, 55))
+    t, ts = b._env_last[NODE]
+    b._env_last[NODE] = (t, ts - bridge.AIRQ_STALE_S - 10)   # ENV antigo
+    b._handle_heartbeat(hb(0xF2, 1000 + 130))
+    st = b.client.last_state()
+    assert st.get("t_amb") is None and st["dt_c"] is None
 
 
 def test_reserved_extras():

@@ -107,7 +107,7 @@ svg text{font-family:var(--mono)}
 
 LEG = [("3V3","--w3v3"),("GND","--gnd"),("SDA · GPIO6","--wsda"),("SCL · GPIO7","--wscl"),
        ("SD · GPIO5","--wsd"),("SCK · GPIO20","--wsck"),("WS · GPIO21","--wws")]
-LEG2 = [("DQ sondas · GPIO4/10","--wdq"),("TC · GPIO1","--wct"),("luz · GPIO3","--wlux"),("passivos","--wpas")]
+LEG2 = [("DQ sondas · GPIO4","--wdq"),("TC · GPIO1","--wct"),("luz · GPIO3","--wlux"),("passivos","--wpas")]
 def legend(items): return '<div class="legend">' + "".join(f'<span><i style="background:var({c})"></i>{t}</span>' for t,c in items) + '</div>'
 
 ROWS = [
@@ -123,8 +123,9 @@ ROWS = [
  ("Microfone WS", "21", "INMP441 WS", "--wws"),
  ("Microfone L/R", "—", "GND (canal esquerdo)", "--gnd"),
  ("Portas do analisador de AC — opcionais", None),
- ("Sonda EXT (DQ)", "4", "DS18B20 da condensadora + 4k7 para 3V3", "--wdq"),
- ("Sonda SUP (DQ)", "10", "DS18B20 do insuflamento + 4k7 para 3V3", "--wdq"),
+ ("Sonda EXT (DQ)", "4", "DS18B20 da condensadora + o ÚNICO 4k7 do barramento para 3V3", "--wdq"),
+ ("Sonda SUP (DQ)", "4", "mesmo fio da EXT (barramento 1-Wire); sem 2º pull-up", "--wdq"),
+ ("Sonda RET (DQ)", "4", "idem — ar de retorno da evaporadora", "--wdq"),
  ("Corrente (TC)", "1", "ponta do jack; anel no bias 10k/6k8 + 10 µF; chave do jack → GND", "--wct"),
  ("Luz", "3", "TEMT6000 SIG", "--wlux"),
 ]
@@ -183,7 +184,8 @@ html = f'''<title>AirQ Ligações</title>
   <div class="sec-hd"><h2>2 · Portas do analisador de AC</h2><span class="tag">opcionais · detectadas sozinhas</span></div>
   <div class="panel diagram">{gen.diagram_ac()}</div>
   {legend(LEG2)}
-  <p>Cada sonda tem a sua porta e o seu GPIO, por isso o firmware sabe qual é qual sem configurar nada. O jack do TC precisa de <b>contacto de comutação</b>: sem plugue, a chave põe o GPIO1 no GND e o card de corrente some do portal.</p>
+  <p>As três sondas partilham o <b>mesmo fio de dados</b> (GPIO4, um só pull-up de 4k7). O firmware reconhece cada uma pelo ID gravado no chip: a 1ª que aparece vira EXT, a 2ª SUP, a 3ª RET, e isso fica salvo. Para conferir ou corrigir, use <b>Identificar sondas</b> no portal (192.168.4.1): aqueça uma sonda com a mão, a que sobe fica em destaque, atribua o papel e cole a etiqueta com o ID de 4 caracteres.</p>
+  <p>Com a sonda <b>RET</b> o ΔT da evaporadora é <b>retorno − insuflamento</b> (normal 8–12 °C); sem ela, cai para o AHT21 da caixa, que lê alto. O jack do TC precisa de <b>contacto de comutação</b>: sem plugue, a chave põe o GPIO1 no GND e o card de corrente some do portal.</p>
 </section>
 
 <section>
@@ -196,9 +198,10 @@ html = f'''<title>AirQ Ligações</title>
   <ol class="notes">
     <li><b>Tudo em 3,3 V.</b> Nada de sensor no pino 5V do SuperMini: o INMP441 e o SCD41 não aguentam, e o ADC do C3 só lê até ~2,5 V.</li>
     <li><b>VIN ou 3V3 na placa azul.</b> Com 3,3 V no VIN o regulador da placa entrega ~3,1–3,2 V, que basta. Ligar direto no pino 3V3 também serve; não ligue os dois.</li>
-    <li><b>AHT21 lê alto.</b> O ENS160 aquece a placa. Afaste a placa do ESP32 dentro da caixa, com furo de ventilação, e compare com um termómetro antes de confiar no ΔT.</li>
+    <li><b>AHT21 lê alto.</b> Na bancada (17/10) leu ~33 °C com as sondas em ~28 °C: o C3 e o ENS160 aquecem a placa. Afaste-a do ESP32, com ventilação; para o ΔT use a sonda RET.</li>
     <li><b>Pull-ups do I2C.</b> A placa azul e o módulo SCD41 já trazem os seus. Dois de 10 kΩ em paralelo dão ~5 kΩ, o que está bem a 50 kHz.</li>
-    <li><b>Sondas em cabo.</b> DS18B20 em 3 fios, nunca em modo parasita. Conector M8 ou RJ11 (P2 faz curto ao entrar). TVS + 100 Ω em série no DQ de cada porta se o cabo for longo.</li>
+    <li><b>Sondas em cabo.</b> DS18B20 em 3 fios, nunca em modo parasita. Conector M8 ou RJ11 (P2 faz curto ao entrar). Barramento em estrela: somando os cabos, até ~5 m com 4k7; acima disso, 2k2. TVS + 100 Ω em série no DQ de cada conector se o cabo for longo.</li>
+    <li><b>Microfone em dB(A).</b> O nível sai ponderado A (padrão de ruído ambiente) a 32 kHz. Ventilador e TV aparecem: na bancada deu 67–71 dB(A). Para conferir, compare com um app de sonómetro ao lado e tape o furo do INMP441 com o dedo — o nível tem de cair.</li>
     <li><b>TC num só condutor.</b> A garra abraça só a fase; o cabo inteiro (fase + neutro) dá zero. Até ~25 A com o SCT-013-030; acima disso o portal mostra "TC SATURADO".</li>
   </ol>
 </section>

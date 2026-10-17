@@ -189,7 +189,7 @@ def probe(x1, x2, y, label, flip=False):
 def diagram_ac():
     W, H = 960, 600
     out, top = [], []
-    c3svg, P = c3(380, 110, used={"3.3", "G", "GPIO1", "GPIO3", "GPIO4", "GPIO6", "GPIO7", "GPIO10"}, label_top=True)
+    c3svg, P = c3(380, 110, used={"3.3", "G", "GPIO1", "GPIO3", "GPIO4", "GPIO6", "GPIO7"}, label_top=True)
     # alimentação do C3 como etiquetas de rede
     top.append(flag(*P["3.3"], "3V3", "left") + flag(*P["G"], "GND", "left"))
 
@@ -241,13 +241,20 @@ def diagram_ac():
     gx, gy = P["GPIO7"]; out.append(wire([(gx, gy), (sx0 + 16, 222)], "wscl", "SCL: GPIO7 → SCD41"))
     top.append(flag(sx0 + 16, 158, "3V3", "left") + flag(sx0 + 16, 250, "GND", "left"))
     top.append(text(sx0 + 75, sy0 - 34, "mesmo I2C do ENS160/AHT21", "small", "middle"))
-    # ── Sonda SUP (GPIO10) ───────────────────────────────────────────────
-    gx, gy = P["GPIO10"]
-    out.append(wire([(gx, gy), (700, gy)], "wdq", "DQ sonda SUP → GPIO10"))
-    out.append(dot(620, gy) + resistor_v(620, gy, 392, "4k7") + flag(620, 392, "3V3", "down"))
+    # ── Sonda SUP — MESMO barramento 1-Wire da EXT (GPIO4) ─────────────────
+    # DQ do conector SUP volta por cima da placa até o nó do DQ da EXT; 1 pull-up só.
+    gy4 = P["GPIO4"][1]
+    out.append(wire([(700, 498), (600, 498), (600, 60), (264, 60), (264, gy4)], "wdq",
+                    "DQ sondas SUP e RET → mesmo fio da EXT (GPIO4)"))
+    out.append(wire([(700, 338), (600, 338)], "wdq", "DQ sonda SUP → barramento"))
+    out.append(dot(264, gy4) + dot(600, 338))
+    top.append(text(440, 50, "EXT + SUP + RET no mesmo DQ · 1 pull-up 4k7 · papel pelo ID ROM", "small", "middle"))
     top.append(connector(700, 310, "SUP"))
     top.append(flag(725, 310, "3V3", "up") + flag(725, 366, "GND", "down"))
     top.append(probe(750, 930, 338, "sonda SUP · insuflamento"))
+    top.append(connector(700, 470, "RET"))
+    top.append(flag(725, 470, "3V3", "up") + flag(725, 526, "GND", "down"))
+    top.append(probe(750, 930, 498, "sonda RET · retorno"))
 
     body = "".join(out) + c3svg + "".join(top)
     return f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="Ligações das portas opcionais do analisador de AC">{body}</svg>'

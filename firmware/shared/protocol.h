@@ -137,9 +137,10 @@ typedef enum : uint8_t {
 #define SENSOR_ID_T_SUP      0xF2      // DS18B20 sonda SUP (ar de insuflamento da evaporadora)
 #define SENSOR_ID_CURRENT    0xF3      // TC (SCT-013): distance_cm = corrente RMS em 0.01 A
 #define SENSOR_ID_LIGHT      0xF4      // TEMT6000: distance_cm = lux, reserved = % relativo
-#define SENSOR_ID_SOUND      0xF5      // INMP441: distance_cm = dB SPL*10 (janela 0.26 s),
-                                       //   reserved = pico dB SPL (uint8)
+#define SENSOR_ID_SOUND      0xF5      // INMP441: distance_cm = dB(A)*10 (janela 0.26 s),
+                                       //   reserved = pico dB(A) (uint8)
 #define SENSOR_ID_VOC        0xF6      // ENS160: distance_cm = TVOC ppb, reserved = AQI 1-5
+#define SENSOR_ID_T_RET      0xF7      // DS18B20 sonda RET (ar de retorno da evaporadora)
 
 #define DISTANCE_ERROR      0xFFFF
 
