@@ -46,6 +46,21 @@ as entidades dos periféricos que existem.
 
 ![Portas opcionais do analisador de AC — sondas, TC, SCD41, TEMT6000](firmware/node/docs/airq_wiring_ac.svg)
 
+![Alimentação por bateria — Li-ion, TP4056, SW1, D1, divisor VBAT, SW2](firmware/node/docs/airq_wiring_power.svg)
+
+### Alimentação por bateria (opcional)
+
+- Li-ion 3,7 V → **TP4056 com proteção (DW01)** B+/B−; carga pelo USB-C do TP4056.
+- OUT+ → **SW1** (liga/desliga) → **D1 Schottky SS34** → pino **5V** do C3 (LDO onboard → 3,3 V).
+  D1 impede que o 5 V do USB do C3 (ao gravar firmware) volte para a bateria.
+- Divisor **100k/100k** depois do SW1 → **GPIO0** (VBAT/2, 4,2 V → 2,1 V; não drena com SW1 aberto).
+  Firmware: `vbat_enabled=true` (pino 0 e divisor 2 já são os padrões) via CMD_CONFIG do gateway.
+- **SW2** no 3V3 do C3 corta todos os sensores. ENS160/AHT21 só são detectados no boot →
+  religar SW2 com o C3 ligado exige reboot. Para economia de verdade, preferir P-MOSFET comandado
+  por GPIO (ex. AO3401) em vez de chave manual.
+- Autonomia com portal Wi-Fi sempre ligado: ~120–130 mA → ~1 dia com 18650 de 2500 mAh.
+  Abaixo de ~3,6 V na bateria o 3,3 V começa a cair (D1 + LDO).
+
 Versão completa (foto da bancada anotada + checklist de soldagem):
 [`firmware/node/docs/airq_ligacoes.html`](firmware/node/docs/airq_ligacoes.html) — abrir
 no browser. Os diagramas são gerados por `firmware/node/docs/wiring_src/` (não editar à mão).
@@ -54,7 +69,7 @@ no browser. Os diagramas são gerados por `firmware/node/docs/wiring_src/` (não
 
 | GPIO | Função | Notas |
 |---|---|---|
-| 0 | livre | ADC1 — reserva |
+| 0 | VBAT/2 (opcional) | ADC1 — divisor 100k/100k da bateria (após SW1) |
 | 1 | **TC (SCT-013)** | ADC1. Bias ~1.34 V (10k/6k8 + 10 µF), jack P2 com comutação → GND sem plugue |
 | 2 | livre | strapping — evitar |
 | 3 | TEMT6000 SIG | ADC1 |

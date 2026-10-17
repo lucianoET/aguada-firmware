@@ -158,6 +158,8 @@ ESP32-C3            INMP441              DS18B20 (x2)          SCT-013 (jack P2)
 
 ![Portas do analisador de AC](docs/airq_wiring_ac.svg)
 
+![Alimentação por bateria](docs/airq_wiring_power.svg)
+
 > KY-037/038 removido em 2026-10 (substituído pelo INMP441, que dá nível absoluto em dB(A)).
 > Detalhes, faixa do TC e diagnóstico ΔT: [`Node AirQ.md`](../../Node%20AirQ.md).
 
@@ -191,6 +193,10 @@ Bateria/fonte ── R1(100k) ─┬─ GPIO4
 ```
 
 Configurar em NVS: `vbat_enabled=true`, `vbat_pin=4`, `vbat_div=2`.
+
+> **Modo ANI-01 (AirQ):** GPIO4 é o barramento das sondas — usar **GPIO0** (ADC1, livre),
+> que já é o `vbat_pin` padrão: `vbat_enabled=true`, `vbat_pin=0`, `vbat_div=2`. Divisor depois do
+> SW1 (ver diagrama de alimentação por bateria).
 
 ---
 

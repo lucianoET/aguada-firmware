@@ -4,11 +4,12 @@ import base64, html
 # ── primitivas SVG ────────────────────────────────────────────────────────────
 def esc(s): return html.escape(str(s))
 
-def wire(pts, cls, title=None):
+def wire(pts, cls, title=None, halo=True):
+    """halo=False: sem contorno (trechos do mesmo fio que se emendam não abrem falha)."""
     d = "M" + " L".join(f"{x},{y}" for x, y in pts)
     t = f"<title>{esc(title)}</title>" if title else ""
-    return (f'<g class="w {cls}">{t}<path class="halo" d="{d}"/>'
-            f'<path class="core" d="{d}"/></g>')
+    h = f'<path class="halo" d="{d}"/>' if halo else ""
+    return f'<g class="w {cls}">{t}{h}<path class="core" d="{d}"/></g>'
 
 def dot(x, y): return f'<circle class="node" cx="{x}" cy="{y}" r="4.5"/>'
 
@@ -258,3 +259,93 @@ def diagram_ac():
 
     body = "".join(out) + c3svg + "".join(top)
     return f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="Ligações das portas opcionais do analisador de AC">{body}</svg>'
+
+
+# ── primitivas de alimentação ────────────────────────────────────────────────
+def switch_h(x1, x2, y, cls, title=None):
+    """Chave liga/desliga (SPST) horizontal entre x1 e x2, desenhada aberta."""
+    a, b = x1 + 14, x2 - 14
+    return (wire([(x1, y), (a, y)], cls, title, False) + wire([(b, y), (x2, y)], cls, title, False) +
+            f'<path class="swl" d="M{a},{y} L{b - 2},{y - 22}"/>' +
+            f'<circle class="swd" cx="{a}" cy="{y}" r="5"/><circle class="swd" cx="{b}" cy="{y}" r="5"/>')
+
+def diode_h(x1, x2, y, cls, title=None):
+    """Diodo horizontal, anodo à esquerda (conduz →)."""
+    m = (x1 + x2) / 2
+    return (wire([(x1, y), (m - 12, y)], cls, title, False) + wire([(m + 11, y), (x2, y)], cls, title, False) +
+            f'<polygon class="dio" points="{m-12},{y-11} {m-12},{y+11} {m+10},{y}"/>' +
+            f'<path class="diol" d="M{m+11},{y-12} L{m+11},{y+12}"/>')
+
+def cell_v(x, ytop, ybot, label):
+    """Célula Li-ion vertical (+ em cima)."""
+    return (f'<rect class="cellcap" x="{x-9}" y="{ytop-9}" width="18" height="10" rx="2"/>'
+            f'<rect class="cell" x="{x-26}" y="{ytop}" width="52" height="{ybot-ytop}" rx="7"/>' +
+            text(x, ytop + 24, "+", "cellt", "middle") + text(x, ybot - 12, "−", "cellt", "middle") +
+            text(x, (ytop + ybot) / 2 + 4, "3,7 V", "cellt", "middle") +
+            text(x, ytop - 54, label, "small", "middle"))
+
+# ══ DIAGRAMA 3 — alimentação por bateria ══════════════════════════════════════
+def diagram_power():
+    W, H = 960, 560
+    out, top = [], []
+    c3svg, P = c3(600, 110, used={"5V", "G", "3.3", "GPIO0"}, label_top=True)
+
+    # ── bateria Li-ion → TP4056 (B+ / B-) ────────────────────────────────
+    top.append(cell_v(85, 150, 290, "Li-ion 18650"))
+    out.append(wire([(85, 141), (85, 112), (150, 112), (150, 150), (196, 150)], "wbat", "bateria + → B+", False))
+    out.append(wire([(85, 290), (85, 312), (150, 312), (150, 270), (196, 270)], "wgnd", "bateria − → B−", False))
+    # módulo TP4056 com proteção (DW01 + 8205A)
+    top.append('<rect class="usb" x="230" y="100" width="60" height="22" rx="6"/>')
+    top.append(text(260, 92, "USB-C · carga 5 V", "small", "middle"))
+    top.append('<rect class="enspcb" x="180" y="118" width="160" height="182" rx="8"/>')
+    top.append('<rect class="chips" x="238" y="182" width="44" height="40" rx="4"/>')
+    top.append(text(260, 240, "TP4056", "chipt", "middle"))
+    top.append(text(260, 255, "+ DW01 (proteção)", "chipt", "middle"))
+    for name, x, y, anchor, dx in (("B+", 196, 150, "start", 14), ("B−", 196, 270, "start", 14),
+                                   ("OUT+", 324, 150, "end", -14), ("OUT−", 324, 270, "end", -14)):
+        top.append(pad(x, y, "pad used") + text(x + dx, y + 4.5, name, "pinw", anchor))
+    top.append(text(260, 324, "módulo carregador TP4056", "part sm", "middle"))
+    top.append(text(260, 342, "use a versão COM proteção (6 pinos)", "small", "middle"))
+    out.append(wire([(324, 270), (366, 270)], "wgnd", None, False))
+    top.append(flag(366, 270, "GND", "down"))
+
+    # ── SW1 liga/desliga → nó VBAT → D1 → 5V do C3 ───────────────────────
+    out.append(wire([(324, 150), (380, 150)], "wbat", "OUT+ → SW1", False))
+    out.append(switch_h(380, 444, 150, "wbat", "SW1 liga/desliga"))
+    top.append(text(412, 116, "SW1 · liga/desliga", "small", "middle"))
+    out.append(wire([(444, 150), (500, 150)], "wbat", "VBAT após SW1", False))
+    out.append(dot(470, 150))
+    out.append(diode_h(500, 560, 150, "wbat", "D1 Schottky → pino 5V"))
+    top.append(text(530, 124, "D1 · SS34", "small", "middle"))
+    x5, y5 = P["5V"]
+    out.append(wire([(560, 150), (x5, y5)], "wbat", "→ 5V do C3 (LDO onboard → 3,3 V)", False))
+
+    # ── divisor VBAT/2 → GPIO0 (ADC1) ─────────────────────────────────────
+    gx, gy = P["GPIO0"]
+    out.append(resistor_v(470, 150, gy, "100k", left=True))
+    out.append(dot(470, gy))
+    out.append(wire([(470, gy), (gx, gy)], "wpas", "VBAT/2 → GPIO0 (ADC1)", False))
+    out.append(resistor_v(470, gy, 470, "100k", left=True))
+    top.append(flag(470, 470, "GND", "down"))
+    top.append(text(486, gy - 10, "VBAT/2", "small", "start"))
+
+    # ── GND do C3 ────────────────────────────────────────────────────────
+    top.append(flag(*P["G"], "GND", "left"))
+
+    # ── 3.3 do C3 → SW2 → 3V3 dos sensores ───────────────────────────────
+    x3, y3 = P["3.3"]
+    out.append(wire([(x3, y3), (586, y3), (586, 500), (700, 500)], "w3v3", "3,3 V do C3 → SW2"))
+    out.append(switch_h(700, 764, 500, "w3v3", "SW2 corta o 3V3 dos sensores"))
+    top.append(text(732, 536, "SW2 · sensores (tracejado = 3V3 comutado)", "small", "middle"))
+    out.append(wire([(764, 500), (870, 500), (870, 452)], "w3v3 sw3", "3V3 comutado → sensores", False))
+    # caixa com os consumidores do 3V3 comutado
+    top.append('<rect class="conn" x="796" y="196" width="150" height="256" rx="8"/>')
+    top.append('<g class="flag f3v3"><rect x="810" y="208" width="122" height="20" rx="3"/>'
+               + text(871, 222.5, "3V3 SENSORES", "flagt", "middle") + "</g>")
+    for i, s in enumerate(["ENS160+AHT21 VIN", "INMP441 VDD", "SCD41 VDD", "sondas + 4k7",
+                           "TEMT6000", "bias do TC (10k)"]):
+        top.append(text(808, 254 + i * 30, "· " + s, "pinw", "start"))
+    top.append(text(600, 56, "D1 impede o 5 V do USB do C3 de voltar à bateria", "small", "start"))
+
+    body = "".join(out) + c3svg + "".join(top)
+    return f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="Alimentação por bateria: Li-ion, TP4056, chaves e divisor de tensão">{body}</svg>'

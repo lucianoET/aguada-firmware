@@ -10,7 +10,7 @@ CSS = r"""
   --bg:#eef1ef; --panel:#f8faf9; --ink:#14201b; --muted:#5a6b64; --line:#c9d3cf;
   --accent:#0f7a5c; --gnd:#1c1f23; --halo:#f8faf9;
   --w3v3:#d6332a; --wsda:#1f6fd1; --wscl:#d99a00; --wsd:#1a9a52; --wsck:#7a4bd1; --wws:#e0661a;
-  --wdq:#0d8c8c; --wct:#9a5b2e; --wlux:#c2457e; --wpas:#3c4a45; --wcable:#8c969c;
+  --wdq:#0d8c8c; --wct:#9a5b2e; --wlux:#c2457e; --wpas:#3c4a45; --wcable:#8c969c; --wbat:#d9480f;
   --display:"IBM Plex Sans Condensed","Arial Narrow",sans-serif;
   --body:"IBM Plex Sans",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,monospace;
@@ -19,12 +19,12 @@ CSS = r"""
   --bg:#0e1412; --panel:#151d1a; --ink:#e3ebe7; --muted:#93a39c; --line:#2a3833;
   --accent:#3fc596; --gnd:#a9b4bd; --halo:#151d1a;
   --w3v3:#ff5a4f; --wsda:#5aa2ff; --wscl:#f2c03a; --wsd:#3ccf7d; --wsck:#a98bff; --wws:#ff8a45;
-  --wdq:#2fc4c4; --wct:#d08a55; --wlux:#ef6fa8; --wpas:#b6c3bd; --wcable:#7d878d; color-scheme:dark}}
+  --wdq:#2fc4c4; --wct:#d08a55; --wlux:#ef6fa8; --wpas:#b6c3bd; --wcable:#7d878d; --wbat:#ff8a3d; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1412; --panel:#151d1a; --ink:#e3ebe7; --muted:#93a39c; --line:#2a3833;
   --accent:#3fc596; --gnd:#a9b4bd; --halo:#151d1a;
   --w3v3:#ff5a4f; --wsda:#5aa2ff; --wscl:#f2c03a; --wsd:#3ccf7d; --wsck:#a98bff; --wws:#ff8a45;
-  --wdq:#2fc4c4; --wct:#d08a55; --wlux:#ef6fa8; --wpas:#b6c3bd; --wcable:#7d878d; color-scheme:dark}
+  --wdq:#2fc4c4; --wct:#d08a55; --wlux:#ef6fa8; --wpas:#b6c3bd; --wcable:#7d878d; --wbat:#ff8a3d; color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
 main{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
@@ -103,11 +103,18 @@ svg text{font-family:var(--mono)}
 .phase{stroke:#6b6b6b;stroke-width:9;stroke-linecap:round;fill:none}
 .clamp{fill:none;stroke:#2b2b2b;stroke-width:12}
 .scdpcb{fill:#121a22}
+.wbat .core{stroke:var(--wbat)} .sw3 .core{stroke-dasharray:10 6}
+.swl{stroke:var(--ink);stroke-width:3.4;fill:none;stroke-linecap:round}
+.swd{fill:var(--panel);stroke:var(--ink);stroke-width:2.5}
+.dio{fill:var(--ink)} .diol{stroke:var(--ink);stroke-width:3.4}
+.cell{fill:#2f7d4f;stroke:#1d5233;stroke-width:2}.cellcap{fill:#9aa3a8}
+.cellt{fill:#eaf5ee;font-size:12px;font-weight:700}
 """
 
 LEG = [("3V3","--w3v3"),("GND","--gnd"),("SDA · GPIO6","--wsda"),("SCL · GPIO7","--wscl"),
        ("SD · GPIO5","--wsd"),("SCK · GPIO20","--wsck"),("WS · GPIO21","--wws")]
 LEG2 = [("DQ sondas · GPIO4","--wdq"),("TC · GPIO1","--wct"),("luz · GPIO3","--wlux"),("passivos","--wpas")]
+LEG3 = [("bateria / VBAT","--wbat"),("3V3 (tracejado = comutado por SW2)","--w3v3"),("GND","--gnd"),("divisor → GPIO0","--wpas")]
 def legend(items): return '<div class="legend">' + "".join(f'<span><i style="background:var({c})"></i>{t}</span>' for t,c in items) + '</div>'
 
 ROWS = [
@@ -128,6 +135,13 @@ ROWS = [
  ("Sonda RET (DQ)", "4", "idem — ar de retorno da evaporadora", "--wdq"),
  ("Corrente (TC)", "1", "ponta do jack; anel no bias 10k/6k8 + 10 µF; chave do jack → GND", "--wct"),
  ("Luz", "3", "TEMT6000 SIG", "--wlux"),
+ ("Alimentação por bateria — opcional", None),
+ ("Bateria → TP4056", "—", "Li-ion + → B+, − → B− (módulo TP4056 com proteção DW01)", "--wbat"),
+ ("TP4056 OUT+ → SW1", "—", "chave liga/desliga no positivo", "--wbat"),
+ ("SW1 → D1 → 5V", "5V", "Schottky SS34 (anodo na chave, catodo no 5V do C3)", "--wbat"),
+ ("Divisor VBAT", "0", "100k de VBAT (após SW1) ao GPIO0, 100k do GPIO0 ao GND", "--wpas"),
+ ("TP4056 OUT−", "G", "GND comum (bateria, C3, sensores)", "--gnd"),
+ ("3.3 → SW2", "3.3", "SW2 corta o 3V3 de TODOS os sensores; o C3 continua ligado", "--w3v3"),
 ]
 def table():
     out, i = [], 0
@@ -189,6 +203,14 @@ html = f'''<title>AirQ Ligações</title>
 </section>
 
 <section>
+  <div class="sec-hd"><h2>3 · Alimentação por bateria</h2><span class="tag">opcional · Li-ion + TP4056</span></div>
+  <div class="panel diagram">{gen.diagram_power()}</div>
+  {legend(LEG3)}
+  <p><b>SW1</b> liga/desliga o aparelho todo. A carga é pelo <b>USB-C do TP4056</b> (com SW1 desligado também carrega). <b>D1</b> evita que o 5 V do USB do C3 entre na bateria quando você grava o firmware com SW1 ligado. O divisor 100k/100k depois de SW1 leva VBAT/2 ao <b>GPIO0</b> (4,2 V → 2,1 V, dentro da faixa linear do ADC) e não drena a bateria com o aparelho desligado; no firmware basta habilitar <code>vbat</code> (pino 0, divisor 2 — já são os padrões).</p>
+  <p><b>SW2</b> corta o 3V3 dos sensores e deixa o C3 ligado. Desligue SW2 só com o C3 desligado, ou reinicie depois de religar: o ENS160 e o AHT21 só são detectados no arranque.</p>
+</section>
+
+<section>
   <div class="sec-hd"><h2>Checklist de ligação</h2><span class="tag">marque ao soldar</span></div>
   <div class="panel">{table()}</div>
 </section>
@@ -202,6 +224,8 @@ html = f'''<title>AirQ Ligações</title>
     <li><b>Pull-ups do I2C.</b> A placa azul e o módulo SCD41 já trazem os seus. Dois de 10 kΩ em paralelo dão ~5 kΩ, o que está bem a 50 kHz.</li>
     <li><b>Sondas em cabo.</b> DS18B20 em 3 fios, nunca em modo parasita. Conector M8 ou RJ11 (P2 faz curto ao entrar). Barramento em estrela: somando os cabos, até ~5 m com 4k7; acima disso, 2k2. TVS + 100 Ω em série no DQ de cada conector se o cabo for longo.</li>
     <li><b>Microfone em dB(A).</b> O nível sai ponderado A (padrão de ruído ambiente) a 32 kHz. Ventilador e TV aparecem: na bancada deu 67–71 dB(A). Para conferir, compare com um app de sonómetro ao lado e tape o furo do INMP441 com o dedo — o nível tem de cair.</li>
+    <li><b>Autonomia na bateria.</b> O portal Wi-Fi fica sempre ligado (~80–120 mA no C3) e o ENS160 aquece (~30 mA): uma 18650 de 2500 mAh dura ~1 dia. Para semanas é preciso sono profundo com o portal só sob demanda.</li>
+    <li><b>Queda de tensão.</b> Com D1 (~0,3 V) e o regulador do C3, abaixo de ~3,6 V na bateria o 3,3 V começa a cair. O DW01 do TP4056 corta em ~2,5 V; na prática, recarregue quando o VBAT passar de ~3,5 V.</li>
     <li><b>TC num só condutor.</b> A garra abraça só a fase; o cabo inteiro (fase + neutro) dá zero. Até ~25 A com o SCT-013-030; acima disso o portal mostra "TC SATURADO".</li>
   </ol>
 </section>
