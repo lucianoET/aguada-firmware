@@ -1,3 +1,4 @@
+#include "calib.h"
 #include "sound_sensor.h"
 #include <Arduino.h>
 #include <ESP_I2S.h>
@@ -135,6 +136,9 @@ SoundReading sound_read(void) {
     double rms_a = sqrt(a.sumsq_a / a.n);
     r.db_spl  = (float)(20.0 * log10(fmax(rms_a, 1.0) / FS) + MIC_DBFS_TO_SPL + MIC_DB_OFFSET);
     r.peak_db = (float)(20.0 * log10(fmax(a.peak_a, 1.0) / FS) + MIC_DBFS_TO_SPL + MIC_DB_OFFSET);
+    r.db_raw  = r.db_spl;
+    r.db_spl += calib().db;
+    r.peak_db += calib().db;
     r.valid   = true;
 
     double mean_z = a.sum_z / a.n;

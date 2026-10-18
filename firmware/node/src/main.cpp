@@ -31,6 +31,8 @@
 #include "co2_scd41.h"
 #include "probe_temp.h"
 #include "current_ct.h"
+#include "calib.h"
+#include "airq_test.h"
 
 // ── Pinagem AirQ / analisador de AC (ESP32-C3 SuperMini) ─────────────────────
 // Todos os periféricos abaixo são opcionais e detectados em runtime.
@@ -637,6 +639,32 @@ static void ani_send_extras(const AniReading &r) {
              g_last_ct.amps, g_last_ct.valid, g_last_sound.db_spl, g_last_sound.valid);
 }
 
+// Amostra do teste de campo (portal → Teste AC / Teste ambiente), escala fixa int16.
+static int16_t q(bool ok, float v, float k) {
+    if (!ok || !isfinite(v)) return TEST_NULL;
+    float x = v * k;
+    if (x > 32767.0f) x = 32767.0f;
+    if (x < -32767.0f) x = -32767.0f;
+    return (int16_t)lroundf(x);
+}
+static void test_record(const AniReading &r) {
+    if (test_state() != TS_RUN) return;
+    const ProbeReading &pe = g_last_probe[PROBE_EXT], &ps = g_last_probe[PROBE_SUP], &pr = g_last_probe[PROBE_RET];
+    TestSample t;
+    t.v[0]  = q(r.th_valid, r.temp_c, 10);
+    t.v[1]  = q(r.th_valid, r.hum_pct, 10);
+    t.v[2]  = q(pr.valid, pr.temp_c, 10);
+    t.v[3]  = q(ps.valid, ps.temp_c, 10);
+    t.v[4]  = q(pe.valid, pe.temp_c, 10);
+    t.v[5]  = q(g_last_ct.valid, g_last_ct.amps, 100);
+    t.v[6]  = q(g_last_sound.valid, g_last_sound.db_spl, 10);
+    t.v[7]  = q(g_last_co2.valid, (float)g_last_co2.co2_ppm, 1);
+    t.v[8]  = q(r.valid, (float)r.eco2, 1);
+    t.v[9]  = q(r.valid, (float)r.tvoc, 1);
+    t.v[10] = q(g_last_light.valid, (float)g_last_light.lux, 1);
+    test_add(t);
+}
+
 static void ani_tick(void) {
     static uint32_t last_measure_ms = 0;
     static uint32_t last_send_ms    = 0;
@@ -671,6 +699,7 @@ static void ani_tick(void) {
     ani_service_web();
     probe_tick();                   // DS18B20 — lê conversão anterior, pede a próxima
     for (int i = 0; i < PROBE_COUNT; i++) g_last_probe[i] = probe_get((ProbeId)i);
+    test_record(r);                 // teste de campo do portal (se estiver a gravar)
 
     // Canais extra (SCD41, sondas, TC, luz, som, VOC) não dependem do AHT21/ENS160.
     if (do_send) ani_send_extras(r);
@@ -860,6 +889,7 @@ void setup(void) {
         Serial.printf("ANI_BOOT node=0x%04X relay=%d sda=%d scl=%d\n",
                       g_cfg.node_id, g_cfg.relay_enabled,
                       g_cfg.i2c_sda_pin, g_cfg.i2c_scl_pin);
+        calib_load();                    // offsets/ganhos de campo (NVS "calib")
         bool sensors_ok = ani_init(g_cfg.i2c_sda_pin, g_cfg.i2c_scl_pin);
         if (!sensors_ok) {
             led_blink(5, 100);   // 5 blinks rápidos = erro de sensor no boot
@@ -950,6 +980,68 @@ void setup(void) {
             g_httpd.send(200, "application/json", "{\"ok\":true}");
         });
         // Identificador de sondas: lista do barramento a 1 Hz + atribuição de papel
+        // ── Calibração de campo ─────────────────────────────────────────────
+        // GET /cal → offsets/ganhos + leituras brutas; POST /cal?k=t|rh|db|ct|lux|EXT|SUP|RET&v=x
+        // POST /cal?reset=1 → zera tudo (inclui offsets das sondas)
+        g_httpd.on("/cal", HTTP_GET, []() {
+            const Calib &c = calib();
+            char b[900];
+            int n = snprintf(b, sizeof(b),
+                "{\"t\":{\"raw\":%.2f,\"off\":%.2f,\"ok\":%s},\"rh\":{\"raw\":%.1f,\"off\":%.1f,\"ok\":%s},"
+                "\"db\":{\"raw\":%.1f,\"off\":%.1f,\"ok\":%s},\"ct\":{\"raw\":%.2f,\"gain\":%.3f,\"ok\":%s},"
+                "\"lux\":{\"raw\":%u,\"gain\":%.3f,\"ok\":%s},\"pr\":[",
+                g_last_ani.temp_raw, c.t_aht, g_last_ani.th_valid ? "true" : "false",
+                g_last_ani.hum_raw, c.rh_aht, g_last_ani.th_valid ? "true" : "false",
+                g_last_sound.db_raw, c.db, g_last_sound.valid ? "true" : "false",
+                g_last_ct.amps_raw, c.ct, g_last_ct.present ? "true" : "false",
+                g_last_light.lux_raw, c.lux, g_last_light.valid ? "true" : "false");
+            for (int i = 0; i < PROBE_COUNT && n < (int)sizeof(b) - 120; i++) {
+                const ProbeReading &p = g_last_probe[i];
+                char rom[17];
+                probe_rom_str((ProbeId)i, rom);
+                n += snprintf(b + n, sizeof(b) - n,
+                    "%s{\"role\":\"%s\",\"rom\":\"%s\",\"raw\":%.2f,\"off\":%.2f,\"ok\":%s}",
+                    i ? "," : "", probe_name((ProbeId)i), rom, p.raw_c,
+                    probe_get_offset((ProbeId)i), p.valid ? "true" : "false");
+            }
+            snprintf(b + n, sizeof(b) - n, "]}");
+            g_httpd.send(200, "application/json", b);
+        });
+        g_httpd.on("/cal", HTTP_POST, []() {
+            bool ok = false;
+            if (g_httpd.arg("reset") == "1") {
+                calib_reset(); probe_reset_offsets(); ok = true;
+            } else {
+                String k = g_httpd.arg("k");
+                float v = g_httpd.arg("v").toFloat();
+                if (!g_httpd.hasArg("v")) ok = false;
+                else if (k == "EXT") ok = probe_set_offset(PROBE_EXT, v);
+                else if (k == "SUP") ok = probe_set_offset(PROBE_SUP, v);
+                else if (k == "RET") ok = probe_set_offset(PROBE_RET, v);
+                else ok = calib_set(k.c_str(), v);
+            }
+            for (int i = 0; i < PROBE_COUNT; i++) g_last_probe[i] = probe_get((ProbeId)i);
+            g_httpd.send(ok ? 200 : 400, "application/json", ok ? "{\"ok\":true}" : "{\"ok\":false}");
+        });
+        // ── Testes de campo (gravação no firmware, avaliação no portal) ─────
+        g_httpd.on("/test", HTTP_GET, []() {
+            g_httpd.setContentLength(CONTENT_LENGTH_UNKNOWN);
+            g_httpd.send(200, "application/json", "");
+            test_json([](const char *c, void *) { g_httpd.sendContent(c); }, nullptr);
+            g_httpd.sendContent("");
+        });
+        g_httpd.on("/test/start", HTTP_POST, []() {
+            String k = g_httpd.arg("kind");
+            TestKind kind = k == "ac" ? TEST_AC : k == "env" ? TEST_ENV : TEST_NONE;
+            if (kind == TEST_NONE) { g_httpd.send(400, "application/json", "{\"ok\":false}"); return; }
+            uint32_t dur = (uint32_t)g_httpd.arg("dur").toInt();
+            test_start(kind, dur, g_httpd.arg("tag").c_str(), g_httpd.arg("opt").c_str());
+            g_httpd.send(200, "application/json", "{\"ok\":true}");
+        });
+        g_httpd.on("/test/stop", HTTP_POST, []() {
+            test_stop();
+            g_httpd.send(200, "application/json", "{\"ok\":true}");
+        });
         g_httpd.on("/probes", HTTP_GET, []() {
             char pbuf[640];
             probe_ident_json(pbuf, sizeof(pbuf));

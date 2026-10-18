@@ -1,3 +1,4 @@
+#include "calib.h"
 #include "ani_sensor.h"
 #include <Wire.h>
 #include <Adafruit_AHTX0.h>
@@ -112,8 +113,11 @@ AniReading ani_read(void) {
         aht_ok = s_aht.getEvent(&hum_evt, &temp_evt);
     }
     if (aht_ok) {
-        r.temp_c  = temp_evt.temperature;
-        r.hum_pct = hum_evt.relative_humidity;
+        r.temp_raw = temp_evt.temperature;
+        r.hum_raw  = hum_evt.relative_humidity;
+        r.temp_c   = r.temp_raw + calib().t_aht;
+        float h    = r.hum_raw + calib().rh_aht;
+        r.hum_pct  = h < 0 ? 0 : h > 100 ? 100 : h;
         s_last_temp = r.temp_c;
         s_last_hum  = r.hum_pct;
         r.th_valid  = true;

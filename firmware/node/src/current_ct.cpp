@@ -1,3 +1,4 @@
+#include "calib.h"
 #include "current_ct.h"
 #include <Arduino.h>
 #include <math.h>
@@ -50,6 +51,8 @@ CurrentReading current_read(void) {
 
     double sig = vrms * vrms - (double)CT_NOISE_MV * CT_NOISE_MV;
     double amps = (sig > 0 ? sqrt(sig) : 0) / 1000.0 * CT_AMPS_PER_VOLT;
+    r.amps_raw = amps < CT_MIN_AMPS ? 0.0f : (float)amps;
+    amps *= calib().ct;
     r.amps    = amps < CT_MIN_AMPS ? 0.0f : (float)amps;
     r.clipped = (vmax >= CT_CLIP_HI_MV) || (vmin <= CT_CLIP_LO_MV);
     r.valid   = true;

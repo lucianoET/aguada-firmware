@@ -139,18 +139,59 @@ Os canais `0xF0–0xF6` usam o tipo HEARTBEAT que o gateway já repassa tal e qu
 
 ---
 
-## Diagnóstico do ar-condicionado (captive portal)
+## Portal (http://192.168.4.1) — modos
 
-| ΔT (ambiente − insuflamento) | Leitura provável |
+Abas no topo: **Monitor · Teste AC · Ambiente · Calibração**. O firmware só grava;
+a avaliação e o laudo são feitos no portal (fácil de ajustar critérios sem recompilar).
+
+### Teste AC (laudo de ar-condicionado)
+
+Pré-verificação ao vivo (RET, SUP, EXT, TC/compressor) → grava 10–30 min a cada 8 s
+→ laudo com veredito **Aprovado / Atenção / Reprovado**, gráficos (temperaturas num eixo,
+corrente noutro), *Copiar laudo* e *Baixar CSV*. Critérios (média dos últimos 5 min com
+compressor ligado):
+
+| Critério | OK | Atenção | Falha |
+|---|---|---|---|
+| ΔT evaporadora (RET − SUP; sem RET usa o AHT21) | 8–12 °C | 6–8 / 12–14 | < 6 / > 14 |
+| Ar de insuflamento | 10–16 °C | 7–10 / > 16 | < 7 (congelamento) |
+| Estabilização (ΔT nos últimos 3 min) | variação ≤ 0,6 °C | > 0,6 °C | — |
+| Corrente vs. nominal (se informada) | ±15 % | 15–30 % | > 30 % |
+| Ciclos do compressor | 0 | ≥ 1 | — |
+| Ar de entrada da condensadora (EXT) | ≤ 35 °C | > 35 °C | — |
+
+Ruído e umidade entram como informativos. Laudo indicativo: falta de gás confirma-se com
+manifold (pressões, SH/SC). Inverter em baixa rotação dá ΔT menor.
+
+### Teste de ambiente
+
+5–60 min; critérios: **RE 09/2003** (ANVISA) — temperatura 23–26 °C verão / 20–22 °C inverno,
+UR 40–65 % verão / 35–65 % inverno, **CO₂ ≤ 1000 ppm (só com SCD41**; eCO₂ do ENS160 é
+estimativa e não é avaliado); **ISO/CIE 8995-1** iluminância por uso (500/300/100 lx);
+ruído pela **NBR 10152** (≈40–50 dB(A) escritório; > 65 dB(A) NR-17); TVOC informativo.
+Não medidos: velocidade do ar, renovação (27 m³/h·pessoa), biológicos.
+
+### Calibração (NVS)
+
+| Sensor | Tipo | Como |
+|---|---|---|
+| Sondas EXT/SUP/RET | offset por papel (viaja com a ROM; sonda nova zera) | *Igualar sondas* (média) ou termômetro de referência |
+| AHT21 T / UR | offset | termo-higrômetro de referência |
+| INMP441 | offset dB(A) | sonômetro / app ao lado |
+| TC | ganho | alicate amperímetro na mesma fase (≥ 0,5 A) |
+| TEMT6000 | ganho | luxímetro (≥ 20 lx) |
+
+As leituras enviadas por ESP-NOW e mostradas no portal já saem corrigidas. Usa-se a média
+das últimas 4 leituras distintas. *Zerar toda a calibração* volta ao de fábrica.
+
+### API HTTP
+
+| Rota | Função |
 |---|---|
-| insuflamento < 2 °C | risco de congelamento da serpentina |
-| < 6 °C (compressor ligado) | pouca carga de gás, compressor fraco, condensadora suja |
-| 6–8 °C | abaixo do esperado |
-| 8–14 °C | normal |
-| > 14 °C | pouca vazão de ar: filtro / evaporadora suja, ventilador |
-
-Com TC ligado e corrente < 1 A, o ΔT não é avaliado (compressor desligado).
-Faixas de referência para splits/self em regime; inverter em baixa rotação dá ΔT menor.
+| `GET /data` | leituras atuais (Monitor) |
+| `GET /cal` · `POST /cal?k=t\|rh\|db\|ct\|lux\|EXT\|SUP\|RET&v=` · `POST /cal?reset=1` | calibração |
+| `POST /test/start?kind=ac\|env&dur=s&tag=&opt=` · `POST /test/stop` · `GET /test` | testes (RAM, até 480 amostras; perde-se no reboot) |
+| `GET /probes` · `POST /probe_ident?on=1\|0` · `POST /probe_assign?rom=&role=` | identificador de sondas |
 
 ---
 
@@ -174,8 +215,10 @@ cd firmware/node
 | `firmware/node/src/sound_sensor.cpp/.h` | INMP441 (I2S, 32 kHz) — nível RMS e pico **ponderados A** (IIR, janela 0.26 s/tick); amostra >>9 (1 bit de atraso do I2S do C3) |
 | `firmware/node/src/light_sensor.cpp/.h` | TEMT6000 |
 | `firmware/node/src/main.cpp` | `ani_tick`, `ani_send_extras`, captive `/data`, ESP-NOW |
-| `firmware/node/include/ani_web.h` | captive portal (secções escondem-se sem periférico) |
-| `firmware/shared/protocol.h` | `SENSOR_ID_CO2 … SENSOR_ID_VOC` (0xF0–0xF6) |
+| `firmware/node/include/ani_web.h` | captive portal: abas Monitor / Teste AC / Ambiente / Calibração, laudos e gráficos (JS) |
+| `firmware/node/src/calib.cpp/.h` | calibração de campo (offsets/ganhos em NVS) |
+| `firmware/node/src/airq_test.cpp/.h` | gravador dos testes (RAM, JSON em pedaços) |
+| `firmware/shared/protocol.h` | `SENSOR_ID_CO2 … SENSOR_ID_T_RET` (0xF0–0xF7) |
 | `tools/bridge.py` | `_handle_airq_channel`, discovery HA, ΔT, compressor |
 | `tools/test_airq_channels.py` | testes dos canais AirQ na bridge |
 | `firmware/node/docs/airq_wiring_*.svg`, `airq_ligacoes.html` | diagramas de ligação (gerados) |

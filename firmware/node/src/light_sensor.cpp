@@ -1,3 +1,4 @@
+#include "calib.h"
 #include "light_sensor.h"
 #include <Arduino.h>
 #include <esp_log.h>
@@ -40,6 +41,9 @@ LightReading light_read(void) {
     float volts     = r.mv / 1000.0f;
     float microamps = (volts / TEMT6000_LOAD_OHM) * 1e6f;
     float lux       = microamps * TEMT6000_LUX_PER_UA;
+    if (lux > 65535.0f) lux = 65535.0f;
+    r.lux_raw = (uint16_t)(lux + 0.5f);
+    lux *= calib().lux;
     if (lux > 65535.0f) lux = 65535.0f;
     r.lux = (uint16_t)(lux + 0.5f);
 

@@ -21,7 +21,8 @@
 enum ProbeId : uint8_t { PROBE_EXT = 0, PROBE_SUP = 1, PROBE_RET = 2, PROBE_COUNT = 3 };
 
 typedef struct {
-    float temp_c;
+    float temp_c;    // corrigida pelo offset de calibração do papel
+    float raw_c;     // leitura do DS18B20 sem offset
     bool  present;   // sonda detectada no barramento
     bool  valid;     // leitura válida neste tick
 } ProbeReading;
@@ -35,6 +36,12 @@ ProbeReading probe_get(ProbeId id);
 
 // Troca dois papéis (ROMs gravadas e leituras) e grava em NVS. Ignora a==b / fora da faixa.
 void probe_swap(ProbeId a, ProbeId b);
+
+// Offset de calibração (°C) do papel, somado à leitura. Viaja com a ROM numa troca de
+// papéis e é gravado em NVS ("probes", chave <papel>_o). Faixa ±5 °C.
+bool  probe_set_offset(ProbeId id, float off);
+float probe_get_offset(ProbeId id);
+void  probe_reset_offsets(void);
 
 // Nome curto do papel: "EXT", "SUP", "RET".
 const char *probe_name(ProbeId id);

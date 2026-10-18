@@ -10,6 +10,8 @@ typedef struct {
     float    hum_pct;   // relative humidity in % (AHT21)
     bool     valid;     // ENS160 com medição válida (eCO2 ≥ 400)
     bool     th_valid;  // AHT21 leu nesta rodada — T/H valem mesmo com ENS160 falhando
+    float    temp_raw;  // AHT21 sem calibração (temp_c = temp_raw + calib().t_aht)
+    float    hum_raw;   // idem UR
 } AniReading;
 
 // Initialise I2C bus and both sensors. Returns true if both respond on the bus.

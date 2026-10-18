@@ -10,7 +10,7 @@ static const char ANI_WEB_HTML[] PROGMEM = R"rawhtml(<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AirQ — Qualidade do Ar</title>
+<title>AirQ — Analisador</title>
 <style>
 :root{
   --bg:#f1f5f9;--s:#ffffff;--b:#e2e8f0;--t:#0f172a;--mu:#64748b;--mu2:#94a3b8;
@@ -111,6 +111,95 @@ td{padding:3px 5px;border-bottom:1px solid var(--b);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 .d{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
 .g{color:#16a34a}.f{color:#65a30d}.m{color:#d97706}.p{color:#ea580c}.r{color:#dc2626}
+
+/* ── Modos (abas) ───────────────────────────────────────────────── */
+:root{--ac:#0e7490;--run:#b45309;--ok:#15803d;--wa:#b45309;--bad:#b91c1c;
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#7c3aed}
+@media (prefers-color-scheme:dark){:root{--ac:#38bdf8;--run:#f59e0b;--ok:#22c55e;--wa:#f59e0b;--bad:#f87171;
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#a78bfa}}
+.tabs{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
+  padding:6px;background:var(--s);border-bottom:1px solid var(--b)}
+.tabs button{font:inherit;font-size:.78rem;font-weight:700;padding:9px 2px;border-radius:9px;border:1px solid transparent;
+  background:transparent;color:var(--mu);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ac);color:#fff}
+@media (prefers-color-scheme:dark){.tabs button[aria-selected="true"]{color:#06202a}}
+.tabs button:focus-visible,.pbtn:focus-visible,.gbtn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.tabs button .rec{display:none;width:7px;height:7px;border-radius:50%;background:var(--run);margin-left:5px;vertical-align:1px}
+.tabs button.recording .rec{display:inline-block;animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.tabs button.recording .rec,#dot.ok{animation:none}}
+.view{display:none}.view.on{display:flex;flex-direction:column;gap:9px}
+.box{background:var(--s);border:1px solid var(--b);border-radius:12px;padding:12px 13px}
+.box h2{font-size:1rem;font-weight:800;margin-bottom:3px}
+.box h3{font-size:.86rem;font-weight:800;margin:10px 0 4px}
+.lead{font-size:.8rem;color:var(--mu);line-height:1.45}
+.frm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.frm label{display:flex;flex-direction:column;gap:3px;font-size:.74rem;font-weight:600;color:var(--mu)}
+.frm label.wide{grid-column:1/-1}
+.frm input,.frm select,.cal input{font:inherit;font-size:.92rem;color:var(--t);background:var(--bg);
+  border:1px solid var(--b);border-radius:8px;padding:8px 9px;width:100%}
+.pbtn{font:inherit;font-weight:800;font-size:.9rem;padding:11px 14px;border-radius:10px;border:0;
+  background:var(--ac);color:#fff;cursor:pointer;width:100%;margin-top:10px}
+@media (prefers-color-scheme:dark){.pbtn{color:#06202a}}
+.pbtn.stop{background:var(--run)}
+.pbtn:disabled{opacity:.45;cursor:default}
+.gbtn{font:inherit;font-weight:700;font-size:.8rem;padding:8px 11px;border-radius:9px;border:1px solid var(--b);
+  background:var(--s);color:var(--t);cursor:pointer}
+.row{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.chk{list-style:none;margin-top:8px;display:flex;flex-direction:column;gap:4px;font-size:.82rem}
+.chk li{display:flex;gap:7px;align-items:baseline}
+.chk .i{width:1.1em;text-align:center;font-weight:800}
+.i.ok{color:var(--ok)}.i.wa{color:var(--wa)}.i.bad{color:var(--bad)}.i.na{color:var(--mu2)}
+.clock{display:flex;align-items:baseline;gap:8px;margin-top:2px}
+.clock b{font-size:2.3rem;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.clock span{color:var(--mu);font-size:.85rem;font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:3px;background:var(--b);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--run);width:0;transition:width .6s}
+.now{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.now div{display:flex;flex-direction:column;font-size:.68rem;color:var(--mu);font-weight:600}
+.now b{font-size:1.15rem;color:var(--t);font-variant-numeric:tabular-nums}
+.chart{position:relative;margin-top:6px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible;touch-action:pan-y}
+.chart .gl{stroke:var(--b);stroke-width:1}
+.chart .ax{fill:var(--mu);font-size:10px;font-variant-numeric:tabular-nums}
+.chart .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .xh{stroke:var(--mu2);stroke-width:1;stroke-dasharray:3 3}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.74rem;color:var(--mu);margin-top:4px}
+.leg i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:3px;margin-right:5px}
+.tip{position:absolute;top:0;pointer-events:none;background:var(--t);color:var(--s);font-size:.72rem;
+  border-radius:7px;padding:5px 7px;white-space:nowrap;display:none;font-variant-numeric:tabular-nums;line-height:1.35}
+.ctitle{font-size:.76rem;font-weight:700;color:var(--mu);margin-top:12px}
+.verdict{display:flex;align-items:center;gap:12px;border-radius:12px;padding:14px;margin-top:4px;color:#fff}
+.verdict .vi{font-size:1.6rem;font-weight:900;line-height:1;width:44px;height:44px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.22)}
+.verdict b{font-size:1.45rem;font-weight:900;display:block;line-height:1.1}
+.verdict span{font-size:.8rem;opacity:.95}
+.verdict.ok{background:#15803d}.verdict.wa{background:#b45309}.verdict.bad{background:#b91c1c}.verdict.na{background:#64748b}
+.crit{margin-top:10px;display:flex;flex-direction:column}
+.crit .c{display:grid;grid-template-columns:1.2em 1fr auto;gap:2px 8px;padding:9px 0;border-top:1px solid var(--b);align-items:baseline}
+.crit .c:first-child{border-top:0}
+.crit .c b{font-size:.86rem}
+.crit .c .v{font-weight:800;font-variant-numeric:tabular-nums;font-size:.9rem;text-align:right}
+.crit .c p{grid-column:2/-1;font-size:.76rem;color:var(--mu);line-height:1.4}
+.note{font-size:.72rem;color:var(--mu);margin-top:10px;line-height:1.45}
+.cal{display:flex;flex-direction:column}
+.cal .cr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-top:1px solid var(--b)}
+.cal .cr:first-child{border-top:0}
+.cal .cr b{font-size:.88rem}
+.cal .cr .rd{font-size:.78rem;color:var(--mu);font-variant-numeric:tabular-nums;text-align:right}
+.cal .cr .rd strong{color:var(--t)}
+.cal .cr p{grid-column:1/-1;font-size:.74rem;color:var(--mu);line-height:1.4}
+.cal .ap{grid-column:1/-1;display:flex;gap:6px;margin-top:5px}
+.cal .ap input{flex:1;min-width:0}
+.ptab{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:8px;font-variant-numeric:tabular-nums}
+.ptab th{font-size:.7rem;color:var(--mu);font-weight:600;text-align:right;padding:3px 4px;border-bottom:1px solid var(--b)}
+.ptab th:first-child,.ptab td:first-child{text-align:left}
+.ptab td{text-align:right;padding:6px 4px;border-bottom:1px solid var(--b)}
+.msg{font-size:.78rem;font-weight:700;margin-top:8px;min-height:1em}
+.msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}
+.monlink{font-size:.76rem;color:var(--ac);margin-top:8px;display:inline-block}
+
+.node{overflow:visible}
 </style>
 </head>
 <body>
@@ -123,9 +212,16 @@ tr:last-child td{border-bottom:none}
     <span id="node">ARQ-????</span>
     <span id="sl">a carregar…</span>
   </div>
+  <nav class="tabs" role="tablist" aria-label="Modo de uso">
+    <button id="t-mon" role="tab" aria-selected="true" type="button" onclick="tab('mon')">Monitor</button>
+    <button id="t-ac" role="tab" aria-selected="false" type="button" onclick="tab('ac')">Teste AC<span class="rec"></span></button>
+    <button id="t-env" role="tab" aria-selected="false" type="button" onclick="tab('env')">Ambiente<span class="rec"></span></button>
+    <button id="t-cal" role="tab" aria-selected="false" type="button" onclick="tab('cal')">Calibração</button>
+  </nav>
 
   <!-- body do node: um container por sensor -->
   <div class="node-bd">
+  <div class="view on" id="v-mon" role="tabpanel">
 
     <!-- analisador de ar-condicionado (só aparece com sondas e/ou TC ligados) -->
     <div class="sensor" id="acbox" style="display:none">
@@ -160,21 +256,7 @@ tr:last-child td{border-bottom:none}
             <svg class="spark" id="ampsk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
         </div>
       </div>
-      <div id="swapbox" style="display:none;margin-top:8px">
-        <div class="card">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span class="cl" style="margin:0">Identificar sondas</span>
-            <span id="idst" style="font-size:.7rem;color:var(--mu)"></span>
-            <button type="button" class="btn" id="idbtn" onclick="identToggle()">iniciar</button>
-          </div>
-          <div id="idhelp" style="display:none;font-size:.72rem;color:var(--mu);margin:6px 0 2px">
-            Segure <b>uma</b> sonda na mão (~20 s). A que subir fica em destaque: escolha o papel,
-            clique em <b>atribuir</b> e cole a etiqueta com o ID. Solte, espere voltar e passe à próxima.
-            <a href="#" onclick="identReset();return false">zerar referência</a>
-          </div>
-          <div id="idlist"></div>
-        </div>
-      </div>
+      <a class="monlink" href="#" onclick="tab('cal');return false">Identificar e calibrar as sondas</a>
     </div>
 
     <!-- sensor SCD41 (CO2 real, opcional) -->
@@ -314,6 +396,136 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
+  </div><!-- /v-mon -->
+
+  <!-- ═══ TESTE DE AR-CONDICIONADO ═══ -->
+  <div class="view" id="v-ac" role="tabpanel">
+    <div class="box" id="ac-setup">
+      <h2>Teste de ar-condicionado</h2>
+      <p class="lead">Mede a evaporadora com o compressor a trabalhar: ΔT entre retorno e insuflamento, temperatura de insuflamento, estabilização e corrente. Ligue o aparelho em refrigeração, no frio máximo, e espere 5 min antes de iniciar.</p>
+      <ul class="chk" id="ac-pre"></ul>
+      <div class="frm">
+        <label class="wide">Equipamento / local<input id="ac-tag" maxlength="60" placeholder="ex.: Sala 12 · split 12 000 BTU"></label>
+        <label>Corrente nominal (A)<input id="ac-inom" type="number" inputmode="decimal" min="0" step="0.1" placeholder="placa"></label>
+        <label>Duração<select id="ac-dur"><option value="600">10 min</option><option value="900" selected>15 min</option><option value="1200">20 min</option><option value="1800">30 min</option></select></label>
+      </div>
+      <button class="pbtn" id="ac-go" type="button" onclick="testStart('ac')">Iniciar teste</button>
+    </div>
+    <div class="box" id="ac-run" hidden>
+      <h2>Gravando</h2>
+      <div class="clock"><b id="ac-el">00:00</b><span id="ac-of">de 15:00</span></div>
+      <div class="bar"><i id="ac-bar"></i></div>
+      <div class="now">
+        <div>Retorno<b id="ac-nr">—</b></div><div>Insufl.<b id="ac-ns">—</b></div>
+        <div>ΔT<b id="ac-nd">—</b></div><div>Corrente<b id="ac-na">—</b></div>
+      </div>
+      <button class="pbtn stop" type="button" onclick="testStop()">Encerrar agora</button>
+      <p class="note">Pode fechar esta página: o aparelho continua a gravar. Ao voltar, o teste reaparece.</p>
+    </div>
+    <div class="box" id="ac-res" hidden>
+      <h2 id="ac-rt">Laudo</h2>
+      <p class="lead" id="ac-rs"></p>
+      <div id="ac-verdict"></div>
+      <div class="crit" id="ac-crit"></div>
+      <p class="ctitle">Temperaturas (°C)</p>
+      <div class="chart" id="ac-ch1"></div>
+      <p class="ctitle" id="ac-ch2t">Corrente da condensadora (A)</p>
+      <div class="chart" id="ac-ch2"></div>
+      <div class="row">
+        <button class="gbtn" type="button" onclick="copyReport()">Copiar laudo</button>
+        <button class="gbtn" type="button" onclick="downloadCsv()">Baixar CSV</button>
+        <button class="gbtn" type="button" id="ac-new" onclick="newTest('ac')">Novo teste</button>
+      </div>
+      <p class="msg" id="ac-msg"></p>
+      <p class="note">Laudo indicativo, feito com temperaturas de ar e corrente. Antes de concluir falta de gás, confirme com manifold (pressões, superaquecimento e sub-resfriamento).</p>
+    </div>
+  </div>
+
+  <!-- ═══ TESTE DE AMBIENTE ═══ -->
+  <div class="view" id="v-env" role="tabpanel">
+    <div class="box" id="env-setup">
+      <h2>Teste de ambiente</h2>
+      <p class="lead">Avalia o conforto e a qualidade do ar do local contra a RE 09/2003 (ANVISA), a ISO/CIE 8995-1 (iluminação) e a NBR 10152 (ruído). Deixe o AirQ na altura de trabalho (~1,1 m), longe de janelas e da saída do ar-condicionado.</p>
+      <ul class="chk" id="env-pre"></ul>
+      <div class="frm">
+        <label class="wide">Local<input id="env-tag" maxlength="60" placeholder="ex.: Sala de reuniões · 2º andar"></label>
+        <label>Uso do local<select id="env-use">
+          <option value="500">Escritório / informática (500 lx)</option>
+          <option value="500r">Sala de reunião (500 lx)</option>
+          <option value="300">Sala de aula (300 lx)</option>
+          <option value="300o">Oficina / manutenção (300 lx)</option>
+          <option value="100">Circulação / depósito (100 lx)</option></select></label>
+        <label>Estação<select id="env-season"><option value="v">Verão</option><option value="i">Inverno</option></select></label>
+        <label class="wide">Duração<select id="env-dur"><option value="300">5 min</option><option value="600" selected>10 min</option><option value="900">15 min</option><option value="1800">30 min</option><option value="3600">60 min</option></select></label>
+      </div>
+      <button class="pbtn" id="env-go" type="button" onclick="testStart('env')">Iniciar teste</button>
+    </div>
+    <div class="box" id="env-run" hidden>
+      <h2>Gravando</h2>
+      <div class="clock"><b id="env-el">00:00</b><span id="env-of">de 10:00</span></div>
+      <div class="bar"><i id="env-bar"></i></div>
+      <div class="now">
+        <div>Temp.<b id="env-nt">—</b></div><div>UR<b id="env-nh">—</b></div>
+        <div>CO₂<b id="env-nc">—</b></div><div>Ruído<b id="env-nd">—</b></div>
+      </div>
+      <button class="pbtn stop" type="button" onclick="testStop()">Encerrar agora</button>
+      <p class="note">Pode fechar esta página: o aparelho continua a gravar. Evite falar perto do microfone durante o teste.</p>
+    </div>
+    <div class="box" id="env-res" hidden>
+      <h2 id="env-rt">Laudo</h2>
+      <p class="lead" id="env-rs"></p>
+      <div id="env-verdict"></div>
+      <div class="crit" id="env-crit"></div>
+      <div class="row">
+        <button class="gbtn" type="button" onclick="copyReport()">Copiar laudo</button>
+        <button class="gbtn" type="button" onclick="downloadCsv()">Baixar CSV</button>
+        <button class="gbtn" type="button" onclick="newTest('env')">Novo teste</button>
+      </div>
+      <p class="msg" id="env-msg"></p>
+      <p class="note">Não medido aqui (exigidos pela RE 09/2003): velocidade do ar (0,025–0,25 m/s), renovação de ar (27 m³/h por pessoa) e contaminantes biológicos. O ruído é uma média de janelas curtas de 0,26 s a cada 8 s, não um Leq contínuo de sonômetro.</p>
+    </div>
+  </div>
+
+  <!-- ═══ CALIBRAÇÃO ═══ -->
+  <div class="view" id="v-cal" role="tabpanel">
+    <div class="box">
+      <h2>Sondas de temperatura</h2>
+      <p class="lead">Junte as sondas (e o termômetro de referência, se tiver) no mesmo lugar, por exemplo amarradas juntas ou num copo d'água, e espere 2 min até as leituras pararem de mudar.</p>
+      <table class="ptab" id="cal-pt"></table>
+      <div class="row">
+        <button class="gbtn" type="button" onclick="calProbesEqual()">Igualar sondas</button>
+        <button class="gbtn" type="button" onclick="calProbesZero()">Zerar offsets</button>
+      </div>
+      <div class="cal"><div class="cr"><b>Termômetro de referência</b><span class="rd">aplica a todas as sondas</span>
+        <div class="ap"><input id="cal-pref" type="number" inputmode="decimal" step="0.1" placeholder="°C"><button class="gbtn" type="button" onclick="calProbesRef()">Aplicar</button></div></div></div>
+      <p class="msg" id="cal-pmsg"></p>
+    </div>
+    <div class="box" id="swapbox">
+      <h2>Identificar sondas</h2>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span id="idst" style="font-size:.76rem;color:var(--mu)"></span>
+        <button type="button" class="btn" id="idbtn" onclick="identToggle()">iniciar</button>
+      </div>
+      <div id="idhelp" style="display:none;font-size:.76rem;color:var(--mu);margin:6px 0 2px">
+        Segure <b>uma</b> sonda na mão (~20 s). A que subir fica em destaque: escolha o papel,
+        toque em <b>atribuir</b> e cole a etiqueta com o ID. Solte, espere voltar e passe à próxima.
+        <a href="#" onclick="identReset();return false">zerar referência</a>
+      </div>
+      <div id="idlist"></div>
+    </div>
+    <div class="box">
+      <h2>Sensores da caixa</h2>
+      <p class="lead">Coloque o instrumento de referência ao lado do AirQ, espere a leitura estabilizar e digite o valor dele. Usa-se a média das últimas leituras.</p>
+      <div class="cal" id="cal-list"></div>
+      <p class="msg" id="cal-msg"></p>
+    </div>
+    <div class="box">
+      <h2>Zerar calibração</h2>
+      <p class="lead">Volta todos os sensores e sondas às leituras de fábrica.</p>
+      <button class="gbtn" type="button" onclick="calReset()" style="margin-top:8px">Zerar toda a calibração</button>
+    </div>
+  </div>
+
   </div>
 
   <!-- footer do node: diagnóstico -->
@@ -378,6 +590,7 @@ function setAqi(a){
 }
 
 function upd(d){
+  LD=d;if(curView==='ac'||curView==='env')renderPre();
   lastOk=Date.now();lastAge=d.age||0;
   $e('node').textContent='ARQ-'+(d.node||'????');
   $e('warm').className=d.warmup?'on':'';
@@ -419,7 +632,7 @@ function upd(d){
   var anyAc=d.pext||d.psup||d.pret||d.pbus>0||d.ct;
   show('acbox',anyAc);
   if(anyAc){
-    show('c_sup',d.psup);show('c_ext',d.pext);show('c_ret',d.pret);show('c_ct',d.ct);show('swapbox',d.pext||d.psup||d.pret||d.pbus>0);if(idTimer===null)identPoll();
+    show('c_sup',d.psup);show('c_ext',d.pext);show('c_ret',d.pret);show('c_ct',d.ct);
     var tsup=d.tsup_ok?d.t_sup:null, text=d.text_ok?d.t_ext:null, tret=d.tret_ok?d.t_ret:null, amps=d.ct?d.amps:null;
     var on=amps===null?null:amps>=CMP_ON_A;
     setVal('tsup',tsup,1);setVal('text',text,1);setVal('tret',tret,1);setVal('amps',amps,2);
@@ -502,6 +715,256 @@ function identPoll(){
     $e('idlist').innerHTML=h;
   }).catch(function(){});
 }
+
+// ═══ Modos: navegação ═══════════════════════════════════════════════
+var VIEWS=['mon','ac','env','cal'],curView='mon',LD=null,T=null,dismissed={ac:false,env:false};
+function tab(v){
+  curView=v;
+  VIEWS.forEach(function(x){$e('t-'+x).setAttribute('aria-selected',x===v?'true':'false');$e('v-'+x).className='view'+(x===v?' on':'');});
+  try{localStorage.setItem('airq-tab',v);}catch(e){}
+  if(v==='ac'||v==='env'){renderPre();testPoll();}
+  if(v==='cal'){calPoll();identPoll();}
+  window.scrollTo(0,0);
+}
+function fmt(v,d){return v===null||v===undefined||isNaN(v)?'—':v.toFixed(d).replace('.',',');}
+function mmss(s){s=Math.max(0,s|0);var m=(s/60)|0,r=s%60;return(m<10?'0':'')+m+':'+(r<10?'0':'')+r;}
+function ico(s){return{ok:'✓',wa:'!',bad:'✕',na:'–'}[s];}
+function li(s,t){return '<li><span class="i '+s+'">'+ico(s)+'</span><span>'+t+'</span></li>';}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+// ═══ Pré-verificação (a partir de /data) ════════════════════════════
+function renderPre(){
+  var d=LD;if(!d)return;
+  var on=d.ct?d.amps>=CMP_ON_A:null,h='';
+  h+=li(d.tret_ok?'ok':'bad',d.tret_ok?'Sonda RET (retorno): '+fmt(d.t_ret,1)+' °C':'Sonda RET ausente — o ΔT usará o AHT21 da caixa (menos preciso)');
+  h+=li(d.tsup_ok?'ok':'bad',d.tsup_ok?'Sonda SUP (insuflamento): '+fmt(d.t_sup,1)+' °C':'Sonda SUP ausente — necessária para o teste');
+  h+=li(d.text_ok?'ok':'na',d.text_ok?'Sonda EXT (condensadora): '+fmt(d.t_ext,1)+' °C':'Sonda EXT ausente (opcional)');
+  h+=li(d.ct?(on?'ok':'wa'):'na',d.ct?(on?'Compressor ligado · '+fmt(d.amps,2)+' A':'Compressor desligado ('+fmt(d.amps,2)+' A) — ligue antes de iniciar'):'Sem TC: corrente e ciclos não serão avaliados');
+  $e('ac-pre').innerHTML=h;
+  $e('ac-go').disabled=!d.tsup_ok||(T&&T.state==='run');
+  h='';
+  h+=li(d.thv?'ok':'bad',d.thv?'Temperatura e umidade (AHT21): '+fmt(d.temp_c,1)+' °C · '+d.hum_pct+' %':'AHT21 sem leitura');
+  h+=li(d.co2ok?'ok':'wa',d.co2ok?'CO₂ real (SCD41): '+d.co2+' ppm':'Sem SCD41: o CO₂ não será avaliado pela RE 09 (eCO₂ do ENS160 é estimativa)');
+  h+=li(d.sound?'ok':'na',d.sound?'Ruído (INMP441): '+fmt(d.db,1)+' dB(A)':'Microfone sem sinal');
+  h+=li(d.light?'ok':'na',d.light?'Iluminância (TEMT6000): '+d.lux+' lx':'Sensor de luz sem leitura');
+  $e('env-pre').innerHTML=h;
+  $e('env-go').disabled=!d.thv||(T&&T.state==='run');
+}
+
+// ═══ Testes: gravação no firmware, laudo aqui ═══════════════════════
+function testStart(k){
+  var dur=$e(k+'-dur').value,tag=$e(k+'-tag').value.trim(),opt='';
+  if(k==='ac'){var i=parseFloat(($e('ac-inom').value||'').replace(',','.'));if(i>0)opt='inom='+i;}
+  else opt='use='+$e('env-use').value+';season='+$e('env-season').value;
+  dismissed[k]=false;
+  fetch('/test/start?kind='+k+'&dur='+dur+'&tag='+encodeURIComponent(tag)+'&opt='+encodeURIComponent(opt),{method:'POST'})
+    .then(testPoll).catch(function(){});
+}
+function testStop(){fetch('/test/stop',{method:'POST'}).then(testPoll).catch(function(){});}
+function newTest(k){dismissed[k]=true;renderTest();}
+var testTimer=null;
+function testPoll(){
+  fetch('/test').then(function(r){return r.json();}).then(function(t){T=t;renderTest();}).catch(function(){});
+}
+function C(name,k){var i=T.cols.indexOf(name);return T.d.map(function(r){return r[i]===null?null:r[i]/k;});}
+function nn(v){return v!==null&&v!==undefined&&!isNaN(v);}
+function avg(a){var s=0,n=0;a.forEach(function(v){if(nn(v)){s+=v;n++;}});return n?s/n:null;}
+function mx(a){var m=null;a.forEach(function(v){if(nn(v)&&(m===null||v>m))m=v;});return m;}
+function mn(a){var m=null;a.forEach(function(v){if(nn(v)&&(m===null||v<m))m=v;});return m;}
+function leq(a){var s=0,n=0;a.forEach(function(v){if(nn(v)){s+=Math.pow(10,v/10);n++;}});return n?10*Math.log10(s/n):null;}
+function optv(k){var m=(T.opt||'').match(new RegExp('(?:^|;)'+k+'=([^;]*)'));return m?m[1]:null;}
+function worst(cr){var o={ok:0,wa:1,bad:2},w=-1;cr.forEach(function(c){if(c.s in o&&o[c.s]>w)w=o[c.s];});return w<0?'na':['ok','wa','bad'][w];}
+
+function evalAC(){
+  var tr=C('tr',10),ts=C('ts',10),te=C('te',10),ta=C('ta',10),rh=C('rh',10),a=C('a',100),db=C('db',10);
+  var hasA=a.some(nn),hasR=tr.some(nn),ref=hasR?tr:ta,cr=[];
+  var on=a.map(function(v){return nn(v)?v>=CMP_ON_A:null;});
+  var idx=[];for(var i=0;i<T.d.length;i++)if(!hasA||on[i])idx.push(i);
+  var w5=idx.slice(-Math.round(300/T.step)),w3=idx.slice(-Math.round(180/T.step));
+  var dt5=w5.map(function(i){return nn(ref[i])&&nn(ts[i])?ref[i]-ts[i]:null;}),dt3=w3.map(function(i){return nn(ref[i])&&nn(ts[i])?ref[i]-ts[i]:null;});
+  var dtA=avg(dt5),tsA=avg(w5.map(function(i){return ts[i];})),nOn=idx.length*T.step;
+  var refTxt=hasR?'retorno (sonda RET)':'ambiente da caixa (AHT21, menos preciso)';
+  if(dtA===null)cr.push({k:'ΔT da evaporadora',v:'—',s:'na',p:'Sem leituras de insuflamento'+(hasA?' com o compressor ligado':'')+'.'});
+  else{var s=dtA>=8&&dtA<=12?'ok':(dtA>=6&&dtA<=14?'wa':'bad'),p;
+    if(s==='ok')p='Dentro de 8–12 °C. Referência: '+refTxt+'; média dos últimos 5 min com compressor ligado.';
+    else if(dtA<8)p='Abaixo de 8 °C: pouca troca de calor. Causas comuns: falta de gás, compressor fraco, ar quente infiltrando no retorno.';
+    else p='Acima de 12 °C: pouco ar passando na serpentina. Causas comuns: filtro sujo, ventilador em baixa ou serpentina obstruída.';
+    cr.push({k:'ΔT da evaporadora',v:fmt(dtA,1)+' °C',s:s,p:p});}
+  if(tsA!==null){var s2=tsA>=10&&tsA<=16?'ok':(tsA<7?'bad':'wa');
+    cr.push({k:'Ar de insuflamento',v:fmt(tsA,1)+' °C',s:s2,p:s2==='ok'?'Dentro de 10–16 °C.':(tsA<7?'Abaixo de 7 °C: risco de congelar a serpentina (pouca vazão de ar ou pouco gás).':(tsA<10?'Entre 7 e 10 °C: frio demais — observar vazão de ar.':'Acima de 16 °C: o aparelho não está a resfriar o suficiente.'))});}
+  var vals=dt3.filter(nn);
+  if(vals.length>=Math.round(120/T.step)){var r=mx(vals)-mn(vals),s3=r<=0.6?'ok':(r<=1.5?'wa':'bad');
+    cr.push({k:'Estabilização',v:'±'+fmt(r/2,1)+' °C',s:s3==='bad'?'wa':s3,p:s3==='ok'?'O ΔT ficou estável nos últimos 3 min.':'O ΔT ainda varia nos últimos 3 min — prolongue o teste para um resultado firme.'});}
+  else cr.push({k:'Estabilização',v:'—',s:'na',p:'Menos de 3 min com compressor ligado: tempo insuficiente para avaliar.'});
+  if(hasA){var aOn=avg(w5.map(function(i){return a[i];})),inom=parseFloat(optv('inom'));
+    if(inom>0&&aOn!==null){var q=aOn/inom,s4=q>=0.85&&q<=1.15?'ok':((q>1.3||q<0.7)?'bad':'wa');
+      cr.push({k:'Corrente vs. nominal',v:fmt(aOn,1)+' A ('+Math.round(q*100)+' %)',s:s4,p:s4==='ok'?'Dentro de ±15 % da corrente de placa ('+fmt(inom,1)+' A).':(q>1?'Acima da nominal: sobrecarga — condensadora suja, excesso de gás ou compressor a desgastar.':'Abaixo da nominal: compressor a trabalhar pouco — possível falta de gás.')});}
+    else cr.push({k:'Corrente média',v:aOn===null?'—':fmt(aOn,1)+' A',s:'na',p:'Informe a corrente nominal (placa do aparelho) para avaliar.'});
+    var cyc=0;for(var j=1;j<on.length;j++)if(on[j-1]===true&&on[j]===false)cyc++;
+    cr.push({k:'Ciclos do compressor',v:cyc+'×',s:cyc===0?'ok':'wa',p:cyc===0?'Compressor ligado o teste todo.':'O compressor desligou durante o teste: termostato atingido, proteção térmica ou pressostato. Repita com o frio no máximo.'});}
+  var teA=avg(te);if(teA!==null)cr.push({k:'Ar de entrada da condensadora',v:fmt(teA,1)+' °C',s:teA>35?'wa':'ok',p:teA>35?'Acima de 35 °C: capacidade reduzida. Ver sol direto, recirculação de ar quente ou falta de espaço.':'Condição normal de operação.'});
+  var dbL=leq(db);if(dbL!==null)cr.push({k:'Ruído no ambiente',v:fmt(dbL,0)+' dB(A)',s:'na',p:'Informativo (média de energia das janelas gravadas).'});
+  var rhA=avg(rh);if(rhA!==null)cr.push({k:'Umidade do ambiente',v:fmt(rhA,0)+' %',s:'na',p:'Informativo. Acima de 65 % o aparelho gasta capacidade a desumidificar.'});
+  var v=cr[0].s==='na'?'na':worst(cr);
+  return{cr:cr,v:v,info:Math.round(nOn/60)+' min com compressor '+(hasA?'ligado':'(sem TC: assumido ligado)')};
+}
+function evalENV(){
+  var ta=C('ta',10),rh=C('rh',10),co2=C('co2',1),eco2=C('eco2',1),tvoc=C('tvoc',1),db=C('db',10),lux=C('lux',1),cr=[];
+  var win=optv('season')!=='i',use=optv('use')||'500',tgt=parseInt(use,10);
+  var tLo=win?23:20,tHi=win?26:22,hLo=win?40:35,hHi=65,seas=win?'verão':'inverno';
+  var tA=avg(ta);if(tA!==null){var s=tA>=tLo&&tA<=tHi?'ok':(tA>=tLo-1&&tA<=tHi+1?'wa':'bad');
+    cr.push({k:'Temperatura',v:fmt(tA,1)+' °C',s:s,p:'RE 09/2003, '+seas+': '+tLo+'–'+tHi+' °C. Variação no teste: '+fmt(mn(ta),1)+' a '+fmt(mx(ta),1)+' °C.'});}
+  var hA=avg(rh);if(hA!==null){var s2=hA>=hLo&&hA<=hHi?'ok':(hA>=hLo-5&&hA<=hHi+5?'wa':'bad');
+    cr.push({k:'Umidade relativa',v:fmt(hA,0)+' %',s:s2,p:'RE 09/2003, '+seas+': '+hLo+'–'+hHi+' %.'+(hA>hHi?' Umidade alta favorece fungos e ácaros.':hA<hLo?' Ar seco irrita olhos e vias aéreas.':'')});}
+  if(co2.some(nn)){var cA=avg(co2),cM=mx(co2),s3=cA>1000?'bad':(cM>1000?'wa':'ok');
+    cr.push({k:'CO₂',v:Math.round(cA)+' ppm',s:s3,p:'RE 09/2003: até 1000 ppm. Máximo no teste: '+Math.round(cM)+' ppm.'+(s3!=='ok'?' Aumente a renovação de ar externo.':'')});}
+  else{var eA=avg(eco2);cr.push({k:'CO₂',v:eA===null?'—':'≈'+Math.round(eA)+' ppm',s:'na',p:'Não avaliado: sem SCD41. O valor mostrado é o eCO₂ do ENS160, uma estimativa a partir de compostos voláteis.'});}
+  var dL=leq(db);if(dL!==null){var s4=dL<=50?'ok':(dL<=65?'wa':'bad');
+    cr.push({k:'Ruído',v:fmt(dL,0)+' dB(A)',s:s4,p:'NBR 10152: escritórios e salas de reunião ≈ 40–50 dB(A); acima de 65 dB(A) é desconfortável (NR-17). Máximo: '+fmt(mx(db),0)+' dB(A).'});}
+  var lA=avg(lux);if(lA!==null){var s5=lA>=tgt?'ok':(lA>=0.7*tgt?'wa':'bad');
+    cr.push({k:'Iluminância',v:Math.round(lA)+' lx',s:s5,p:'ISO/CIE 8995-1 para este uso: '+tgt+' lx no plano de trabalho. O TEMT6000 é aproximado: calibre com luxímetro para laudo.'});}
+  var vA=avg(tvoc);if(vA!==null)cr.push({k:'TVOC',v:Math.round(vA)+' ppb',s:vA<=500?'ok':'wa',p:'Sem limite legal no Brasil; referência informativa (até ~500 ppb). Picos vêm de produtos de limpeza, tintas e perfumes.'});
+  return{cr:cr,v:worst(cr),info:''};
+}
+function verdictHtml(v,kind){
+  var t={ok:['Aprovado','Todos os critérios avaliados estão dentro da faixa.'],wa:['Atenção','Há itens fora da faixa recomendada — ver abaixo.'],
+    bad:['Reprovado','Há itens claramente fora da faixa — ver abaixo.'],na:['Sem laudo','Dados insuficientes para avaliar.']}[v];
+  return '<div class="verdict '+v+'"><span class="vi">'+ico(v)+'</span><div><b>'+t[0]+'</b><span>'+t[1]+'</span></div></div>';
+}
+function critHtml(cr){return cr.map(function(c){return '<div class="c"><span class="i '+c.s+'">'+ico(c.s)+'</span><b>'+c.k+'</b><span class="v">'+c.v+'</span><p>'+c.p+'</p></div>';}).join('');}
+
+function renderTest(){
+  if(!T)return;
+  ['ac','env'].forEach(function(k){$e('t-'+k).className=(T.state==='run'&&T.kind===k)?'recording':'';});
+  ['ac','env'].forEach(function(k){
+    var mine=T.kind===k,run=mine&&T.state==='run',done=mine&&T.state==='done'&&!dismissed[k],other=T.state==='run'&&!mine;
+    $e(k+'-setup').hidden=run||done;
+    $e(k+'-run').hidden=!run;
+    var hasData=mine&&T.n>=3&&(run||done);
+    $e(k+'-res').hidden=!hasData;
+    $e(k+'-go').textContent=other?'Outro teste está a gravar':'Iniciar teste';
+    if(run){$e(k+'-el').textContent=mmss(T.el);$e(k+'-of').textContent='de '+mmss(T.dur);$e(k+'-bar').style.width=Math.min(100,100*T.el/T.dur)+'%';}
+    if(!hasData)return;
+    var R=k==='ac'?evalAC():evalENV();
+    $e(k+'-rt').textContent=(run?'Laudo parcial':'Laudo')+(T.tag?' · '+T.tag:'');
+    $e(k+'-rs').textContent=mmss(T.el)+' gravados · '+T.n+' amostras'+(R.info?' · '+R.info:'');
+    $e(k+'-verdict').innerHTML=verdictHtml(R.v,k);
+    $e(k+'-crit').innerHTML=critHtml(R.cr);
+    if(k==='ac')drawAC();
+  });
+  if(T.state==='run'&&T.n){var L=T.d[T.n-1],g=function(n,s){var i=T.cols.indexOf(n);return L[i]===null?null:L[i]/s;};
+    if(T.kind==='ac'){var r=g('tr',10),s=g('ts',10),a=g('a',100);if(r===null)r=g('ta',10);
+      $e('ac-nr').textContent=fmt(r,1);$e('ac-ns').textContent=fmt(s,1);$e('ac-nd').textContent=nn(r)&&nn(s)?fmt(r-s,1):'—';$e('ac-na').textContent=fmt(a,1);}
+    else{var c=g('co2',1);$e('env-nt').textContent=fmt(g('ta',10),1);$e('env-nh').textContent=fmt(g('rh',10),0);
+      $e('env-nc').textContent=c===null?'—':c;$e('env-nd').textContent=fmt(g('db',10),0);}}
+  renderPre();
+}
+function drawAC(){
+  var tr=C('tr',10),ts=C('ts',10),te=C('te',10),a=C('a',100),S=[];
+  if(tr.some(nn))S.push({n:'Retorno',c:'var(--s2)',v:tr});
+  if(ts.some(nn))S.push({n:'Insuflamento',c:'var(--s1)',v:ts});
+  if(te.some(nn))S.push({n:'Condensadora',c:'var(--s3)',v:te});
+  lineChart($e('ac-ch1'),S,'°C',1);
+  var hasA=a.some(nn);$e('ac-ch2t').hidden=!hasA;$e('ac-ch2').hidden=!hasA;
+  if(hasA)lineChart($e('ac-ch2'),[{n:'Corrente',c:'var(--s4)',v:a}],'A',2);
+}
+// Gráfico de linhas, um eixo, toque/hover mostra os valores do instante.
+function lineChart(el,S,unit,dec){
+  var W=320,Hh=140,L=34,R=8,Tp=8,B=20,n=T.d.length,all=[];
+  S.forEach(function(s){s.v.forEach(function(v){if(nn(v))all.push(v);});});
+  if(!all.length||n<2){el.innerHTML='';return;}
+  var lo=Math.min.apply(null,all),hi=Math.max.apply(null,all),pad=(hi-lo)*0.1||1,pos=lo>=0;lo-=pad;hi+=pad;if(pos&&lo<0)lo=0;
+  var X=function(i){return L+(W-L-R)*i/(n-1);},Y=function(v){return Tp+(Hh-Tp-B)*(1-(v-lo)/(hi-lo));};
+  var g='';for(var k=0;k<=3;k++){var v=lo+(hi-lo)*k/3,y=Y(v);g+='<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'"/><text class="ax" x="'+(L-4)+'" y="'+(y+3)+'" text-anchor="end">'+fmt(v,dec===2?1:0)+'</text>';}
+  g+='<text class="ax" x="'+L+'" y="'+(Hh-5)+'">0</text><text class="ax" x="'+(W-R)+'" y="'+(Hh-5)+'" text-anchor="end">'+mmss((n-1)*T.step)+'</text>';
+  S.forEach(function(s){var d='',pen=false;s.v.forEach(function(v,i){if(!nn(v)){pen=false;return;}d+=(pen?'L':'M')+X(i).toFixed(1)+','+Y(v).toFixed(1);pen=true;});
+    g+='<path class="ln" d="'+d+'" stroke="'+s.c+'"/>';});
+  g+='<line class="xh" visibility="hidden" y1="'+Tp+'" y2="'+(Hh-B)+'" x1="0" x2="0"/>';
+  el.innerHTML='<svg viewBox="0 0 '+W+' '+Hh+'" role="img" aria-label="Gráfico: '+S.map(function(s){return s.n;}).join(', ')+' em '+unit+'">'+g+'</svg><div class="tip"></div>'
+    +(S.length>1?'<div class="leg">'+S.map(function(s){return '<span><i style="background:'+s.c+'"></i>'+s.n+'</span>';}).join('')+'</div>':'');
+  var svg=el.firstChild,tip=el.querySelector('.tip'),xh=svg.querySelector('.xh');
+  function mv(e){var b=svg.getBoundingClientRect(),px=(e.clientX-b.left)/b.width*W,i=Math.round((px-L)/(W-L-R)*(n-1));
+    if(i<0||i>=n){tip.style.display='none';return;}
+    xh.setAttribute('x1',X(i));xh.setAttribute('x2',X(i));xh.setAttribute('visibility','visible');
+    tip.innerHTML=mmss(i*T.step)+S.map(function(s){return '<br>'+s.n+': '+fmt(s.v[i],dec)+' '+unit;}).join('');
+    tip.style.display='block';var tx=X(i)/W*b.width;tip.style.left=Math.min(Math.max(0,tx-60),b.width-130)+'px';}
+  svg.addEventListener('pointermove',mv);svg.addEventListener('pointerdown',mv);
+  svg.addEventListener('pointerleave',function(){tip.style.display='none';xh.setAttribute('visibility','hidden');});
+}
+function reportText(){
+  if(!T||!T.n)return'';var k=T.kind,R=k==='ac'?evalAC():evalENV();
+  var lines=['AirQ '+($e('node').textContent)+' — '+(k==='ac'?'Teste de ar-condicionado':'Teste de ambiente'),
+    'Local: '+(T.tag||'—'),'Data: '+new Date().toLocaleString('pt-BR'),
+    'Gravação: '+mmss(T.el)+' ('+T.n+' amostras a cada '+T.step+' s)',
+    'Resultado: '+{ok:'APROVADO',wa:'ATENÇÃO',bad:'REPROVADO',na:'SEM LAUDO'}[R.v],''];
+  R.cr.forEach(function(c){lines.push('['+{ok:'OK',wa:'!',bad:'X',na:'-'}[c.s]+'] '+c.k+': '+c.v+' — '+c.p);});
+  return lines.join('\n');
+}
+function copyReport(){
+  var t=reportText(),m=$e(T.kind+'-msg');
+  function done(ok){m.textContent=ok?'Laudo copiado.':'Não foi possível copiar automaticamente: selecione o texto abaixo.';m.className='msg '+(ok?'ok':'bad');
+    if(!ok){var ta=document.createElement('textarea');ta.value=t;ta.rows=10;ta.style.width='100%';m.appendChild(ta);ta.select();}}
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(function(){done(true);},function(){done(false);});return;}
+  var ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();
+  var ok=false;try{ok=document.execCommand('copy');}catch(e){}document.body.removeChild(ta);done(ok);
+}
+function downloadCsv(){
+  var sc={ta:10,rh:10,tr:10,ts:10,te:10,a:100,db:10},rows=['t_s,'+T.cols.join(',')];
+  T.d.forEach(function(r,i){rows.push(i*T.step+','+r.map(function(v,j){return v===null?'':(v/(sc[T.cols[j]]||1));}).join(','));});
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  a.download='airq_'+T.kind+'_'+(T.tag||'teste').replace(/[^\w-]+/g,'_')+'.csv';document.body.appendChild(a);a.click();a.remove();
+}
+
+// ═══ Calibração ═════════════════════════════════════════════════════
+var CAL=null,CH={},calTimer=null;
+function hist(k,v){if(!nn(v))return;var a=CH[k]||(CH[k]=[]);if(a.length&&a[a.length-1]===v)return;a.push(v);if(a.length>4)a.shift();}
+function havg(k){var a=CH[k];return a&&a.length?a.reduce(function(s,v){return s+v;},0)/a.length:null;}
+function calPoll(){
+  if(calTimer===null)calTimer=setInterval(function(){if(curView==='cal')calPoll();},2000);
+  fetch('/cal').then(function(r){return r.json();}).then(function(c){CAL=c;
+    if(c.t.ok)hist('t',c.t.raw);if(c.rh.ok)hist('rh',c.rh.raw);if(c.db.ok)hist('db',c.db.raw);if(c.ct.ok)hist('ct',c.ct.raw);if(c.lux.ok)hist('lux',c.lux.raw);
+    c.pr.forEach(function(p){if(p.ok)hist('p'+p.role,p.raw);});calRender();}).catch(function(){});
+}
+var CALDEF=[{k:'t',n:'Temperatura (AHT21)',u:'°C',d:2,off:1,p:'A placa aquece com o ESP32: o offset costuma ser negativo.'},
+  {k:'rh',n:'Umidade (AHT21)',u:'%',d:1,off:1,p:'Use um termo-higrômetro de referência.'},
+  {k:'db',n:'Ruído (INMP441)',u:'dB(A)',d:1,off:1,p:'Compare com um sonômetro ou app de sonômetro, lado a lado, com som constante.'},
+  {k:'ct',n:'Corrente (TC)',u:'A',d:2,off:0,min:0.5,p:'Meça a mesma fase com alicate amperímetro, com o compressor ligado.'},
+  {k:'lux',n:'Luz (TEMT6000)',u:'lx',d:0,off:0,min:20,p:'Luxímetro na mesma posição e direção do sensor.'}];
+function calRender(){
+  if(!CAL)return;
+  var ae=document.activeElement,typing=ae&&ae.tagName==='INPUT'&&$e('v-cal').contains(ae);
+  var h='<tr><th>Sonda</th><th>Papel</th><th>Lida</th><th>Offset</th><th>Corrigida</th></tr>',any=false;
+  CAL.pr.forEach(function(p){if(!p.rom)return;any=true;
+    h+='<tr><td><b>'+p.rom.substr(2,4)+'</b></td><td>'+p.role+'</td><td>'+(p.ok?fmt(p.raw,2):'—')+'</td><td>'+(p.off>=0?'+':'')+fmt(p.off,2)+'</td><td>'+(p.ok?fmt(p.raw+p.off,2):'—')+'</td></tr>';});
+  $e('cal-pt').innerHTML=any?h:'<tr><td>Nenhuma sonda com papel atribuído.</td></tr>';
+  if(typing)return;   // não redesenhar os campos enquanto digita
+  $e('cal-list').innerHTML=CALDEF.map(function(c){var o=CAL[c.k],cv=c.off?o.raw+o.off:o.raw*o.gain;
+    return '<div class="cr"><b>'+c.n+'</b><span class="rd">'+(o.ok?'lida <strong>'+fmt(o.raw,c.d)+'</strong> → '+fmt(cv,c.d)+' '+c.u:'sem leitura')+'<br>'+(c.off?'offset '+(o.off>=0?'+':'')+fmt(o.off,c.d):'ganho ×'+fmt(o.gain,3))+'</span>'
+      +'<p>'+c.p+'</p><div class="ap"><input id="ci-'+c.k+'" type="number" inputmode="decimal" step="any" placeholder="valor de referência ('+c.u+')"><button class="gbtn" type="button" onclick="calApply(\''+c.k+'\')">Aplicar</button></div></div>';}).join('');
+}
+function calSet(k,v){return fetch('/cal?k='+k+'&v='+v.toFixed(4),{method:'POST'}).then(function(r){return r.ok;});}
+function calMsg(id,ok,t){var m=$e(id);m.textContent=t;m.className='msg '+(ok?'ok':'bad');}
+function calApply(k){
+  var c=CALDEF.filter(function(x){return x.k===k;})[0],ref=parseFloat(($e('ci-'+k).value||'').replace(',','.')),raw=havg(k);
+  if(!nn(ref)){calMsg('cal-msg',false,'Digite o valor do instrumento de referência.');return;}
+  if(raw===null){calMsg('cal-msg',false,c.n+': sem leitura do sensor.');return;}
+  if(c.min&&raw<c.min){calMsg('cal-msg',false,c.n+': leitura baixa demais para calibrar (mín. '+c.min+' '+c.u+').');return;}
+  var v=c.off?ref-raw:ref/raw;
+  calSet(k,v).then(function(ok){calMsg('cal-msg',ok,ok?c.n+': '+(c.off?'offset '+fmt(v,2):'ganho ×'+fmt(v,3))+' gravado (média de '+CH[k].length+' leituras).':c.n+': valor fora da faixa permitida — confira a referência.');
+    $e('ci-'+k).value='';calPoll();});
+}
+function probesOk(){return CAL?CAL.pr.filter(function(p){return p.rom&&p.ok&&havg('p'+p.role)!==null;}):[];}
+function calProbesSet(fn,txt){var P=probesOk();if(!P.length){calMsg('cal-pmsg',false,'Nenhuma sonda com leitura.');return;}
+  Promise.all(P.map(function(p){return calSet(p.role,fn(p));})).then(function(r){var ok=r.every(Boolean);calMsg('cal-pmsg',ok,ok?txt:'Algum offset ficou fora da faixa (±5 °C).');calPoll();});}
+function calProbesEqual(){var P=probesOk();if(P.length<2){calMsg('cal-pmsg',false,'São precisas pelo menos 2 sondas com leitura.');return;}
+  var m=P.reduce(function(s,p){return s+havg('p'+p.role);},0)/P.length;
+  calProbesSet(function(p){return m-havg('p'+p.role);},'Sondas igualadas à média: '+fmt(m,2)+' °C.');}
+function calProbesRef(){var ref=parseFloat(($e('cal-pref').value||'').replace(',','.'));if(!nn(ref)){calMsg('cal-pmsg',false,'Digite a temperatura do termômetro de referência.');return;}
+  calProbesSet(function(p){return ref-havg('p'+p.role);},'Sondas ajustadas a '+fmt(ref,2)+' °C.');$e('cal-pref').value='';}
+function calProbesZero(){calProbesSet(function(){return 0;},'Offsets das sondas zerados.');}
+function calReset(){if(!confirm('Zerar toda a calibração (sensores e sondas)?'))return;
+  fetch('/cal?reset=1',{method:'POST'}).then(function(r){calMsg('cal-msg',r.ok,r.ok?'Calibração zerada.':'Falhou.');CH={};calPoll();});}
+
 function tick(){
   if(lastOk===0)return;
   var dt=(Date.now()-lastOk)/1000;
@@ -515,6 +978,8 @@ function load(){
 }
 setInterval(tick,1000);
 load();
+testPoll();setInterval(testPoll,8000);
+try{var tv=localStorage.getItem('airq-tab');if(tv&&VIEWS.indexOf(tv)>=0)tab(tv);}catch(e){}
 </script>
 </body>
 </html>

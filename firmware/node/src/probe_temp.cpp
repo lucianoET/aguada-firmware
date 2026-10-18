@@ -4,11 +4,13 @@
 #include <DallasTemperature.h>
 #include <Preferences.h>
 #include <string.h>
+#include <math.h>
 #include <esp_log.h>
 
 static const char *TAG = "probe";
 static const char *NAMES[PROBE_COUNT] = {"EXT", "SUP", "RET"};
 static const char *KEYS[PROBE_COUNT]  = {"ext", "sup", "ret"};
+static const char *OKEYS[PROBE_COUNT] = {"ext_o", "sup_o", "ret_o"};
 #define MAX_DEV 4   // além disso o barramento está errado; extras são ignoradas
 
 typedef struct {
@@ -17,6 +19,7 @@ typedef struct {
     bool          present;   // sonda deste papel está no barramento
     uint8_t       misses;    // -127 consecutivos (CRC falhado ou sonda removida)
     bool          has_val;   // last.temp_c contém uma leitura real
+    float         offset;    // calibração (°C), somada à leitura
     ProbeReading  last;
 } slot_t;
 
@@ -71,6 +74,7 @@ static void nvs_save(void) {
     for (int i = 0; i < PROBE_COUNT; i++) {
         if (s_slot[i].has_addr) p.putBytes(KEYS[i], s_slot[i].addr, 8);
         else if (p.isKey(KEYS[i])) p.remove(KEYS[i]);
+        p.putFloat(OKEYS[i], s_slot[i].offset);
     }
     p.end();
 }
@@ -82,6 +86,8 @@ static void nvs_load(void) {
         slot_t *s = &s_slot[i];
         s->has_addr = p.isKey(KEYS[i]) && p.getBytes(KEYS[i], s->addr, 8) == 8 &&
                       OneWire::crc8(s->addr, 7) == s->addr[7];
+        float o = p.isKey(OKEYS[i]) ? p.getFloat(OKEYS[i], 0.0f) : 0.0f;
+        s->offset = (isfinite(o) && o >= -5.0f && o <= 5.0f) ? o : 0.0f;
     }
     p.end();
 }
@@ -117,6 +123,7 @@ static void bus_scan(void) {
             memcpy(s_slot[s].addr, found[f], 8);
             s_slot[s].has_addr = true;
             s_slot[s].has_val  = false;
+            s_slot[s].offset   = 0.0f;   // sonda nova: calibração da anterior não vale
             seen[s] = used[f] = changed = true;
             rom_hex(found[f], rom);
             ESP_LOGI(TAG, "sonda nova %s → papel %s (gravado)", rom, NAMES[s]);
@@ -185,7 +192,8 @@ void probe_tick(void) {
             p->misses = 0;
             // 85.0 °C = valor de power-on do DS18B20 (conversão não aconteceu)
             if (t != 85.0f && t > -55.0f && t < 125.0f) {
-                p->last.temp_c = t;
+                p->last.raw_c  = t;
+                p->last.temp_c = t + p->offset;
                 p->last.valid  = true;
                 p->has_val     = true;
             }
@@ -216,6 +224,25 @@ void probe_swap(ProbeId a, ProbeId b) {
     s_slot[b] = t;
     nvs_save();
     ESP_LOGI(TAG, "papéis trocados: %s↔%s (gravado)", NAMES[a], NAMES[b]);
+}
+
+bool probe_set_offset(ProbeId id, float off) {
+    if (id >= PROBE_COUNT || !isfinite(off) || off < -5.0f || off > 5.0f) return false;
+    s_slot[id].offset = off;
+    if (s_slot[id].has_val) s_slot[id].last.temp_c = s_slot[id].last.raw_c + off;
+    nvs_save();
+    ESP_LOGI(TAG, "offset %s = %+.2f °C (gravado)", NAMES[id], off);
+    return true;
+}
+
+float probe_get_offset(ProbeId id) { return id < PROBE_COUNT ? s_slot[id].offset : 0.0f; }
+
+void probe_reset_offsets(void) {
+    for (int i = 0; i < PROBE_COUNT; i++) {
+        s_slot[i].offset = 0.0f;
+        if (s_slot[i].has_val) s_slot[i].last.temp_c = s_slot[i].last.raw_c;
+    }
+    nvs_save();
 }
 
 const char *probe_name(ProbeId id) { return id < PROBE_COUNT ? NAMES[id] : "?"; }

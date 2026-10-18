@@ -20,4 +20,5 @@ def standalone(svg, title, note):
 n = 'Aguada node · env ani-01-c3 · ESP32-C3 SuperMini visto pelo lado da serigrafia · gerado de firmware/node/docs'
 open('../airq_wiring_core.svg','w').write(standalone(gen.diagram_core(), 'AirQ — caixa central (ENS160+AHT21, INMP441)', n))
 open('../airq_wiring_power.svg','w').write(standalone(gen.diagram_power(), 'AirQ — alimentação por bateria (opcional)', n))
+open('../airq_wiring_full.svg','w').write(standalone(gen.diagram_full(), 'AirQ — sistema completo (bateria + C3 + todos os sensores)', n))
 open('../airq_wiring_ac.svg','w').write(standalone(gen.diagram_ac(), 'AirQ — portas do analisador de AC (opcionais)', n))

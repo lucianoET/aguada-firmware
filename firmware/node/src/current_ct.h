@@ -24,7 +24,8 @@
 #endif
 
 typedef struct {
-    float    amps;      // corrente RMS (A)
+    float    amps;      // corrente RMS (A), × ganho de calibração (calib().ct)
+    float    amps_raw;  // idem sem calibração
     uint16_t bias_mv;   // média do sinal (diagnóstico do circuito de bias)
     bool     present;   // TC ligado (bias detectado)
     bool     clipped;   // sinal saiu da faixa linear do ADC — corrente subestimada

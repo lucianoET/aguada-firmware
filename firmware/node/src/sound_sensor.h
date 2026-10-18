@@ -15,6 +15,7 @@
 typedef struct {
     float db_spl;    // nível RMS ponderado A de uma janela de 0,26 s por tick, dB(A)
     float peak_db;   // pico instantâneo ponderado A da janela, dB(A)
+    float db_raw;    // nível sem o offset de calibração de campo (calib().db)
     bool  valid;
 } SoundReading;
 

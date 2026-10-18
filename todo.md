@@ -44,3 +44,7 @@ Visão geral em [`Node AirQ.md`](Node%20AirQ.md).
 
 - 2026-10-14 — KY-037/038 removido (nunca leu: alimentação/ligação), substituído por
   INMP441 I2S. Luz e som passam a ir por ESP-NOW/MQTT (canais 0xF4/0xF5).
+- [ ] **Portal — modos (17/10):** gravar no C3 e testar no celular: Teste AC com o split
+      ligado (15 min, corrente nominal da placa), Teste de ambiente 10 min, Calibração
+      (igualar sondas; AHT21 contra termo-higrômetro; mic contra app de sonômetro).
+

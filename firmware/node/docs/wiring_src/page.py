@@ -109,11 +109,15 @@ svg text{font-family:var(--mono)}
 .dio{fill:var(--ink)} .diol{stroke:var(--ink);stroke-width:3.4}
 .cell{fill:#2f7d4f;stroke:#1d5233;stroke-width:2}.cellcap{fill:#9aa3a8}
 .cellt{fill:#eaf5ee;font-size:12px;font-weight:700}
+.f3v3s rect{fill:var(--w3v3);stroke:var(--panel);stroke-width:1.5;stroke-dasharray:3 2}
+.fvbat rect{fill:var(--wbat)} .fsda rect{fill:var(--wsda)} .fscl rect{fill:var(--wscl)}
+.netl{font-size:11.5px;font-weight:700}.nsda{fill:var(--wsda)}.nscl{fill:var(--wscl)}
 """
 
 LEG = [("3V3","--w3v3"),("GND","--gnd"),("SDA · GPIO6","--wsda"),("SCL · GPIO7","--wscl"),
        ("SD · GPIO5","--wsd"),("SCK · GPIO20","--wsck"),("WS · GPIO21","--wws")]
 LEG2 = [("DQ sondas · GPIO4","--wdq"),("TC · GPIO1","--wct"),("luz · GPIO3","--wlux"),("passivos","--wpas")]
+LEG4 = [("VBAT","--wbat"),("3V3S (comutado)","--w3v3"),("GND","--gnd"),("SDA · 6","--wsda"),("SCL · 7","--wscl"),("SD · 5","--wsd"),("SCK · 20","--wsck"),("WS · 21","--wws"),("DQ · 4","--wdq"),("TC · 1","--wct"),("luz · 3","--wlux"),("passivos","--wpas")]
 LEG3 = [("bateria / VBAT","--wbat"),("3V3 (tracejado = comutado por SW2)","--w3v3"),("GND","--gnd"),("divisor → GPIO0","--wpas")]
 def legend(items): return '<div class="legend">' + "".join(f'<span><i style="background:var({c})"></i>{t}</span>' for t,c in items) + '</div>'
 
@@ -208,6 +212,13 @@ html = f'''<title>AirQ Ligações</title>
   {legend(LEG3)}
   <p><b>SW1</b> liga/desliga o aparelho todo. A carga é pelo <b>USB-C do TP4056</b> (com SW1 desligado também carrega). <b>D1</b> evita que o 5 V do USB do C3 entre na bateria quando você grava o firmware com SW1 ligado. O divisor 100k/100k depois de SW1 leva VBAT/2 ao <b>GPIO0</b> (4,2 V → 2,1 V, dentro da faixa linear do ADC) e não drena a bateria com o aparelho desligado; no firmware basta habilitar <code>vbat</code> (pino 0, divisor 2 — já são os padrões).</p>
   <p><b>SW2</b> corta o 3V3 dos sensores e deixa o C3 ligado. Desligue SW2 só com o C3 desligado, ou reinicie depois de religar: o ENS160 e o AHT21 só são detectados no arranque.</p>
+</section>
+
+<section>
+  <div class="sec-hd"><h2>4 · Sistema completo</h2><span class="tag">bateria + C3 + todos os sensores</span></div>
+  <div class="panel diagram">{gen.diagram_full()}</div>
+  {legend(LEG4)}
+  <p>Tudo junto numa folha só. Para não virar um emaranhado, a alimentação usa <b>etiquetas de rede</b>: toda etiqueta <b>3V3S</b> (3,3 V que passa pela chave SW2) está ligada às outras 3V3S, toda <b>VBAT</b> às outras VBAT, e o mesmo para GND. O SCD41 entra no mesmo I2C do ENS160 pelas etiquetas SDA/SCL. Os sinais (I2C, I2S, 1-Wire, ADC) estão desenhados fio a fio. Conector de cada sonda, da esquerda para a direita: VDD · DQ · GND.</p>
 </section>
 
 <section>

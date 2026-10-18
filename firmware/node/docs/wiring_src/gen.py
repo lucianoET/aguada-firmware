@@ -349,3 +349,156 @@ def diagram_power():
 
     body = "".join(out) + c3svg + "".join(top)
     return f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="Alimentação por bateria: Li-ion, TP4056, chaves e divisor de tensão">{body}</svg>'
+
+
+# ── etiqueta de rede genérica (VBAT, 3V3S, SDA, SCL…) ─────────────────────────
+NET = {"3V3S": ("f3v3s", "w3v3 sw3"), "VBAT": ("fvbat", "wbat"), "GND": ("fgnd", "wgnd"),
+       "SDA": ("fsda", "wsda"), "SCL": ("fscl", "wscl"), "3V3": ("f3v3", "w3v3")}
+
+def netflag(x, y, net, side="up", stub=22):
+    """Etiqueta de rede: o mesmo nome em dois sítios = mesmo fio."""
+    cls, wcls = NET[net]
+    w = max(40, 9 * len(net) + 14)
+    if side == "up":
+        y2 = y - stub; r = (x - w / 2, y2 - 17); t = (x, y2 - 4.5); s = [(x, y), (x, y2)]
+    elif side == "down":
+        y2 = y + stub; r = (x - w / 2, y2); t = (x, y2 + 12.5); s = [(x, y), (x, y2)]
+    elif side == "left":
+        x2 = x - stub; r = (x2 - w, y - 8.5); t = (x2 - w / 2, y + 4); s = [(x, y), (x2, y)]
+    else:
+        x2 = x + stub; r = (x2, y - 8.5); t = (x2 + w / 2, y + 4); s = [(x, y), (x2, y)]
+    return (wire(s, wcls, None, False) +
+            f'<g class="flag {cls}"><rect x="{r[0]}" y="{r[1]}" width="{w}" height="17" rx="3"/>'
+            + text(t[0], t[1], net, "flagt", "middle") + "</g>")
+
+# ══ DIAGRAMA 4 — sistema completo (bateria + C3 + todos os sensores) ═══════════
+def diagram_full():
+    W, H = 1200, 1060
+    out, top = [], []
+    used = {"5V", "G", "3.3", "GPIO0", "GPIO1", "GPIO3", "GPIO4", "GPIO5", "GPIO6", "GPIO7", "GPIO20", "GPIO21"}
+    c3svg, P = c3(560, 250, used=used, label_top=True)
+
+    # ── alimentação: Li-ion → TP4056 → SW1 → (VBAT) → D1 → 5V ────────────
+    top.append(cell_v(70, 270, 410, "Li-ion 18650"))
+    out.append(wire([(70, 261), (70, 236), (125, 236), (125, 290), (166, 290)], "wbat", "bateria + → B+", False))
+    out.append(wire([(70, 410), (70, 432), (125, 432), (125, 370), (166, 370)], "wgnd", "bateria − → B−", False))
+    top.append('<rect class="usb" x="195" y="240" width="60" height="22" rx="6"/>')
+    top.append(text(225, 230, "USB-C · carga", "small", "middle"))
+    top.append('<rect class="enspcb" x="150" y="256" width="150" height="152" rx="8"/>')
+    top.append('<rect class="chips" x="203" y="306" width="44" height="34" rx="4"/>')
+    top.append(text(225, 356, "TP4056", "chipt", "middle") + text(225, 370, "+ DW01", "chipt", "middle"))
+    for name, x, y, anchor, dx in (("B+", 166, 290, "start", 14), ("B−", 166, 370, "start", 14),
+                                   ("OUT+", 284, 290, "end", -14), ("OUT−", 284, 370, "end", -14)):
+        top.append(pad(x, y, "pad used") + text(x + dx, y + 4.5, name, "pinw", anchor))
+    top.append(text(225, 452, "carregador TP4056 c/ proteção", "small", "middle"))
+    out.append(wire([(284, 370), (310, 370)], "wgnd", None, False))
+    top.append(netflag(310, 370, "GND", "down"))
+    out.append(wire([(284, 290), (300, 290)], "wbat", None, False))
+    out.append(switch_h(300, 356, 290, "wbat", "SW1 liga/desliga"))
+    top.append(text(328, 318, "SW1", "small", "middle"))
+    out.append(wire([(356, 290), (420, 290)], "wbat", None, False))
+    out.append(dot(380, 290))
+    top.append(netflag(380, 290, "VBAT", "up"))
+    out.append(diode_h(420, 476, 290, "wbat", "D1 Schottky"))
+    top.append(text(448, 318, "D1 SS34", "small", "middle"))
+    out.append(wire([(476, 290), P["5V"]], "wbat", "→ 5V do C3", False))
+    top.append(netflag(*P["G"], "GND", "left"))
+
+    # ── 3.3 do C3 → SW2 → rede 3V3S (todos os sensores) ──────────────────
+    x3, y3 = P["3.3"]
+    out.append(wire([(x3, y3), (546, y3)], "w3v3", None, False))
+    out.append(switch_h(490, 546, y3, "w3v3", "SW2 corta o 3V3 dos sensores"))
+    out.append(wire([(490, y3), (470, y3)], "w3v3 sw3", None, False))
+    top.append(netflag(470, y3, "3V3S", "left"))
+    top.append(text(518, y3 + 24, "SW2", "small", "middle"))
+
+    # ── GPIO4: barramento 1-Wire das 3 sondas ────────────────────────────
+    gx, gy = P["GPIO4"]
+    out.append(wire([(gx, gy), (480, gy), (480, 690), (100, 690), (100, 733)], "wdq", "DQ sondas → GPIO4"))
+    for cx in (220, 340):
+        out.append(wire([(cx, 690), (cx, 733)], "wdq") + dot(cx, 690))
+    out.append(dot(420, 690) + resistor_v(420, 610, 690, "4k7", left=True))
+    top.append(netflag(420, 610, "3V3S", "up"))
+    for cx, name, what in ((100, "EXT", "condensadora"), (220, "SUP", "insuflamento"), (340, "RET", "retorno")):
+        out.append(wire([(cx, 750), (cx, 812)], "wcable"))
+        top.append(f'<rect class="conn" x="{cx-48}" y="{716}" width="96" height="34" rx="6"/>')
+        top.append(pad(cx - 30, 733, "pad used") + pad(cx, 733, "pad used") + pad(cx + 30, 733, "pad used"))
+        top.append(netflag(cx - 30, 741.5, "3V3S", "down") + netflag(cx + 30, 741.5, "GND", "down"))
+        top.append(f'<rect class="probe" x="{cx-9}" y="812" width="18" height="56" rx="9"/>')
+        top.append(text(cx, 888, f"sonda {name}", "small", "middle") + text(cx, 903, what, "small", "middle"))
+
+    # ── GPIO3: TEMT6000 ──────────────────────────────────────────────────
+    gx, gy = P["GPIO3"]
+    out.append(wire([(gx, gy), (500, gy), (500, 930), (462, 930)], "wlux", "SIG TEMT6000 → GPIO3"))
+    top.append('<rect class="temtpcb" x="378" y="900" width="92" height="60" rx="6"/>'
+               '<circle class="lsens" cx="402" cy="922" r="7"/>')
+    top.append(pad(462, 930, "pad used") + text(450, 934, "SIG", "pinw", "end"))
+    top.append(text(420, 954, "TEMT6000", "chipt", "middle"))
+    top.append(netflag(392, 960, "3V3S", "down") + netflag(444, 960, "GND", "down"))
+
+    # ── GPIO1: TC SCT-013 no jack P2 + bias ──────────────────────────────
+    gx, gy = P["GPIO1"]
+    out.append(wire([(gx, gy), (520, gy), (520, 898), (572, 898)], "wct", "ponta (tip) do jack → GPIO1"))
+    top.append('<rect class="jack" x="560" y="880" width="70" height="64" rx="6"/>')
+    top.append(pad(572, 898, "pad used") + pad(618, 926, "pad used") + pad(595, 944, "pad used"))
+    top.append(text(586, 902, "T", "pinw", "start") + text(604, 930, "S", "pinw", "end"))
+    top.append(text(600, 1004, "jack P2 · garra SCT-013", "small", "middle"))
+    top.append(netflag(595, 952.5, "GND", "down"))
+    out.append(wire([(618, 926), (730, 926)], "wpas", "anel (sleeve) → bias"))
+    out.append(dot(680, 926))
+    out.append(resistor_v(680, 846, 926, "10k", left=True))
+    top.append(netflag(680, 846, "3V3S", "up"))
+    out.append(resistor_v(680, 926, 1000, "6k8", left=True))
+    top.append(netflag(680, 1000, "GND", "down"))
+    out.append(capacitor_v(730, 926, 1000, "10µF"))
+    top.append(netflag(730, 1000, "GND", "down"))
+
+    # ── GPIO0: divisor VBAT/2 ────────────────────────────────────────────
+    gx, gy = P["GPIO0"]
+    out.append(wire([(gx, gy), (540, gy), (540, 700), (780, 700)], "wpas", "VBAT/2 → GPIO0 (ADC1)"))
+    out.append(dot(780, 700))
+    out.append(resistor_v(780, 640, 700, "100k") + resistor_v(780, 700, 770, "100k"))
+    top.append(netflag(780, 640, "VBAT", "up") + netflag(780, 770, "GND", "down"))
+    top.append(text(700, 690, "VBAT/2", "small", "middle"))
+
+    # ── I2C: ENS160+AHT21 (por cima) ─────────────────────────────────────
+    enssvg, E = ens(800, 120)
+    gx, gy = P["GPIO6"]; sx, sy = E["SDA"]
+    out.append(wire([(gx, gy), (770, gy), (770, 66), (sx, 66), (sx, sy)], "wsda", "SDA: GPIO6 → ENS160/AHT21"))
+    gx, gy = P["GPIO7"]; sx, sy = E["SCL"]
+    out.append(wire([(gx, gy), (785, gy), (785, 82), (sx, 82), (sx, sy)], "wscl", "SCL: GPIO7 → ENS160/AHT21"))
+    top.append(netflag(*E["VIN"], "3V3S", "up") + netflag(*E["GND"], "GND", "up"))
+    def mini(x, y, net, w):
+        c = {"3V3S": "f3v3s", "GND": "fgnd"}[net]
+        return (f'<path class="jump {"f3v3" if net == "3V3S" else "fgnd"}" d="M{x},{y} v-18"/>'
+                f'<g class="flag {c}"><rect x="{x-w/2}" y="{y-35}" width="{w}" height="17" rx="3"/>'
+                + text(x, y - 22.5, net, "flagt", "middle") + "</g>")
+    ensx = mini(*E["CS"], "3V3S", 34) + mini(*E["ADD"], "GND", 28)
+
+    # ── SCD41 (mesmo I2C, por etiquetas) ─────────────────────────────────
+    sx0, sy0 = 880, 300
+    top.append(f'<rect class="scdpcb" x="{sx0}" y="{sy0}" width="150" height="124" rx="8"/>'
+               f'<rect class="chips" x="{sx0+80}" y="{sy0+30}" width="40" height="40" rx="4"/>')
+    top.append(text(sx0 + 100, sy0 + 104, "SCD41 · CO₂", "pinw", "middle"))
+    for n, y, net in (("VDD", 318, "3V3S"), ("SDA", 346, "SDA"), ("SCL", 374, "SCL"), ("GND", 402, "GND")):
+        top.append(pad(sx0 + 16, y, "pad used") + text(sx0 + 30, y + 4.5, n, "pinw"))
+        top.append(netflag(sx0 + 16, y, net, "left"))
+    top.append(text(850, 61, "SDA", "netl nsda", "middle") + text(880, 77, "SCL", "netl nscl", "middle"))
+
+    # ── INMP441 (I2S) ────────────────────────────────────────────────────
+    misvg, M = inmp(940, 560)
+    gx, gy = P["GPIO5"]; mx, my = M["SD"]
+    out.append(wire([(gx, gy), (745, gy), (745, 40), (1160, 40), (1160, my), (mx, my)], "wsd", "SD: GPIO5 → INMP441 SD"))
+    gx, gy = P["GPIO20"]; mx, my = M["SCK"]
+    out.append(wire([(gx, gy), (840, gy), (840, my), (mx, my)], "wsck", "SCK: GPIO20 → INMP441 SCK"))
+    gx, gy = P["GPIO21"]; mx, my = M["WS"]
+    out.append(wire([(gx, gy), (825, gy), (825, my), (mx, my)], "wws", "WS: GPIO21 → INMP441 WS"))
+    # etiquetas no `out`: a placa do mic (desenhada depois) cobre o traço e os nomes ficam legíveis
+    out.append(netflag(*M["VDD"], "3V3S", "right", 64) + netflag(*M["GND"], "GND", "right", 64)
+               + netflag(*M["L/R"], "GND", "left", 64))
+
+    top.append(dot(420, 690) + dot(680, 926) + dot(780, 700))
+    top.append(text(20, 1050, "Etiquetas com o mesmo nome estão ligadas · 3V3S = 3,3 V comutado pelo SW2 · "
+                    "fios que se cruzam sem ponto não estão ligados", "small", "start"))
+    body = "".join(out) + c3svg + enssvg + misvg + "".join(top) + ensx
+    return f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="Sistema completo: bateria, carregador, chaves, ESP32-C3 e todos os sensores">{body}</svg>'
