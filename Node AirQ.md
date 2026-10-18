@@ -141,7 +141,17 @@ Os canais `0xF0–0xF6` usam o tipo HEARTBEAT que o gateway já repassa tal e qu
 
 ## Portal (http://192.168.4.1) — modos
 
-Abas no topo: **Monitor · ArCond · Ambiente · Calibração** (no Monitor, a secção de ar-condicionado fica no fim). O firmware só grava;
+Abas no topo: **Painel · Sensores · ArCond · Ambiente · Calibração**. O Painel é a página inicial:
+roseta com 6 parâmetros (temperatura, umidade, CO₂/eCO₂, TVOC, ruído, luz) coloridos pela situação,
+tiles com sparkline, faixa do ar-condicionado (ΔT) e a *sessão de monitoramento* (o navegador guarda
+uma leitura a cada 5 s, até 1 h). A referência do Painel (estação e uso do local) é a mesma do teste de Ambiente.
+Em Sensores ficam os detalhes por sensor (ar-condicionado no fim).
+
+**Exportar** (Painel e laudos): *PDF / imprimir* (relatório A4 com logo, critérios, gráficos, calibração
+e campo de assinatura), *Relatório .html* (arquivo autônomo, abre offline), *CSV* (`;` e vírgula decimal,
+abre direto no Excel), *JSON* (dados brutos + avaliação + calibração) e *Copiar texto*. O nome do
+responsável técnico fica salvo no navegador. A janela de login do Wi-Fi (captive) bloqueia downloads e
+impressão: abrir `http://192.168.4.1` no navegador. Logo: `firmware/node/docs/airq_logo.svg`. O firmware só grava;
 a avaliação e o laudo são feitos no portal (fácil de ajustar critérios sem recompilar).
 
 ### ArCond (laudo de ar-condicionado)
@@ -216,7 +226,7 @@ cd firmware/node
 | `firmware/node/src/sound_sensor.cpp/.h` | INMP441 (I2S, 32 kHz) — nível RMS e pico **ponderados A** (IIR, janela 0.26 s/tick); amostra >>9 (1 bit de atraso do I2S do C3) |
 | `firmware/node/src/light_sensor.cpp/.h` | TEMT6000 |
 | `firmware/node/src/main.cpp` | `ani_tick`, `ani_send_extras`, captive `/data`, ESP-NOW |
-| `firmware/node/include/ani_web.h` | captive portal: abas Monitor / ArCond / Ambiente / Calibração, laudos e gráficos (JS) |
+| `firmware/node/include/ani_web.h` | captive portal: abas Painel / Sensores / ArCond / Ambiente / Calibração, laudos e gráficos (JS) |
 | `firmware/node/src/calib.cpp/.h` | calibração de campo (offsets/ganhos em NVS) |
 | `firmware/node/src/airq_test.cpp/.h` | gravador dos testes (RAM, JSON em pedaços) |
 | `firmware/shared/protocol.h` | `SENSOR_ID_CO2 … SENSOR_ID_T_RET` (0xF0–0xF7) |
