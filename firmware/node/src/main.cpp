@@ -662,6 +662,7 @@ static void test_record(const AniReading &r) {
     t.v[8]  = q(r.valid, (float)r.eco2, 1);
     t.v[9]  = q(r.valid, (float)r.tvoc, 1);
     t.v[10] = q(g_last_light.valid, (float)g_last_light.lux, 1);
+    t.v[11] = q(r.valid, (float)r.aqi, 1);
     test_add(t);
 }
 

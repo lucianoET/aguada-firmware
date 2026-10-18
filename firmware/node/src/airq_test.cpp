@@ -5,7 +5,7 @@
 #include <esp_log.h>
 
 static const char *TAG = "test";
-static const char *COLS = "[\"ta\",\"rh\",\"tr\",\"ts\",\"te\",\"a\",\"db\",\"co2\",\"eco2\",\"tvoc\",\"lux\"]";
+static const char *COLS = "[\"ta\",\"rh\",\"tr\",\"ts\",\"te\",\"a\",\"db\",\"co2\",\"eco2\",\"tvoc\",\"lux\",\"aqi\"]";
 
 static TestSample s_buf[TEST_MAXN];
 static uint16_t   s_n = 0;
@@ -74,7 +74,7 @@ void test_json(test_emit_fn emit, void *ctx) {
             else                len += snprintf(b + len, sizeof(b) - len, "%s%d", c ? "," : "", v);
         }
         len += snprintf(b + len, sizeof(b) - len, "]");
-        if (len > sizeof(b) - 90) { emit(b, ctx); len = 0; b[0] = 0; }
+        if (len > sizeof(b) - 110) { emit(b, ctx); len = 0; b[0] = 0; }
     }
     if (len) emit(b, ctx);
     emit("]}", ctx);

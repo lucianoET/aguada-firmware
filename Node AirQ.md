@@ -141,10 +141,10 @@ Os canais `0xF0–0xF6` usam o tipo HEARTBEAT que o gateway já repassa tal e qu
 
 ## Portal (http://192.168.4.1) — modos
 
-Abas no topo: **Monitor · Teste AC · Ambiente · Calibração**. O firmware só grava;
+Abas no topo: **Monitor · ArCond · Ambiente · Calibração** (no Monitor, a secção de ar-condicionado fica no fim). O firmware só grava;
 a avaliação e o laudo são feitos no portal (fácil de ajustar critérios sem recompilar).
 
-### Teste AC (laudo de ar-condicionado)
+### ArCond (laudo de ar-condicionado)
 
 Pré-verificação ao vivo (RET, SUP, EXT, TC/compressor) → grava 10–30 min a cada 8 s
 → laudo com veredito **Aprovado / Atenção / Reprovado**, gráficos (temperaturas num eixo,
@@ -166,8 +166,9 @@ manifold (pressões, SH/SC). Inverter em baixa rotação dá ΔT menor.
 ### Teste de ambiente
 
 5–60 min; critérios: **RE 09/2003** (ANVISA) — temperatura 23–26 °C verão / 20–22 °C inverno,
-UR 40–65 % verão / 35–65 % inverno, **CO₂ ≤ 1000 ppm (só com SCD41**; eCO₂ do ENS160 é
-estimativa e não é avaliado); **ISO/CIE 8995-1** iluminância por uso (500/300/100 lx);
+UR 40–65 % verão / 35–65 % inverno, **CO₂ ≤ 1000 ppm** (SCD41; sem ele, avalia-se o **eCO₂ do ENS160 como
+estimativa** — indica ventilação, não vale como laudo NDIR); **AQI do ENS160** (média ≤ 2,5 ok,
+≤ 3,5 atenção, acima falha); **ISO/CIE 8995-1** iluminância por uso (500/300/100 lx);
 ruído pela **NBR 10152** (≈40–50 dB(A) escritório; > 65 dB(A) NR-17); TVOC informativo.
 Não medidos: velocidade do ar, renovação (27 m³/h·pessoa), biológicos.
 
@@ -176,13 +177,13 @@ Não medidos: velocidade do ar, renovação (27 m³/h·pessoa), biológicos.
 | Sensor | Tipo | Como |
 |---|---|---|
 | Sondas EXT/SUP/RET | offset por papel (viaja com a ROM; sonda nova zera) | *Igualar sondas* (média) ou termômetro de referência |
-| AHT21 T / UR | offset | termo-higrômetro de referência |
+| AHT21 T / UR | offset | termo-higrômetro de referência; T também por *Usar a média das sondas* (bloqueado se as sondas discordarem > 1 °C) |
 | INMP441 | offset dB(A) | sonômetro / app ao lado |
 | TC | ganho | alicate amperímetro na mesma fase (≥ 0,5 A) |
 | TEMT6000 | ganho | luxímetro (≥ 20 lx) |
 
 As leituras enviadas por ESP-NOW e mostradas no portal já saem corrigidas. Usa-se a média
-das últimas 4 leituras distintas. *Zerar toda a calibração* volta ao de fábrica.
+das últimas 4 leituras distintas. Os campos aceitam vírgula ou ponto e não são apagados pela atualização da página. *Zerar toda a calibração* volta ao de fábrica.
 
 ### API HTTP
 
@@ -215,7 +216,7 @@ cd firmware/node
 | `firmware/node/src/sound_sensor.cpp/.h` | INMP441 (I2S, 32 kHz) — nível RMS e pico **ponderados A** (IIR, janela 0.26 s/tick); amostra >>9 (1 bit de atraso do I2S do C3) |
 | `firmware/node/src/light_sensor.cpp/.h` | TEMT6000 |
 | `firmware/node/src/main.cpp` | `ani_tick`, `ani_send_extras`, captive `/data`, ESP-NOW |
-| `firmware/node/include/ani_web.h` | captive portal: abas Monitor / Teste AC / Ambiente / Calibração, laudos e gráficos (JS) |
+| `firmware/node/include/ani_web.h` | captive portal: abas Monitor / ArCond / Ambiente / Calibração, laudos e gráficos (JS) |
 | `firmware/node/src/calib.cpp/.h` | calibração de campo (offsets/ganhos em NVS) |
 | `firmware/node/src/airq_test.cpp/.h` | gravador dos testes (RAM, JSON em pedaços) |
 | `firmware/shared/protocol.h` | `SENSOR_ID_CO2 … SENSOR_ID_T_RET` (0xF0–0xF7) |

@@ -12,7 +12,7 @@ enum TestState : uint8_t { TS_IDLE = 0, TS_RUN = 1, TS_DONE = 2 };
 
 #define TEST_NULL   INT16_MIN       // canal sem leitura nesta amostra
 #define TEST_MAXN   480             // 64 min a 8 s
-#define TEST_NCOL   11
+#define TEST_NCOL   12
 
 // Colunas (int16, escala fixa) — a mesma ordem vai no JSON ("cols")
 //  ta  T ambiente AHT21 ×10   rh UR ×10      tr T retorno ×10   ts T insuflamento ×10

@@ -214,7 +214,7 @@ tr:last-child td{border-bottom:none}
   </div>
   <nav class="tabs" role="tablist" aria-label="Modo de uso">
     <button id="t-mon" role="tab" aria-selected="true" type="button" onclick="tab('mon')">Monitor</button>
-    <button id="t-ac" role="tab" aria-selected="false" type="button" onclick="tab('ac')">Teste AC<span class="rec"></span></button>
+    <button id="t-ac" role="tab" aria-selected="false" type="button" onclick="tab('ac')">ArCond<span class="rec"></span></button>
     <button id="t-env" role="tab" aria-selected="false" type="button" onclick="tab('env')">Ambiente<span class="rec"></span></button>
     <button id="t-cal" role="tab" aria-selected="false" type="button" onclick="tab('cal')">Calibração</button>
   </nav>
@@ -222,42 +222,6 @@ tr:last-child td{border-bottom:none}
   <!-- body do node: um container por sensor -->
   <div class="node-bd">
   <div class="view on" id="v-mon" role="tabpanel">
-
-    <!-- analisador de ar-condicionado (só aparece com sondas e/ou TC ligados) -->
-    <div class="sensor" id="acbox" style="display:none">
-      <div class="sensor-hd"><b>Ar-condicionado</b><span>· sondas DS18B20 + TC</span><span class="pill" id="d_ac">—</span></div>
-      <div class="cards">
-        <div class="card hl" id="c_dt">
-          <span class="cl" id="dtl">ΔT · retorno − insuflamento</span>
-          <div class="bodyr">
-            <div class="nums"><span class="cv" id="dt">—</span><span class="cu">°C</span></div>
-            <svg class="spark" id="dtk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg>
-          </div>
-          <span class="cs" id="dts" style="margin-left:0"></span>
-        </div>
-        <div class="card" id="c_sup">
-          <span class="cl">Insuflamento (sonda SUP)</span>
-          <div class="bodyr"><div class="nums"><span class="cv" id="tsup">—</span><span class="cu">°C</span></div>
-            <svg class="spark" id="tsupk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
-        </div>
-        <div class="card" id="c_ret">
-          <span class="cl">Retorno · ar que entra na evaporadora (sonda RET)</span>
-          <div class="bodyr"><div class="nums"><span class="cv" id="tret">—</span><span class="cu">°C</span></div>
-            <svg class="spark" id="tretk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
-        </div>
-        <div class="card" id="c_ext">
-          <span class="cl">Externo · entrada da condensadora (sonda EXT)</span>
-          <div class="bodyr"><div class="nums"><span class="cv" id="text">—</span><span class="cu">°C</span></div>
-            <svg class="spark" id="textk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
-        </div>
-        <div class="card" id="c_ct">
-          <span class="cl">Corrente da condensadora (TC)</span>
-          <div class="bodyr"><div class="nums"><span class="cv" id="amps">—</span><span class="cu">A</span><span class="cs" id="cmp"></span></div>
-            <svg class="spark" id="ampsk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
-        </div>
-      </div>
-      <a class="monlink" href="#" onclick="tab('cal');return false">Identificar e calibrar as sondas</a>
-    </div>
 
     <!-- sensor SCD41 (CO2 real, opcional) -->
     <div class="sensor" id="scdbox" style="display:none">
@@ -396,6 +360,42 @@ tr:last-child td{border-bottom:none}
       </div>
     </div>
 
+    <!-- analisador de ar-condicionado (só aparece com sondas e/ou TC ligados) -->
+    <div class="sensor" id="acbox" style="display:none">
+      <div class="sensor-hd"><b>Ar-condicionado</b><span>· sondas DS18B20 + TC</span><span class="pill" id="d_ac">—</span></div>
+      <div class="cards">
+        <div class="card hl" id="c_dt">
+          <span class="cl" id="dtl">ΔT · retorno − insuflamento</span>
+          <div class="bodyr">
+            <div class="nums"><span class="cv" id="dt">—</span><span class="cu">°C</span></div>
+            <svg class="spark" id="dtk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg>
+          </div>
+          <span class="cs" id="dts" style="margin-left:0"></span>
+        </div>
+        <div class="card" id="c_sup">
+          <span class="cl">Insuflamento (sonda SUP)</span>
+          <div class="bodyr"><div class="nums"><span class="cv" id="tsup">—</span><span class="cu">°C</span></div>
+            <svg class="spark" id="tsupk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
+        </div>
+        <div class="card" id="c_ret">
+          <span class="cl">Retorno · ar que entra na evaporadora (sonda RET)</span>
+          <div class="bodyr"><div class="nums"><span class="cv" id="tret">—</span><span class="cu">°C</span></div>
+            <svg class="spark" id="tretk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
+        </div>
+        <div class="card" id="c_ext">
+          <span class="cl">Externo · entrada da condensadora (sonda EXT)</span>
+          <div class="bodyr"><div class="nums"><span class="cv" id="text">—</span><span class="cu">°C</span></div>
+            <svg class="spark" id="textk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
+        </div>
+        <div class="card" id="c_ct">
+          <span class="cl">Corrente da condensadora (TC)</span>
+          <div class="bodyr"><div class="nums"><span class="cv" id="amps">—</span><span class="cu">A</span><span class="cs" id="cmp"></span></div>
+            <svg class="spark" id="ampsk" viewBox="0 0 100 28" preserveAspectRatio="none"><polyline points=""/></svg></div>
+        </div>
+      </div>
+      <a class="monlink" href="#" onclick="tab('cal');return false">Identificar e calibrar as sondas</a>
+    </div>
+
   </div><!-- /v-mon -->
 
   <!-- ═══ TESTE DE AR-CONDICIONADO ═══ -->
@@ -406,7 +406,7 @@ tr:last-child td{border-bottom:none}
       <ul class="chk" id="ac-pre"></ul>
       <div class="frm">
         <label class="wide">Equipamento / local<input id="ac-tag" maxlength="60" placeholder="ex.: Sala 12 · split 12 000 BTU"></label>
-        <label>Corrente nominal (A)<input id="ac-inom" type="number" inputmode="decimal" min="0" step="0.1" placeholder="placa"></label>
+        <label>Corrente nominal (A)<input id="ac-inom" type="text" inputmode="decimal" autocomplete="off" placeholder="placa, ex.: 5,2"></label>
         <label>Duração<select id="ac-dur"><option value="600">10 min</option><option value="900" selected>15 min</option><option value="1200">20 min</option><option value="1800">30 min</option></select></label>
       </div>
       <button class="pbtn" id="ac-go" type="button" onclick="testStart('ac')">Iniciar teste</button>
@@ -497,7 +497,7 @@ tr:last-child td{border-bottom:none}
         <button class="gbtn" type="button" onclick="calProbesZero()">Zerar offsets</button>
       </div>
       <div class="cal"><div class="cr"><b>Termômetro de referência</b><span class="rd">aplica a todas as sondas</span>
-        <div class="ap"><input id="cal-pref" type="number" inputmode="decimal" step="0.1" placeholder="°C"><button class="gbtn" type="button" onclick="calProbesRef()">Aplicar</button></div></div></div>
+        <div class="ap"><input id="cal-pref" type="text" inputmode="decimal" autocomplete="off" placeholder="°C, ex.: 25,4"><button class="gbtn" type="button" onclick="calProbesRef()">Aplicar</button></div></div></div>
       <p class="msg" id="cal-pmsg"></p>
     </div>
     <div class="box" id="swapbox">
@@ -744,7 +744,8 @@ function renderPre(){
   $e('ac-go').disabled=!d.tsup_ok||(T&&T.state==='run');
   h='';
   h+=li(d.thv?'ok':'bad',d.thv?'Temperatura e umidade (AHT21): '+fmt(d.temp_c,1)+' °C · '+d.hum_pct+' %':'AHT21 sem leitura');
-  h+=li(d.co2ok?'ok':'wa',d.co2ok?'CO₂ real (SCD41): '+d.co2+' ppm':'Sem SCD41: o CO₂ não será avaliado pela RE 09 (eCO₂ do ENS160 é estimativa)');
+  h+=li(d.co2ok?'ok':'na',d.co2ok?'CO₂ real (SCD41): '+d.co2+' ppm':'Sem SCD41: o CO₂ será estimado pelo ENS160 (eCO₂)');
+  h+=li(d.valid?(d.warmup?'wa':'ok'):'bad',d.valid?(d.warmup?'ENS160 aquecendo (~3 min após ligar): espere antes de iniciar':'ENS160: eCO₂ '+d.eco2+' ppm · TVOC '+d.tvoc+' ppb · AQI '+d.aqi):'ENS160 sem leitura');
   h+=li(d.sound?'ok':'na',d.sound?'Ruído (INMP441): '+fmt(d.db,1)+' dB(A)':'Microfone sem sinal');
   h+=li(d.light?'ok':'na',d.light?'Iluminância (TEMT6000): '+d.lux+' lx':'Sensor de luz sem leitura');
   $e('env-pre').innerHTML=h;
@@ -754,7 +755,7 @@ function renderPre(){
 // ═══ Testes: gravação no firmware, laudo aqui ═══════════════════════
 function testStart(k){
   var dur=$e(k+'-dur').value,tag=$e(k+'-tag').value.trim(),opt='';
-  if(k==='ac'){var i=parseFloat(($e('ac-inom').value||'').replace(',','.'));if(i>0)opt='inom='+i;}
+  if(k==='ac'){var i=num('ac-inom');if(i>0)opt='inom='+i;}
   else opt='use='+$e('env-use').value+';season='+$e('env-season').value;
   dismissed[k]=false;
   fetch('/test/start?kind='+k+'&dur='+dur+'&tag='+encodeURIComponent(tag)+'&opt='+encodeURIComponent(opt),{method:'POST'})
@@ -818,7 +819,12 @@ function evalENV(){
     cr.push({k:'Umidade relativa',v:fmt(hA,0)+' %',s:s2,p:'RE 09/2003, '+seas+': '+hLo+'–'+hHi+' %.'+(hA>hHi?' Umidade alta favorece fungos e ácaros.':hA<hLo?' Ar seco irrita olhos e vias aéreas.':'')});}
   if(co2.some(nn)){var cA=avg(co2),cM=mx(co2),s3=cA>1000?'bad':(cM>1000?'wa':'ok');
     cr.push({k:'CO₂',v:Math.round(cA)+' ppm',s:s3,p:'RE 09/2003: até 1000 ppm. Máximo no teste: '+Math.round(cM)+' ppm.'+(s3!=='ok'?' Aumente a renovação de ar externo.':'')});}
-  else{var eA=avg(eco2);cr.push({k:'CO₂',v:eA===null?'—':'≈'+Math.round(eA)+' ppm',s:'na',p:'Não avaliado: sem SCD41. O valor mostrado é o eCO₂ do ENS160, uma estimativa a partir de compostos voláteis.'});}
+  else{var eA=avg(eco2);
+    if(eA===null)cr.push({k:'CO₂',v:'—',s:'na',p:'Sem SCD41 e sem leitura do ENS160.'});
+    else{var eM=mx(eco2),s3e=eA>1000?'bad':(eM>1000?'wa':'ok');
+      cr.push({k:'CO₂ (estimado · ENS160)',v:'≈'+Math.round(eA)+' ppm',s:s3e,p:'Sem SCD41: eCO₂ do ENS160, estimado a partir de compostos voláteis — indica ventilação, mas não substitui medição NDIR para laudo da RE 09/2003 (1000 ppm). Máximo: '+Math.round(eM)+' ppm.'});}}
+  var aq=C('aqi',1);if(aq.some(nn)){var qA=avg(aq),sq=qA<=2.5?'ok':(qA<=3.5?'wa':'bad');
+    cr.push({k:'Qualidade do ar (AQI · ENS160)',v:fmt(qA,1)+' de 5',s:sq,p:'Índice UBA do ENS160: 1 excelente, 2 bom, 3 moderado, 4 ruim, 5 insalubre. Máximo no teste: '+mx(aq)+'.'});}
   var dL=leq(db);if(dL!==null){var s4=dL<=50?'ok':(dL<=65?'wa':'bad');
     cr.push({k:'Ruído',v:fmt(dL,0)+' dB(A)',s:s4,p:'NBR 10152: escritórios e salas de reunião ≈ 40–50 dB(A); acima de 65 dB(A) é desconfortável (NR-17). Máximo: '+fmt(mx(db),0)+' dB(A).'});}
   var lA=avg(lux);if(lA!==null){var s5=lA>=tgt?'ok':(lA>=0.7*tgt?'wa':'bad');
@@ -856,7 +862,7 @@ function renderTest(){
     if(T.kind==='ac'){var r=g('tr',10),s=g('ts',10),a=g('a',100);if(r===null)r=g('ta',10);
       $e('ac-nr').textContent=fmt(r,1);$e('ac-ns').textContent=fmt(s,1);$e('ac-nd').textContent=nn(r)&&nn(s)?fmt(r-s,1):'—';$e('ac-na').textContent=fmt(a,1);}
     else{var c=g('co2',1);$e('env-nt').textContent=fmt(g('ta',10),1);$e('env-nh').textContent=fmt(g('rh',10),0);
-      $e('env-nc').textContent=c===null?'—':c;$e('env-nd').textContent=fmt(g('db',10),0);}}
+      if(c===null){var e=g('eco2',1);$e('env-nc').textContent=e===null?'—':'≈'+e;}else $e('env-nc').textContent=c;$e('env-nd').textContent=fmt(g('db',10),0);}}
   renderPre();
 }
 function drawAC(){
@@ -925,27 +931,50 @@ function calPoll(){
     if(c.t.ok)hist('t',c.t.raw);if(c.rh.ok)hist('rh',c.rh.raw);if(c.db.ok)hist('db',c.db.raw);if(c.ct.ok)hist('ct',c.ct.raw);if(c.lux.ok)hist('lux',c.lux.raw);
     c.pr.forEach(function(p){if(p.ok)hist('p'+p.role,p.raw);});calRender();}).catch(function(){});
 }
-var CALDEF=[{k:'t',n:'Temperatura (AHT21)',u:'°C',d:2,off:1,p:'A placa aquece com o ESP32: o offset costuma ser negativo.'},
-  {k:'rh',n:'Umidade (AHT21)',u:'%',d:1,off:1,p:'Use um termo-higrômetro de referência.'},
-  {k:'db',n:'Ruído (INMP441)',u:'dB(A)',d:1,off:1,p:'Compare com um sonômetro ou app de sonômetro, lado a lado, com som constante.'},
-  {k:'ct',n:'Corrente (TC)',u:'A',d:2,off:0,min:0.5,p:'Meça a mesma fase com alicate amperímetro, com o compressor ligado.'},
-  {k:'lux',n:'Luz (TEMT6000)',u:'lx',d:0,off:0,min:20,p:'Luxímetro na mesma posição e direção do sensor.'}];
+var CALDEF=[{k:'t',ex:'25,4',n:'Temperatura (AHT21)',u:'°C',d:2,off:1,p:'A placa aquece com o ESP32: o offset costuma ser negativo.'},
+  {k:'rh',ex:'55',n:'Umidade (AHT21)',u:'%',d:1,off:1,p:'Use um termo-higrômetro de referência.'},
+  {k:'db',ex:'45',n:'Ruído (INMP441)',u:'dB(A)',d:1,off:1,p:'Compare com um sonômetro ou app de sonômetro, lado a lado, com som constante.'},
+  {k:'ct',ex:'5,2',n:'Corrente (TC)',u:'A',d:2,off:0,min:0.5,p:'Meça a mesma fase com alicate amperímetro, com o compressor ligado.'},
+  {k:'lux',ex:'350',n:'Luz (TEMT6000)',u:'lx',d:0,off:0,min:20,p:'Luxímetro na mesma posição e direção do sensor.'}];
+function num(id){var v=($e(id).value||'').trim().replace(',','.');return v===''?NaN:parseFloat(v);}
+var calBuilt=false;
+function calBuild(){
+  $e('cal-list').innerHTML=CALDEF.map(function(c){
+    return '<div class="cr"><b>'+c.n+'</b><span class="rd" id="cr-'+c.k+'">—</span><p>'+c.p+'</p>'
+      +'<div class="ap"><input id="ci-'+c.k+'" type="text" inputmode="decimal" autocomplete="off" placeholder="referência ('+c.u+'), ex.: '+c.ex+'">'
+      +'<button class="gbtn" type="button" onclick="calApply(\''+c.k+'\')">Aplicar</button></div>'
+      +(c.k==='t'?'<div class="ap"><button class="gbtn" type="button" id="cal-tavg" onclick="calTempFromProbes()" style="width:100%">Usar a média das sondas como referência</button></div>':'')
+      +'</div>';}).join('');
+  calBuilt=true;
+}
 function calRender(){
   if(!CAL)return;
-  var ae=document.activeElement,typing=ae&&ae.tagName==='INPUT'&&$e('v-cal').contains(ae);
+  if(!calBuilt)calBuild();
   var h='<tr><th>Sonda</th><th>Papel</th><th>Lida</th><th>Offset</th><th>Corrigida</th></tr>',any=false;
   CAL.pr.forEach(function(p){if(!p.rom)return;any=true;
     h+='<tr><td><b>'+p.rom.substr(2,4)+'</b></td><td>'+p.role+'</td><td>'+(p.ok?fmt(p.raw,2):'—')+'</td><td>'+(p.off>=0?'+':'')+fmt(p.off,2)+'</td><td>'+(p.ok?fmt(p.raw+p.off,2):'—')+'</td></tr>';});
   $e('cal-pt').innerHTML=any?h:'<tr><td>Nenhuma sonda com papel atribuído.</td></tr>';
-  if(typing)return;   // não redesenhar os campos enquanto digita
-  $e('cal-list').innerHTML=CALDEF.map(function(c){var o=CAL[c.k],cv=c.off?o.raw+o.off:o.raw*o.gain;
-    return '<div class="cr"><b>'+c.n+'</b><span class="rd">'+(o.ok?'lida <strong>'+fmt(o.raw,c.d)+'</strong> → '+fmt(cv,c.d)+' '+c.u:'sem leitura')+'<br>'+(c.off?'offset '+(o.off>=0?'+':'')+fmt(o.off,c.d):'ganho ×'+fmt(o.gain,3))+'</span>'
-      +'<p>'+c.p+'</p><div class="ap"><input id="ci-'+c.k+'" type="number" inputmode="decimal" step="any" placeholder="valor de referência ('+c.u+')"><button class="gbtn" type="button" onclick="calApply(\''+c.k+'\')">Aplicar</button></div></div>';}).join('');
+  CALDEF.forEach(function(c){var o=CAL[c.k],cv=c.off?o.raw+o.off:o.raw*o.gain;
+    $e('cr-'+c.k).innerHTML=(o.ok?'lida <strong>'+fmt(o.raw,c.d)+'</strong> → '+fmt(cv,c.d)+' '+c.u:'sem leitura')+'<br>'+(c.off?'offset '+(o.off>=0?'+':'')+fmt(o.off,c.d):'ganho ×'+fmt(o.gain,3));});
+  var pm=probeMean();$e('cal-tavg').disabled=pm===null;
+  $e('cal-tavg').textContent=pm===null?'Usar a média das sondas (sem sondas com leitura)':'Usar a média das sondas como referência ('+fmt(pm,2)+' °C)';
+}
+// média das sondas JÁ corrigidas pelos seus offsets
+function probeMean(){var P=probesOk();if(!P.length)return null;
+  return P.reduce(function(s,p){return s+havg('p'+p.role)+p.off;},0)/P.length;}
+function calTempFromProbes(){
+  var pm=probeMean(),raw=havg('t');
+  if(pm===null){calMsg('cal-msg',false,'Nenhuma sonda com leitura.');return;}
+  if(raw===null){calMsg('cal-msg',false,'AHT21 sem leitura.');return;}
+  var T=probesOk().map(function(p){return havg('p'+p.role)+p.off;}),sp=Math.max.apply(null,T)-Math.min.apply(null,T);
+  if(sp>1){calMsg('cal-msg',false,'As sondas discordam '+fmt(sp,1)+' °C entre si: junte-as ao lado da caixa (AC desligado) e use "Igualar sondas" antes.');return;}
+  var v=pm-raw;
+  calSet('t',v).then(function(ok){calMsg('cal-msg',ok,ok?'Temperatura (AHT21): offset '+fmt(v,2)+' °C gravado — referência = média de '+probesOk().length+' sonda(s), '+fmt(pm,2)+' °C.':'Offset fora da faixa (±10 °C): confira se as sondas estão junto da caixa.');calPoll();});
 }
 function calSet(k,v){return fetch('/cal?k='+k+'&v='+v.toFixed(4),{method:'POST'}).then(function(r){return r.ok;});}
 function calMsg(id,ok,t){var m=$e(id);m.textContent=t;m.className='msg '+(ok?'ok':'bad');}
 function calApply(k){
-  var c=CALDEF.filter(function(x){return x.k===k;})[0],ref=parseFloat(($e('ci-'+k).value||'').replace(',','.')),raw=havg(k);
+  var c=CALDEF.filter(function(x){return x.k===k;})[0],ref=num('ci-'+k),raw=havg(k);
   if(!nn(ref)){calMsg('cal-msg',false,'Digite o valor do instrumento de referência.');return;}
   if(raw===null){calMsg('cal-msg',false,c.n+': sem leitura do sensor.');return;}
   if(c.min&&raw<c.min){calMsg('cal-msg',false,c.n+': leitura baixa demais para calibrar (mín. '+c.min+' '+c.u+').');return;}
@@ -959,7 +988,7 @@ function calProbesSet(fn,txt){var P=probesOk();if(!P.length){calMsg('cal-pmsg',f
 function calProbesEqual(){var P=probesOk();if(P.length<2){calMsg('cal-pmsg',false,'São precisas pelo menos 2 sondas com leitura.');return;}
   var m=P.reduce(function(s,p){return s+havg('p'+p.role);},0)/P.length;
   calProbesSet(function(p){return m-havg('p'+p.role);},'Sondas igualadas à média: '+fmt(m,2)+' °C.');}
-function calProbesRef(){var ref=parseFloat(($e('cal-pref').value||'').replace(',','.'));if(!nn(ref)){calMsg('cal-pmsg',false,'Digite a temperatura do termômetro de referência.');return;}
+function calProbesRef(){var ref=num('cal-pref');if(!nn(ref)){calMsg('cal-pmsg',false,'Digite a temperatura do termômetro de referência.');return;}
   calProbesSet(function(p){return ref-havg('p'+p.role);},'Sondas ajustadas a '+fmt(ref,2)+' °C.');$e('cal-pref').value='';}
 function calProbesZero(){calProbesSet(function(){return 0;},'Offsets das sondas zerados.');}
 function calReset(){if(!confirm('Zerar toda a calibração (sensores e sondas)?'))return;
