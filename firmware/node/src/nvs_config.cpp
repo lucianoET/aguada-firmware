@@ -1,3 +1,13 @@
+#ifndef DEFAULT_VBAT_ENABLED
+#define DEFAULT_VBAT_ENABLED 0
+#endif
+#ifndef DEFAULT_VBAT_PIN
+#define DEFAULT_VBAT_PIN 0
+#endif
+#ifndef DEFAULT_VBAT_DIV
+#define DEFAULT_VBAT_DIV 2
+#endif
+
 #include "nvs_config.h"
 #include <nvs_flash.h>
 #include <nvs.h>
@@ -59,9 +69,9 @@ void nvs_config_defaults(node_config_t *cfg, uint16_t node_id) {
     cfg->filter_outlier_cm    = DEFAULT_OUTLIER_CM;
     cfg->filter_threshold_cm  = DEFAULT_THRESHOLD_CM;
 
-    cfg->vbat_enabled         = false;
-    cfg->vbat_pin             = 0;
-    cfg->vbat_div             = 2;   // default: equal-resistor voltage divider
+    cfg->vbat_enabled         = (bool)DEFAULT_VBAT_ENABLED;
+    cfg->vbat_pin             = DEFAULT_VBAT_PIN;
+    cfg->vbat_div             = DEFAULT_VBAT_DIV;   // 2 = resistores iguais; 3 = 200k/100k (fonte 5 V)
     cfg->deep_sleep_enabled   = false;
     cfg->led_enabled          = true;
 

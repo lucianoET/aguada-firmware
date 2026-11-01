@@ -48,6 +48,34 @@ ESP32-C3          HC-SR04
 
 ---
 
+### Nó reservatório padrão — env `node-c3-ch11` (fonte 5 V)
+
+| Sinal | GPIO | Ligação |
+|-------|------|---------|
+| TRIG | **3** | TRIG do sensor |
+| ECHO | **4** | ECHO → **1k série + 2k ao GND** (5 V → 3,3 V) |
+| Fonte 5 V | **1** (ADC1) | 200k → G1 → 100k → GND (`vbat_div=3`, alerta < 4,5 V) |
+| DS18B20 | **10** | DQ + pull-up 4k7 → 3V3 (opcional, compensa temperatura) |
+
+Sensor (HC-SR04 ou JSN-SR04T à prova d'água) em **5 V**. C3 pelo pino 5V; 470 µF + 100 nF
+junto ao C3 e 100 µF junto ao sensor. Nunca ECHO de 5 V direto no GPIO (danificou G0 do CON).
+
+```
+Fonte 5V ──┬── C3 5V
+           ├── Sensor VCC
+           └── 200k ─┬─ G1
+                    100k ─ GND
+C3 G3 ──────────── TRIG
+C3 G4 ──1k──┬───── ECHO
+           2k
+           GND
+```
+
+O nó envia por **unicast** ao gateway depois de receber o ACK do HELLO (gateway com
+firmware novo) ou com `-DDEFAULT_GATEWAY_MAC`; sem isso, broadcast como antes.
+
+---
+
 ### Modo ULTRASONIC — 2 sensores
 
 | Sinal | GPIO | Sensor |

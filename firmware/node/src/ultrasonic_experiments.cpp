@@ -16,7 +16,7 @@ static const char *TAG = "ultra_exp";
 // ────────────────────────────────────────────────────────────────────────────
 UltrasonicReading us_dist_cm(uint8_t trig_pin, uint8_t echo_pin, uint8_t samples,
                              uint16_t min_distance, uint16_t max_distance) {
-    UltrasonicReading result = {0, 0, false};
+    UltrasonicReading result = {0, 0, false, 0};
 
     if (samples == 0 || samples > 10) {
         samples = 5;
@@ -53,6 +53,7 @@ UltrasonicReading us_dist_cm(uint8_t trig_pin, uint8_t echo_pin, uint8_t samples
     result.distance_cm = distance_cm;
     result.percent = percent;
     result.valid = true;
+    result.echo_us = (uint32_t)echo_us;
 
     ESP_LOGD(TAG, "us_dist_cm: %u cm, %u%% (NewPing median %u samples)",
              distance_cm, percent, samples);

@@ -211,6 +211,19 @@ static void led_tick(void) {
 // ── Packet queue (ESP-NOW cb → loop) ─────────────────────────────────────────
 #define PKT_QUEUE_LEN 16
 typedef struct { espnow_packet_t pkt; uint8_t src_mac[6]; } pkt_event_t;
+
+// HELLO recebido direto (não via relay) → ACK unicast: o nó aprende o MAC do
+// gateway e passa a enviar por unicast (ACK de camada MAC + retransmissão).
+static void ack_hello(const pkt_event_t *evt) {
+    if (evt->pkt.flags & FLAG_IS_RELAY) return;
+    espnow_packet_t ack = {};
+    ack.version = PROTO_VERSION;
+    ack.type    = PKT_ACK;
+    ack.node_id = evt->pkt.node_id;
+    ack.seq     = evt->pkt.seq;
+    ack.ttl     = 0;   // relays não repassam
+    gw_espnow_send(&ack, evt->src_mac);
+}
 static QueueHandle_t s_pkt_queue = nullptr;
 static uint32_t s_queue_drops    = 0;
 static int64_t s_time_offset_s   = 0;
@@ -707,6 +720,7 @@ void loop(void) {
             case PKT_HELLO:
                 led_event_rx();
                 publish_hello(&evt.pkt);
+                ack_hello(&evt);
                 break;
             default:
                 ESP_LOGW(TAG, "Unhandled type=0x%02X node=0x%04X",

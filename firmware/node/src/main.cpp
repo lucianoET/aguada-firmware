@@ -15,6 +15,7 @@
 #include <esp_mac.h>
 #include <esp_timer.h>
 #include <esp_log.h>
+#include <esp_task_wdt.h>
 #include "protocol.h"
 #include "node_config.h"
 #include "nvs_config.h"
@@ -60,6 +61,34 @@
 #ifndef MIC_WS_PIN
 #define MIC_WS_PIN 21
 #endif
+// ── Robustez do nó ultrassônico ──────────────────────────────────────────────
+// Watchdog do loop: travou (NewPing, rádio, I2C) → reinicia sozinho.
+#ifndef LOOP_WDT_TIMEOUT_S
+#define LOOP_WDT_TIMEOUT_S 60
+#endif
+// Já entregou por unicast alguma vez e passou este tempo sem nenhuma entrega
+// confirmada → reinicia (rádio preso). 0 desativa.
+#ifndef LINK_LOSS_RESTART_S
+#define LINK_LOSS_RESTART_S (6UL * 3600UL)
+#endif
+// Sem gateway conhecido: HELLO periódico para o gateway responder com ACK.
+#ifndef GW_DISCOVER_S
+#define GW_DISCOVER_S 300
+#endif
+// Limite de "fonte baixa" em décimos de V (padrão = bateria 3,2 V; fonte 5 V → 45).
+#ifndef NODE_VBAT_LOW
+#define NODE_VBAT_LOW VBAT_LOW_THRESHOLD
+#endif
+// DS18B20 junto ao sensor para compensar a velocidade do som. -1 = sem sonda
+// (conversão fixa do NewPing, comportamento antigo).
+#ifndef US_TEMP_PIN
+#define US_TEMP_PIN -1
+#endif
+// Temperatura usada quando a sonda está configurada mas sem leitura recente.
+#ifndef US_TEMP_DEFAULT_C
+#define US_TEMP_DEFAULT_C 25.0f
+#endif
+#define US_TEMP_MAX_AGE_MS (10UL * 60UL * 1000UL)
 #include "rgb_led.h"
 #include <WebServer.h>
 #include <DNSServer.h>
@@ -83,6 +112,11 @@ static Co2Reading    g_last_co2   = {};   // SCD41 CO2 real (opcional)
 static CurrentReading g_last_ct   = {};   // TC da condensadora (opcional)
 static ProbeReading  g_last_probe[PROBE_COUNT] = {};   // sondas DS18B20 EXT / SUP
 static WebServer     g_httpd(80);
+
+static bool          g_ever_delivered    = false;   // já houve entrega unicast confirmada
+static uint32_t      g_last_delivered_ms = 0;
+static float         g_air_temp_c        = US_TEMP_DEFAULT_C;
+static uint32_t      g_air_temp_ms       = 0;       // 0 = nunca leu a sonda
 static DNSServer     g_dns;
 
 static void send_hello(bool from_button = false);
@@ -187,16 +221,15 @@ static void led_blink(int count, int ms) {
 
 static int8_t read_vbat(void) {
     if (!g_cfg.vbat_enabled) return -1;
-    // ADC 12-bit, Vref ~3.3V — average 8 samples for noise reduction
+    // ADC calibrado (mV) — média de 8 amostras para reduzir ruído
     // vbat_div=1: direct connection; vbat_div=2: equal-resistor voltage divider
     // 4 warm-up reads first: allows ADC sampling capacitor to charge fully,
     // critical when source impedance is high (e.g. 100k–1M resistor divider)
-    for (int i = 0; i < 4; i++) { analogRead(g_cfg.vbat_pin); delayMicroseconds(200); }
-    int sum = 0;
-    for (int i = 0; i < 8; i++) { sum += analogRead(g_cfg.vbat_pin); delayMicroseconds(200); }
-    float raw = sum / 8.0f;
+    for (int i = 0; i < 4; i++) { analogReadMilliVolts(g_cfg.vbat_pin); delayMicroseconds(200); }
+    uint32_t sum = 0;
+    for (int i = 0; i < 8; i++) { sum += analogReadMilliVolts(g_cfg.vbat_pin); delayMicroseconds(200); }
     float div = (float)(g_cfg.vbat_div > 0 ? g_cfg.vbat_div : 1);
-    float v = (raw / 4095.0f) * 3.3f * div;
+    float v = (sum / 8.0f) / 1000.0f * div;
     return (int8_t)roundf(v * 10.0f);  // tenths of V, rounded
 }
 
@@ -462,6 +495,15 @@ static void relay_aux_tick(void) {
 
 // ── Build & send a packet ─────────────────────────────────────────────────────
 
+// Envio dos pacotes do próprio nó: unicast ao gateway quando conhecido (com
+// fallback broadcast). O repasse de relay continua em broadcast (espnow_send).
+static void node_tx(const espnow_packet_t *pkt) {
+    if (espnow_send_gw(pkt)) {
+        g_ever_delivered    = true;
+        g_last_delivered_ms = millis();
+    }
+}
+
 static void send_packet(uint8_t type, uint8_t sensor_id, uint16_t distance_cm, uint8_t percent) {
     espnow_packet_t pkt = {};
     pkt.version     = PROTO_VERSION;
@@ -476,12 +518,12 @@ static void send_packet(uint8_t type, uint8_t sensor_id, uint16_t distance_cm, u
     pkt.flags       = 0;
     pkt.reserved    = percent;
 
-    if (pkt.vbat != -1 && pkt.vbat < VBAT_LOW_THRESHOLD)
+    if (pkt.vbat != -1 && pkt.vbat < NODE_VBAT_LOW)
         pkt.flags |= FLAG_LOW_BATTERY;
     if (distance_cm == DISTANCE_ERROR)
         pkt.flags |= FLAG_SENSOR_ERROR;
 
-    espnow_send(&pkt);
+    node_tx(&pkt);
 
     led_blink(1, 30);
     ESP_LOGI(TAG, "TX type=0x%02X sid=%d dist=%d seq=%d", type, sensor_id, distance_cm, pkt.seq - 1);
@@ -498,7 +540,7 @@ static void send_hello(bool from_button) {
     pkt.distance_cm = g_cfg.num_sensors;  // reuse field to carry num_sensors in HELLO
     pkt.vbat        = read_vbat();
     if (from_button) pkt.flags |= FLAG_BTN_HELLO;
-    espnow_send(&pkt);
+    node_tx(&pkt);
     ESP_LOGI(TAG, "TX HELLO node_id=0x%04X num_sensors=%d btn=%d", g_cfg.node_id, g_cfg.num_sensors, from_button);
 }
 
@@ -517,7 +559,7 @@ static void send_relay_env(float temp_c, float hum_pct) {
     float h = hum_pct < 0.0f ? 0.0f : hum_pct > 100.0f ? 100.0f : hum_pct;
     pkt.reserved    = (uint8_t)h;
     pkt.vbat        = read_vbat();
-    espnow_send(&pkt);
+    node_tx(&pkt);
     ESP_LOGI(TAG, "TX ENV T=%.1f H=%.0f enc=%u hum=%u", temp_c, hum_pct, pkt.distance_cm, pkt.reserved);
 }
 
@@ -526,6 +568,12 @@ static void send_relay_env(float temp_c, float hum_pct) {
 static void on_recv(const espnow_packet_t *pkt, const uint8_t *src_mac) {
     // Update neighbor table
     mesh_update_neighbor(pkt->node_id, src_mac, pkt->rssi, pkt->ttl);
+
+    // ACK direto do gateway ao nosso HELLO → aprende o MAC e passa a unicast
+    if (pkt->type == PKT_ACK && pkt->node_id == g_cfg.node_id && !(pkt->flags & FLAG_IS_RELAY)) {
+        espnow_set_gateway(src_mac);
+        return;
+    }
 
     // Commands addressed to us
     if (pkt->node_id == g_cfg.node_id || pkt->node_id == 0xFFFF) {
@@ -604,8 +652,7 @@ static void send_ext(uint8_t sid, bool valid, uint32_t value, uint8_t extra) {
     pkt.reserved    = valid ? extra : 0;
     pkt.vbat        = read_vbat();
     pkt.flags       = valid ? 0 : FLAG_SENSOR_ERROR;
-    esp_err_t err = espnow_send(&pkt);
-    if (err != ESP_OK) ESP_LOGW(TAG, "EXT TX sid=0x%02X falhou err=%d", sid, (int)err);
+    node_tx(&pkt);
     delay(20);   // espaçar a rajada: broadcast ESP-NOW não tem ACK nem fila grande
 }
 
@@ -691,7 +738,7 @@ static void ani_tick(void) {
             pkt.distance_cm = DISTANCE_ERROR;
             pkt.vbat        = read_vbat();
             pkt.flags       = FLAG_SENSOR_ERROR | FLAG_IS_AIR_QUALITY;
-            espnow_send(&pkt);
+            node_tx(&pkt);
         }
         return;
     }
@@ -712,7 +759,7 @@ static void ani_tick(void) {
         pkt.reserved    = r.aqi;
         pkt.vbat        = read_vbat();
         pkt.flags       = FLAG_IS_AIR_QUALITY;
-        espnow_send(&pkt);
+        node_tx(&pkt);
         ESP_LOGI(TAG, "ANI TX eco2=%uppm aqi=%u", r.eco2, r.aqi);
     }
 
@@ -761,6 +808,22 @@ static void sensor_tick(uint8_t idx) {
         g_last_sent_cm[idx] = DISTANCE_ERROR;
         return;
     }
+
+#if US_TEMP_PIN >= 0
+    // Velocidade do som pela temperatura do ar: c = 331,3 + 0,606·T m/s.
+    // Com sonda configurada a escala é sempre esta (sem leitura recente → US_TEMP_DEFAULT_C),
+    // para o nó não alternar entre duas conversões.
+    {
+        float t = (g_air_temp_ms && now - g_air_temp_ms < US_TEMP_MAX_AGE_MS)
+                  ? g_air_temp_c : US_TEMP_DEFAULT_C;
+        float c = 331.3f + 0.606f * t;
+        uint32_t cm = (uint32_t)lroundf((float)r.echo_us * c / 20000.0f);
+        if (cm < 2 || cm > HC_MAX_RANGE_CM) return;
+        ESP_LOGD(TAG, "S%d eco=%luus T=%.1fC %u→%lu cm", sid, (unsigned long)r.echo_us,
+                 t, r.distance_cm, (unsigned long)cm);
+        r.distance_cm = (uint16_t)cm;
+    }
+#endif
 
     // Layer 1-2: outlier rejection + moving average
     uint16_t filtered = filter_update(&g_filters[idx], r.distance_cm);
@@ -950,18 +1013,75 @@ void setup(void) {
                 ultrasonic_init(g_cfg.sensor[i].trig_pin, g_cfg.sensor[i].echo_pin);
                 ESP_LOGI(TAG, "  Sensor %d: TRIG=%d ECHO=%d", i+1,
                          g_cfg.sensor[i].trig_pin, g_cfg.sensor[i].echo_pin);
+                if (g_cfg.vbat_enabled && (g_cfg.vbat_pin == g_cfg.sensor[i].trig_pin ||
+                                           g_cfg.vbat_pin == g_cfg.sensor[i].echo_pin)) {
+                    ESP_LOGW(TAG, "vbat_pin=%d colide com o sensor %d: vbat desativado",
+                             g_cfg.vbat_pin, i + 1);
+                    g_cfg.vbat_enabled = false;
+                }
             }
         }
+#if US_TEMP_PIN >= 0
+        probe_init(US_TEMP_PIN, -1);   // DS18B20 do ar do reservatório na porta EXT
+#endif
         led_blink(2, 100);
     }
 
     // Announce on boot
     send_hello();
+
+    esp_task_wdt_config_t wdt = {};
+    wdt.timeout_ms    = LOOP_WDT_TIMEOUT_S * 1000;
+    wdt.trigger_panic = true;
+    if (esp_task_wdt_reconfigure(&wdt) != ESP_OK) esp_task_wdt_init(&wdt);
+    esp_task_wdt_add(NULL);
+    ESP_LOGI(TAG, "WDT %ds, gateway %s", LOOP_WDT_TIMEOUT_S,
+             espnow_gateway_known() ? "conhecido (unicast)" : "desconhecido (broadcast)");
 }
+
+// Sem gateway conhecido: HELLO periódico para receber o ACK. Rádio sem nenhuma
+// entrega confirmada por LINK_LOSS_RESTART_S (depois de já ter entregue) → reinicia.
+static void link_tick(void) {
+    static uint32_t last_discover_ms = 0;
+    uint32_t now = millis();
+
+    if (!espnow_gateway_known() && now - last_discover_ms >= GW_DISCOVER_S * 1000UL) {
+        last_discover_ms = now;
+        if (g_cfg.sensor_type != SENSOR_TYPE_AIR_QUALITY && g_cfg.num_sensors > 0)
+            send_hello();   // relay e ANI já mandam HELLO a cada 60 s
+    }
+
+#if LINK_LOSS_RESTART_S > 0
+    if (g_ever_delivered && now - g_last_delivered_ms >= LINK_LOSS_RESTART_S * 1000UL) {
+        ESP_LOGE(TAG, "sem entrega confirmada há %lus: reiniciando",
+                 (unsigned long)((now - g_last_delivered_ms) / 1000));
+        delay(100);
+        esp_restart();
+    }
+#endif
+}
+
+#if US_TEMP_PIN >= 0
+// Conversão não-bloqueante da DS18B20: cada chamada lê a anterior e pede a próxima.
+static void air_temp_tick(void) {
+    static uint32_t last_ms = 0;
+    uint32_t now = millis();
+    if (last_ms && now - last_ms < 10000) return;
+    last_ms = now;
+    probe_tick();
+    ProbeReading p = probe_get(PROBE_EXT);
+    if (p.valid) {
+        g_air_temp_c  = p.temp_c;
+        g_air_temp_ms = now ? now : 1;
+    }
+}
+#endif
 
 // ── Loop ──────────────────────────────────────────────────────────────────────
 
 void loop(void) {
+    esp_task_wdt_reset();
+    link_tick();
     // Handle deferred config save (cannot call NVS from ESP-NOW WiFi callback)
     if (g_config_save_pending) {
         g_config_save_pending = false;
@@ -978,6 +1098,9 @@ void loop(void) {
         ani_tick();
         relay_aux_tick();
     } else if (g_cfg.num_sensors > 0) {
+#if US_TEMP_PIN >= 0
+        air_temp_tick();
+#endif
         for (uint8_t i = 0; i < 2; i++) {
             sensor_tick(i);
         }

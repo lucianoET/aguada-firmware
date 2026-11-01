@@ -15,6 +15,7 @@ struct UltrasonicReading {
     uint16_t distance_cm;  // Distância em cm
     uint8_t percent;       // Percentual 0-100
     bool valid;            // Reading válido
+    uint32_t echo_us;      // Mediana do eco (ida e volta) — base da compensação de temperatura
 };
 
 // ────────────────────────────────────────────────────────────────────────────
