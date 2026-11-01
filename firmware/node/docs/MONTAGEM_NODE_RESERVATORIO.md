@@ -42,7 +42,7 @@ Firmware: env **`node-c3-ch11`** (ESP-NOW canal 11). Tempo de bancada: ~1 h.
 | **G1** | monitor 5 V | nó R3/R4 + C3 | marrom |
 | **G10** | 1-Wire | DS18B20 DQ (amarelo) + R5 para 3V3 | ciano |
 | G2, G8, G9 | — | **não usar** (pinos de boot; G8 = LED da placa) | |
-| G0, G5–G7, G20, G21 | — | livres | |
+| G0, G5–G7, G20, G21 | — | reservados: microfone (G0), I2C/OLED (G6/G7), relés (G5/G21), botão (G20) — ver [node_pinout.md](../node_pinout.md) | |
 
 **Por que o divisor no ECHO:** o sensor alimentado em 5 V devolve um pulso de 5 V, e o C3 só
 aguenta 3,6 V nas entradas. Sem o divisor o pino queima — já aconteceu no nó CON (G0).

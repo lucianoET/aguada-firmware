@@ -76,6 +76,24 @@ C3 G4 ──1k──┬───── ECHO
 O nó envia por **unicast** ao gateway depois de receber o ACK do HELLO (gateway com
 firmware novo) ou com `-DDEFAULT_GATEWAY_MAC`; sem isso, broadcast como antes.
 
+#### Reserva de pinos (expansão — ainda sem firmware)
+
+| GPIO | Reserva | Observação |
+|------|---------|------------|
+| **0** | Microfone analógico (ADC1_CH0) | MAX9814/MAX4466 em 3V3 (saída ~1,6 V de bias). Detecta água entrando pelo ruído: envelope/RMS vs. nível de fundo. ADC1 funciona com o rádio ligado |
+| 1 | Fonte 5 V | já em uso |
+| **2** | Entrada (PB), só com pull-up 10k externo | **strapping**: tem de estar em nível alto no boot — nada que puxe para GND ao ligar |
+| 3 / 4 | Ultrassom TRIG / ECHO | já em uso |
+| **5** | Saída: **relé 1** | sem strapping; é ADC2 (inútil com rádio), mas como digital é o pino mais seguro para saída |
+| **6 / 7** | **I2C SDA / SCL** | sensores + OLED SSD1306 (0x3C). Endereços sem conflito: AHT21 0x38, ENS160 0x53, SCD41 0x62, BH1750 0x23. Pull-up 4k7 se o módulo não tiver |
+| 8 | LED da placa | strapping; manter só como LED de status |
+| **9** | Entrada: **PB1** = botão BOOT da placa | strapping, mas o botão já existe; vale como botão depois do boot |
+| 10 | 1-Wire (DS18B20) | já em uso |
+| **20** | Entrada: **PB2** (pull-up interno) | U0RXD, livre (log vai pela USB) |
+| **21** | Saída: **relé 2** | U0TXD: a ROM transmite no boot e o relé pode dar um pulso. Só para carga não crítica |
+
+Relé: módulo com transistor/optoacoplador acionado por 3,3 V, bobina no 5 V. Botões: GPIO → botão → GND.
+
 ---
 
 ### Modo ULTRASONIC — 2 sensores
