@@ -50,6 +50,8 @@ ESP32-C3          HC-SR04
 
 ### Nó reservatório padrão — env `node-c3-ch11` (fonte 5 V)
 
+Manual completo de montagem: [docs/MONTAGEM_NODE_RESERVATORIO.md](docs/MONTAGEM_NODE_RESERVATORIO.md).
+
 | Sinal | GPIO | Ligação |
 |-------|------|---------|
 | TRIG | **3** | TRIG do sensor |

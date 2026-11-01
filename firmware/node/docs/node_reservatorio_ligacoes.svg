@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 800" width="960" height="800"><title>Nó reservatório Aguada — ligações</title>
+<rect width="960" height="800" fill="#fbfcfb"/>
+<text x="24" y="34" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#14201b" text-anchor="start">Nó reservatório Aguada — ligações (env node-c3-ch11)</text>
+<text x="24" y="56" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#5a6b64" text-anchor="start">ESP32-C3 SuperMini visto por cima (componentes para cima, USB-C no topo). Confira a serigrafia da sua placa.</text>
+<rect x="455" y="78" width="60" height="30" rx="5" fill="#9aa3a8" stroke="none" stroke-width="1.5"/>
+<text x="485" y="98" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">USB-C</text>
+<rect x="400" y="100" width="170" height="404" rx="10" fill="#1d3b5c" stroke="none" stroke-width="1.5"/>
+<text x="485.0" y="314" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">ESP32-C3</text>
+<text x="485.0" y="334" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#cfe0ee" text-anchor="middle">SuperMini</text>
+<rect x="450" y="436" width="70" height="46" rx="4" fill="#2c557f" stroke="none" stroke-width="1.5"/>
+<text x="485" y="464" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#cfe0ee" text-anchor="middle">antena</text>
+<circle cx="400" cy="140" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="145" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">5V</text>
+<circle cx="400" cy="186" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="191" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">GND</text>
+<circle cx="400" cy="232" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="237" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">3V3</text>
+<circle cx="400" cy="278" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="283" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">G4</text>
+<circle cx="400" cy="324" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="329" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">G3</text>
+<circle cx="400" cy="370" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="375" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">G2</text>
+<circle cx="400" cy="416" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="421" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">G1</text>
+<circle cx="400" cy="462" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="467" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">G0</text>
+<circle cx="570" cy="140" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="145" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G5</text>
+<circle cx="570" cy="186" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="191" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G6</text>
+<circle cx="570" cy="232" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="237" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G7</text>
+<circle cx="570" cy="278" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="283" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G8</text>
+<circle cx="570" cy="324" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="329" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G9</text>
+<circle cx="570" cy="370" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="375" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G10</text>
+<circle cx="570" cy="416" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="421" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G20</text>
+<circle cx="570" cy="462" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="467" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G21</text>
+<path d="M393,140 L360,140" fill="none" stroke="#d6332a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="120" width="336" height="40" rx="6" fill="#fff" stroke="#d6332a" stroke-width="2"/>
+<text x="34" y="137" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">5V  ← Fonte + (5 V DC)</text>
+<text x="34" y="153" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">também: sensor VCC · R3 200k · C1 470µF</text>
+<path d="M393,186 L360,186" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="166" width="336" height="40" rx="6" fill="#fff" stroke="#1c1f23" stroke-width="2"/>
+<text x="34" y="183" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">GND ← Fonte −</text>
+<text x="34" y="199" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">também: sensor GND · R2 · R4 · DS18B20 GND</text>
+<path d="M393,232 L360,232" fill="none" stroke="#e0661a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="212" width="336" height="40" rx="6" fill="#fff" stroke="#e0661a" stroke-width="2"/>
+<text x="34" y="229" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">3V3 → DS18B20 VDD</text>
+<text x="34" y="245" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">e pull-up R5 4k7 (saída, não alimentar aqui)</text>
+<path d="M393,278 L360,278" fill="none" stroke="#1a9a52" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="258" width="336" height="40" rx="6" fill="#fff" stroke="#1a9a52" stroke-width="2"/>
+<text x="34" y="275" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">ECHO ← nó do divisor R1/R2</text>
+<text x="34" y="291" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">NUNCA ligar o ECHO de 5 V direto</text>
+<path d="M393,324 L360,324" fill="none" stroke="#1f6fd1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="304" width="336" height="40" rx="6" fill="#fff" stroke="#1f6fd1" stroke-width="2"/>
+<text x="34" y="321" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">TRIG → sensor TRIG</text>
+<text x="34" y="337" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">direto (3,3 V basta para o sensor)</text>
+<text x="386" y="375" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="end">não usar (boot)</text>
+<path d="M393,416 L360,416" fill="none" stroke="#9a5b2e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="396" width="336" height="40" rx="6" fill="#fff" stroke="#9a5b2e" stroke-width="2"/>
+<text x="34" y="413" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">MON 5V ← nó do divisor R3/R4</text>
+<text x="34" y="429" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">leitura da fonte (÷3)</text>
+<text x="386" y="467" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="end">livre</text>
+<text x="584" y="283" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">LED — não usar</text>
+<text x="584" y="329" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">BOOT — não usar</text>
+<path d="M577,370 L610,370" fill="none" stroke="#0d8c8c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="610" y="350" width="326" height="40" rx="6" fill="#fff" stroke="#0d8c8c" stroke-width="2"/>
+<text x="620" y="367" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">G10 ↔ DS18B20 DQ (amarelo)</text>
+<text x="620" y="383" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">opcional · pull-up R5 4k7 para 3V3</text>
+<rect x="24" y="560" width="290" height="220" rx="10" fill="#f3f6f4" stroke="#d5ddd8" stroke-width="1.5"/>
+<text x="38" y="584" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#14201b" text-anchor="start">1 · Divisor do ECHO (5 V → 3,3 V)</text>
+<text x="110" y="612" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#1a9a52" text-anchor="middle">sensor ECHO</text>
+<path d="M110,620 L110,630" fill="none" stroke="#1a9a52" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M110,630 L110,642.0" fill="none" stroke="#1a9a52" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M110,678.0 L110,690" fill="none" stroke="#1a9a52" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="102" y="642.0" width="16" height="36" rx="2" fill="#fff" stroke="#14201b" stroke-width="1.5"/>
+<text x="126" y="665.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">R1 1k</text>
+<circle cx="110" cy="690" r="4.5" fill="#1a9a52"/>
+<path d="M110,690 L250,690" fill="none" stroke="#1a9a52" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="258" y="695" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">G4</text>
+<path d="M110,690 L110,702.0" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M110,738.0 L110,750" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="102" y="702.0" width="16" height="36" rx="2" fill="#fff" stroke="#14201b" stroke-width="1.5"/>
+<text x="126" y="725.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">R2 2k</text>
+<path d="M98,750 L122,750" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M103,755 L117,755" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M107,760 L113,760" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="170" y="725" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">2k = 2× 1k em série</text>
+<text x="170" y="740" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">5 V × 2/3 = 3,3 V</text>
+<rect x="330" y="560" width="290" height="220" rx="10" fill="#f3f6f4" stroke="#d5ddd8" stroke-width="1.5"/>
+<text x="344" y="584" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#14201b" text-anchor="start">2 · Monitor da fonte 5 V (G1)</text>
+<text x="416" y="612" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#d6332a" text-anchor="middle">5V</text>
+<path d="M416,620 L416,630" fill="none" stroke="#d6332a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M416,630 L416,642.0" fill="none" stroke="#d6332a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M416,678.0 L416,690" fill="none" stroke="#d6332a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="408" y="642.0" width="16" height="36" rx="2" fill="#fff" stroke="#14201b" stroke-width="1.5"/>
+<text x="432" y="665.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">R3 200k</text>
+<circle cx="416" cy="690" r="4.5" fill="#9a5b2e"/>
+<path d="M416,690 L556,690" fill="none" stroke="#9a5b2e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="564" y="695" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">G1</text>
+<path d="M416,690 L416,702.0" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M416,738.0 L416,750" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="408" y="702.0" width="16" height="36" rx="2" fill="#fff" stroke="#14201b" stroke-width="1.5"/>
+<text x="432" y="725.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">R4 100k</text>
+<path d="M404,750 L428,750" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M409,755 L423,755" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M413,760 L419,760" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M500,690 L500,720" fill="none" stroke="#9a5b2e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M490,720 L510,720" fill="none" stroke="#14201b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M490,727 L510,727" fill="none" stroke="#14201b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M500,727 L500,750" fill="none" stroke="#1c1f23" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M488,750 L512,750" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M493,755 L507,755" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M497,760 L503,760" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="518" y="728" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">C3 100nF</text>
+<rect x="636" y="560" width="300" height="220" rx="10" fill="#f3f6f4" stroke="#d5ddd8" stroke-width="1.5"/>
+<text x="650" y="584" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#14201b" text-anchor="start">3 · Sonda DS18B20 (opcional)</text>
+<text x="700" y="612" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#e0661a" text-anchor="middle">3V3</text>
+<path d="M700,620 L700,630" fill="none" stroke="#e0661a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M700,630 L700,642.0" fill="none" stroke="#e0661a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M700,678.0 L700,690" fill="none" stroke="#e0661a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="692" y="642.0" width="16" height="36" rx="2" fill="#fff" stroke="#14201b" stroke-width="1.5"/>
+<text x="716" y="665.0" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">R5 4k7</text>
+<circle cx="700" cy="690" r="4.5" fill="#0d8c8c"/>
+<path d="M700,690 L900,690" fill="none" stroke="#0d8c8c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="860" y="682" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">G10</text>
+<path d="M700,690 L700,725" fill="none" stroke="#0d8c8c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="666" y="725" width="68" height="30" rx="4" fill="#2a2f33" stroke="none" stroke-width="1.5"/>
+<text x="700" y="745" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">DS18B20</text>
+<text x="784" y="720" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#d6332a" text-anchor="start">vermelho → 3V3</text>
+<text x="784" y="736" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#1c1f23" text-anchor="start">preto → GND</text>
+<text x="784" y="752" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#0d8c8c" text-anchor="start">amarelo → DQ / G10</text>
+<text x="784" y="768" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">sonda no ar da caixa</text>
+</svg>
