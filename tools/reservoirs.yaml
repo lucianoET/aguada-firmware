@@ -82,6 +82,15 @@ reservoirs:
       lat: -22.8453873
       lng: -43.1004756
 
+  # Bancada lucmac: nó reservatório node-c3-ch11 (MAC A4:CB:8F:21:53:08). Remover ao instalar.
+  "0X5308":
+    - sensor_id: 1
+      alias: BANC
+      name: Bancada (teste)
+      level_max_cm: 100
+      volume_max_L: 1000
+      sensor_offset_cm: 20
+
   # ── ANI-01 nodes (Aguada Node Indoor — qualidade do ar) ─────────────────────
   # type: air_quality → bridge usa eco2/aqi, sem cálculo de nível/volume.
   # Pacote 2 (SENSOR_ID_ENV=0xFE) com temp+hum é tratado automaticamente
