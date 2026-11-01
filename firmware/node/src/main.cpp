@@ -634,13 +634,20 @@ static void on_recv(const espnow_packet_t *pkt, const uint8_t *src_mac) {
 // Envia um canal extra AirQ/AC (SENSOR_ID_0xF0..0xF6) como HEARTBEAT.
 // Canal nunca visto e sem leitura → não envia (a bridge só cria a entidade no HA
 // quando o periférico existe). Canal já visto que deixa de ler → DISTANCE_ERROR.
+static void send_ext_pkt(uint8_t sid, bool valid, uint32_t value, uint8_t extra);
+
 static void send_ext(uint8_t sid, bool valid, uint32_t value, uint8_t extra) {
     static bool seen[8] = {};
     uint8_t idx = (uint8_t)(sid - SENSOR_ID_CO2);
     if (idx >= 8) return;
     if (!valid && !seen[idx]) return;
     if (valid) seen[idx] = true;
+    send_ext_pkt(sid, valid, value, extra);
+}
 
+// Sem o filtro "só depois da 1ª leitura válida": o erro chega ao servidor mesmo
+// quando a sonda nunca respondeu (sonda ausente/mal ligada vira diagnóstico).
+static void send_ext_pkt(uint8_t sid, bool valid, uint32_t value, uint8_t extra) {
     espnow_packet_t pkt = {};
     pkt.version     = PROTO_VERSION;
     pkt.type        = PKT_HEARTBEAT;
@@ -857,6 +864,11 @@ static void heartbeat_tick(void) {
         if (g_last_sent_cm[i] == DISTANCE_ERROR) continue; // no valid reading yet
         send_packet(PKT_HEARTBEAT, i + 1, g_last_sent_cm[i], 0);
     }
+#if US_TEMP_PIN >= 0
+    // Temperatura do ar da compensação, no canal extra T_EXT (mesma codificação do AirQ).
+    bool t_ok = g_air_temp_ms && now - g_air_temp_ms < US_TEMP_MAX_AGE_MS;
+    send_ext_pkt(SENSOR_ID_T_EXT, t_ok, temp_enc(g_air_temp_c), 0);
+#endif
 }
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
