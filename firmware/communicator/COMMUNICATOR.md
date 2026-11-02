@@ -4,6 +4,11 @@ Node de comunicação do Aguada: microfone para voz (anúncios e discursos), alt
 saída de linha para os amplificadores, OLED, botões de alarme e sirene. Um firmware para
 todas as montagens; cada periférico é opcional e detectado no boot.
 
+**Manuais:** [montagem](docs/MONTAGEM_COMMUNICATOR_C3.md) ·
+[usuário](docs/MANUAL_USUARIO_COMMUNICATOR.md) · diagrama
+[docs/communicator_c3_ligacoes.svg](docs/communicator_c3_ligacoes.svg)
+(gerado por `docs/wiring_src/communicator.py`).
+
 Base reaproveitada: `DEV_luctronics/luctronics_firmware/fonoclama/slave_wifi` (I2S de saída,
 OLED, MQTT/HA, captive portal) e o esboço `xFonoclama/esp32_warning_system.tsx`.
 

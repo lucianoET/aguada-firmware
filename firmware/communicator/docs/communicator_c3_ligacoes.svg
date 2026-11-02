@@ -1,0 +1,245 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 1060" width="960" height="1060"><title>Communicator C3 Aguada — ligações</title>
+<rect width="960" height="1060" fill="#fbfcfb"/>
+<text x="24" y="34" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#14201b" text-anchor="start">Communicator C3 Aguada — ligações (env communicator_c3)</text>
+<text x="24" y="56" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#5a6b64" text-anchor="start">ESP32-C3 SuperMini visto por cima (componentes para cima, USB-C no topo). Confira a serigrafia da sua placa.</text>
+<rect x="455" y="78" width="60" height="30" rx="5" fill="#9aa3a8" stroke="none" stroke-width="1.5"/>
+<text x="485" y="98" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">USB-C</text>
+<rect x="400" y="100" width="170" height="404" rx="10" fill="#1d3b5c" stroke="none" stroke-width="1.5"/>
+<text x="485.0" y="314" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#fff" text-anchor="middle">ESP32-C3</text>
+<text x="485.0" y="334" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="400" fill="#cfe0ee" text-anchor="middle">SuperMini</text>
+<rect x="450" y="436" width="70" height="46" rx="4" fill="#2c557f" stroke="none" stroke-width="1.5"/>
+<text x="485" y="464" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#cfe0ee" text-anchor="middle">antena</text>
+<circle cx="400" cy="140" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="145" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">5V</text>
+<circle cx="400" cy="186" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="191" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">GND</text>
+<circle cx="400" cy="232" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="237" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">3V3</text>
+<circle cx="400" cy="278" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="283" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">G4</text>
+<circle cx="400" cy="324" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="329" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">G3</text>
+<circle cx="400" cy="370" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="375" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">G2</text>
+<circle cx="400" cy="416" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="421" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">G1</text>
+<circle cx="400" cy="462" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="414" y="467" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="start">G0</text>
+<circle cx="570" cy="140" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="145" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G5</text>
+<circle cx="570" cy="186" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="191" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G6</text>
+<circle cx="570" cy="232" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="237" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G7</text>
+<circle cx="570" cy="278" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="283" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G8</text>
+<circle cx="570" cy="324" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="329" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G9</text>
+<circle cx="570" cy="370" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="375" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G10</text>
+<circle cx="570" cy="416" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="421" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G20</text>
+<circle cx="570" cy="462" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>
+<text x="556" y="467" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#fff" text-anchor="end">G21</text>
+<path d="M393,140 L360,140" fill="none" stroke="#d6332a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="120" width="336" height="40" rx="6" fill="#fff" stroke="#d6332a" stroke-width="2"/>
+<text x="34" y="137" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">5V  ← Fonte + (5 V DC, ≥ 2 A)</text>
+<text x="34" y="153" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">também: VIN do MAX98357A / PCM5102A</text>
+<path d="M393,186 L360,186" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="166" width="336" height="40" rx="6" fill="#fff" stroke="#1c1f23" stroke-width="2"/>
+<text x="34" y="183" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">GND ← Fonte − (comum a tudo)</text>
+<text x="34" y="199" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">mic · amp · OLED · botões · GND dos 12 V</text>
+<path d="M393,232 L360,232" fill="none" stroke="#e0661a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="212" width="336" height="40" rx="6" fill="#fff" stroke="#e0661a" stroke-width="2"/>
+<text x="34" y="229" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">3V3 → INMP441 VDD · OLED VCC</text>
+<text x="34" y="245" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">saída 3,3 V (+ SD_MODE / XMT do amp)</text>
+<path d="M393,278 L360,278" fill="none" stroke="#1f6fd1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="258" width="336" height="40" rx="6" fill="#fff" stroke="#1f6fd1" stroke-width="2"/>
+<text x="34" y="275" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">BCLK → amp BCLK + mic SCK</text>
+<text x="34" y="291" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">I2S: um fio que se divide</text>
+<path d="M393,324 L360,324" fill="none" stroke="#1a9a52" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="304" width="336" height="40" rx="6" fill="#fff" stroke="#1a9a52" stroke-width="2"/>
+<text x="34" y="321" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">DOUT → amp DIN</text>
+<text x="34" y="337" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">MAX98357A ou PCM5102A</text>
+<text x="386" y="375" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="end">livre (pino de boot)</text>
+<path d="M393,416 L360,416" fill="none" stroke="#c27c0e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="396" width="336" height="40" rx="6" fill="#fff" stroke="#c27c0e" stroke-width="2"/>
+<text x="34" y="413" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">PTT ← botão ao GND</text>
+<text x="34" y="429" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">segurar para falar</text>
+<path d="M393,462 L360,462" fill="none" stroke="#c27c0e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="24" y="442" width="336" height="40" rx="6" fill="#fff" stroke="#c27c0e" stroke-width="2"/>
+<text x="34" y="459" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">ALARME ← botão ao GND</text>
+<text x="34" y="475" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">1 s dispara · 3 s cancela</text>
+<path d="M577,140 L610,140" fill="none" stroke="#7b4fc9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="610" y="120" width="326" height="40" rx="6" fill="#fff" stroke="#7b4fc9" stroke-width="2"/>
+<text x="620" y="137" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">WS → amp LRC + mic WS</text>
+<text x="620" y="153" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">I2S: um fio que se divide</text>
+<path d="M577,186 L610,186" fill="none" stroke="#8a5cb8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="610" y="166" width="326" height="40" rx="6" fill="#fff" stroke="#8a5cb8" stroke-width="2"/>
+<text x="620" y="183" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">SDA ↔ OLED SDA</text>
+<text x="620" y="199" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">SSD1306 0x3C</text>
+<path d="M577,232 L610,232" fill="none" stroke="#8a5cb8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="610" y="212" width="326" height="40" rx="6" fill="#fff" stroke="#8a5cb8" stroke-width="2"/>
+<text x="620" y="229" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">SCL → OLED SCL</text>
+<text x="620" y="245" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start"></text>
+<text x="584" y="283" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">LED da placa (no ar)</text>
+<text x="584" y="329" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">BOOT = botão VOLUME</text>
+<path d="M577,370 L610,370" fill="none" stroke="#0d8c8c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="610" y="350" width="326" height="40" rx="6" fill="#fff" stroke="#0d8c8c" stroke-width="2"/>
+<text x="620" y="367" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">DIN ← mic SD</text>
+<text x="620" y="383" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">INMP441 (sem mic: detectado)</text>
+<path d="M577,416 L610,416" fill="none" stroke="#b3261e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="610" y="396" width="326" height="40" rx="6" fill="#fff" stroke="#b3261e" stroke-width="2"/>
+<text x="620" y="413" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">SIRENE → gate do MOSFET</text>
+<text x="620" y="429" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">100 Ω série · 10k ao GND</text>
+<text x="584" y="467" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">livre (pulsa no boot)</text>
+<rect x="24" y="540" width="296" height="250" rx="10" fill="#f3f6f4" stroke="#d5ddd8" stroke-width="1.5"/>
+<text x="38" y="564" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#14201b" text-anchor="start">1 · Microfone INMP441</text>
+<rect x="44" y="580" width="256" height="26" rx="5" fill="#2a2f33" stroke="none" stroke-width="1.5"/>
+<text x="172.0" y="598" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">INMP441</text>
+<text x="52" y="626" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">VDD</text>
+<path d="M118,622 L148,622" fill="none" stroke="#e0661a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="154" y="626" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#e0661a" text-anchor="start">3V3</text>
+<text x="52" y="646" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">GND</text>
+<path d="M118,642 L148,642" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="154" y="646" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#1c1f23" text-anchor="start">GND</text>
+<text x="52" y="666" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">L/R</text>
+<path d="M118,662 L148,662" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="154" y="666" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#1c1f23" text-anchor="start">GND (canal esq.)</text>
+<text x="52" y="686" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">SCK</text>
+<path d="M118,682 L148,682" fill="none" stroke="#1f6fd1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="154" y="686" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#1f6fd1" text-anchor="start">G4  BCLK</text>
+<text x="52" y="706" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">WS</text>
+<path d="M118,702 L148,702" fill="none" stroke="#7b4fc9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="154" y="706" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#7b4fc9" text-anchor="start">G5  WS</text>
+<text x="52" y="726" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">SD</text>
+<path d="M118,722 L148,722" fill="none" stroke="#0d8c8c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="154" y="726" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#0d8c8c" text-anchor="start">G10 DIN</text>
+<text x="44" y="778" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">furo do mic para fora · fios &lt; 20 cm</text>
+<rect x="340" y="540" width="596" height="250" rx="10" fill="#f3f6f4" stroke="#d5ddd8" stroke-width="1.5"/>
+<text x="354" y="564" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#14201b" text-anchor="start">2 · Saída de áudio — escolha um módulo (mesmo firmware)</text>
+<rect x="360" y="580" width="270" height="26" rx="5" fill="#2a2f33" stroke="none" stroke-width="1.5"/>
+<text x="495.0" y="598" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">MAX98357A → alto-falante</text>
+<text x="368" y="626" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">VIN</text>
+<path d="M434,622 L464,622" fill="none" stroke="#d6332a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="470" y="626" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#d6332a" text-anchor="start">5V</text>
+<text x="368" y="646" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">GND</text>
+<path d="M434,642 L464,642" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="470" y="646" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#1c1f23" text-anchor="start">GND</text>
+<text x="368" y="666" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">SD</text>
+<path d="M434,662 L464,662" fill="none" stroke="#e0661a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="470" y="666" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#e0661a" text-anchor="start">3V3 (liga o amp)</text>
+<text x="368" y="686" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">GAIN</text>
+<path d="M434,682 L464,682" fill="none" stroke="#a3ada8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="470" y="686" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#5a6b64" text-anchor="start">solto (9 dB)</text>
+<text x="368" y="706" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">BCLK</text>
+<path d="M434,702 L464,702" fill="none" stroke="#1f6fd1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="470" y="706" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#1f6fd1" text-anchor="start">G4</text>
+<text x="368" y="726" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">LRC</text>
+<path d="M434,722 L464,722" fill="none" stroke="#7b4fc9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="470" y="726" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#7b4fc9" text-anchor="start">G5</text>
+<text x="368" y="746" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">DIN</text>
+<path d="M434,742 L464,742" fill="none" stroke="#1a9a52" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="470" y="746" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#1a9a52" text-anchor="start">G3</text>
+<text x="360" y="778" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">falante 4–8 Ω, ≤ 3 W nos bornes + / −</text>
+<text x="645" y="670" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="700" fill="#5a6b64" text-anchor="middle">ou</text>
+<rect x="660" y="580" width="260" height="26" rx="5" fill="#2a2f33" stroke="none" stroke-width="1.5"/>
+<text x="790.0" y="598" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">PCM5102A → amplificador</text>
+<text x="668" y="626" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">VIN</text>
+<path d="M734,622 L764,622" fill="none" stroke="#d6332a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="770" y="626" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#d6332a" text-anchor="start">5V</text>
+<text x="668" y="646" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">GND</text>
+<path d="M734,642 L764,642" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="770" y="646" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#1c1f23" text-anchor="start">GND</text>
+<text x="668" y="666" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">SCK</text>
+<path d="M734,662 L764,662" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="770" y="666" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#1c1f23" text-anchor="start">GND (PLL interno)</text>
+<text x="668" y="686" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">BCK</text>
+<path d="M734,682 L764,682" fill="none" stroke="#1f6fd1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="770" y="686" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#1f6fd1" text-anchor="start">G4</text>
+<text x="668" y="706" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">LCK</text>
+<path d="M734,702 L764,702" fill="none" stroke="#7b4fc9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="770" y="706" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#7b4fc9" text-anchor="start">G5</text>
+<text x="668" y="726" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">DIN</text>
+<path d="M734,722 L764,722" fill="none" stroke="#1a9a52" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="770" y="726" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#1a9a52" text-anchor="start">G3</text>
+<text x="668" y="746" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">XMT</text>
+<path d="M734,742 L764,742" fill="none" stroke="#e0661a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="770" y="746" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#e0661a" text-anchor="start">3V3 (sem: mudo)</text>
+<text x="660" y="778" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">FMT · FLT · DEMP → GND · jack → AUX</text>
+<rect x="24" y="810" width="296" height="230" rx="10" fill="#f3f6f4" stroke="#d5ddd8" stroke-width="1.5"/>
+<text x="38" y="834" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#14201b" text-anchor="start">3 · Botões</text>
+<text x="44" y="881" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">G1</text>
+<path d="M76,876 L140,876" fill="none" stroke="#c27c0e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M140,876 L160,862" fill="none" stroke="#14201b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="140" cy="876" r="4.5" fill="#14201b"/>
+<circle cx="166" cy="876" r="4.5" fill="#14201b"/>
+<path d="M166,876 L196,876" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M184,878 L208,878" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M189,883 L203,883" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M193,888 L199,888" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="222" y="876" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">PTT</text>
+<text x="222" y="892" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">botão grande, NA</text>
+<text x="44" y="951" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">G0</text>
+<path d="M76,946 L140,946" fill="none" stroke="#c27c0e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M140,946 L160,932" fill="none" stroke="#14201b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="140" cy="946" r="4.5" fill="#14201b"/>
+<circle cx="166" cy="946" r="4.5" fill="#14201b"/>
+<path d="M166,946 L196,946" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M184,948 L208,948" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M189,953 L203,953" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M193,958 L199,958" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="222" y="946" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">ALARME</text>
+<text x="222" y="962" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">vermelho / cogumelo</text>
+<text x="44" y="1020" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">VOLUME = botão BOOT da placa (G9)</text>
+<rect x="340" y="810" width="316" height="230" rx="10" fill="#f3f6f4" stroke="#d5ddd8" stroke-width="1.5"/>
+<text x="354" y="834" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#14201b" text-anchor="start">4 · Sirene 12 V (MOSFET low-side)</text>
+<text x="520" y="860" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#d6332a" text-anchor="middle">+12 V</text>
+<path d="M520,866 L520,882" fill="none" stroke="#d6332a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="486" y="882" width="68" height="30" rx="4" fill="#2a2f33" stroke="none" stroke-width="1.5"/>
+<text x="520" y="902" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">SIRENE</text>
+<path d="M520,912 L520,950" fill="none" stroke="#b3261e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="566" y="902" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">1N4007 em paralelo</text>
+<text x="566" y="916" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">(cátodo no +12 V)</text>
+<rect x="498" y="950" width="44" height="44" rx="4" fill="#fff" stroke="#14201b" stroke-width="1.5"/>
+<text x="520" y="970" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#14201b" text-anchor="middle">MOS</text>
+<text x="520" y="985" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#14201b" text-anchor="middle">FET</text>
+<path d="M520,994 L520,1010" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M508,1010 L532,1010" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M513,1015 L527,1015" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M517,1020 L523,1020" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="550" y="968" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">IRLZ44N / AO3400</text>
+<text x="550" y="982" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">(logic-level)</text>
+<text x="360" y="976" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">G20</text>
+<path d="M392,972 L420,972" fill="none" stroke="#b3261e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="420" y="965" width="30" height="14" rx="2" fill="#fff" stroke="#14201b" stroke-width="1.5"/>
+<text x="435" y="960" font-family="Arial,Helvetica,sans-serif" font-size="10" font-weight="700" fill="#14201b" text-anchor="middle">100 Ω</text>
+<path d="M450,972 L498,972" fill="none" stroke="#b3261e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="470" cy="972" r="4.5" fill="#b3261e"/>
+<path d="M470,972 L470,980.0" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M470,1012.0 L470,1020" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="463" y="980.0" width="14" height="32" rx="2" fill="#fff" stroke="#14201b" stroke-width="1.5"/>
+<text x="483" y="1001.0" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#14201b" text-anchor="start"></text>
+<text x="380" y="1006" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">10k → GND</text>
+<path d="M458,1020 L482,1020" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M463,1025 L477,1025" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M467,1030 L473,1030" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="676" y="810" width="260" height="230" rx="10" fill="#f3f6f4" stroke="#d5ddd8" stroke-width="1.5"/>
+<text x="690" y="834" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#14201b" text-anchor="start">5 · OLED SSD1306 128×64</text>
+<rect x="696" y="850" width="220" height="26" rx="5" fill="#2a2f33" stroke="none" stroke-width="1.5"/>
+<text x="806.0" y="868" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">OLED I2C 0x3C</text>
+<text x="704" y="896" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">VCC</text>
+<path d="M770,892 L800,892" fill="none" stroke="#e0661a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="806" y="896" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#e0661a" text-anchor="start">3V3</text>
+<text x="704" y="916" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">GND</text>
+<path d="M770,912 L800,912" fill="none" stroke="#1c1f23" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="806" y="916" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#1c1f23" text-anchor="start">GND</text>
+<text x="704" y="936" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">SDA</text>
+<path d="M770,932 L800,932" fill="none" stroke="#8a5cb8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="806" y="936" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#8a5cb8" text-anchor="start">G6</text>
+<text x="704" y="956" font-family="DejaVu Sans Mono,Consolas,monospace" font-size="11" font-weight="700" fill="#14201b" text-anchor="start">SCL</text>
+<path d="M770,952 L800,952" fill="none" stroke="#8a5cb8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="806" y="956" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#8a5cb8" text-anchor="start">G7</text>
+<text x="696" y="1010" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">opcional: sem OLED o node</text>
+<text x="696" y="1024" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">funciona igual</text>
+</svg>
