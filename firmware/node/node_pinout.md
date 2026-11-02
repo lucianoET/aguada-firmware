@@ -59,6 +59,7 @@ O env antigo `node-c3-ch11` é o mesmo firmware.
 | ECHO | **4** | ECHO → **1k série + 2k ao GND** (5 V → 3,3 V) |
 | Fonte 5 V | **1** (ADC1) | 200k → G1 → 100k → GND (`vbat_div=3`, alerta < 4,5 V) |
 | DS18B20 | **10** | DQ + pull-up 4k7 → 3V3 (opcional, compensa temperatura) |
+| Temperatura I2C | **6 / 7** | HTU21D/HD21D (0x40) ou SHT3x (0x44), opcional; prioridade sobre a DS18B20 |
 
 Sensor (HC-SR04 ou JSN-SR04T à prova d'água) em **5 V**. C3 pelo pino 5V; 470 µF + 100 nF
 junto ao C3 e 100 µF junto ao sensor. Nunca ECHO de 5 V direto no GPIO (danificou G0 do CON).
@@ -86,7 +87,7 @@ firmware novo) ou com `-DDEFAULT_GATEWAY_MAC`; sem isso, broadcast como antes.
 | **2** | Entrada (PB), só com pull-up 10k externo | **strapping**: tem de estar em nível alto no boot — nada que puxe para GND ao ligar |
 | 3 / 4 | Ultrassom TRIG / ECHO | já em uso |
 | **5** | Saída: **relé 1** | sem strapping; é ADC2 (inútil com rádio), mas como digital é o pino mais seguro para saída |
-| **6 / 7** | **I2C SDA / SCL** | sensores + OLED SSD1306 (0x3C). Endereços sem conflito: AHT21 0x38, ENS160 0x53, SCD41 0x62, BH1750 0x23. Pull-up 4k7 se o módulo não tiver |
+| **6 / 7** | **I2C SDA / SCL** | sensor de temperatura (já suportado) + OLED SSD1306 (0x3C, reserva). Endereços sem conflito: AHT21 0x38, ENS160 0x53, SCD41 0x62, BH1750 0x23. Pull-up 4k7 se o módulo não tiver |
 | 8 | LED da placa | strapping; manter só como LED de status |
 | **9** | Entrada: **PB1** = botão BOOT da placa | strapping, mas o botão já existe; vale como botão depois do boot |
 | 10 | 1-Wire (DS18B20) | já em uso |
@@ -106,7 +107,7 @@ Manual: [docs/MONTAGEM_NODE_RESERVATORIO_2U.md](docs/MONTAGEM_NODE_RESERVATORIO_
 | ECHO1 | **4** | sensor 1 → 1k série + 2k ao GND |
 | ECHO2 | **20** | sensor 2 → 1k série + 2k ao GND |
 | Fonte 5 V | **1** | igual ao 1U |
-| DS18B20 | **10** | uma sonda para os dois (ar) |
+| Temperatura | **6/7** (I2C) ou **10** (DS18B20) | opcional, um sensor para os dois (ar) |
 | Reservados | 0 · 5 · 6/7 · 9 · 21 | mic · relé 1 · I2C/OLED · PB1 · relé 2 (sem PB2: G20 virou ECHO2) |
 
 **TRIG compartilhado:** os dois sensores disparam juntos e cada leitura usa só o seu ECHO; o

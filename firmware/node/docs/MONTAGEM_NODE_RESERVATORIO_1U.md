@@ -25,7 +25,7 @@ Firmware: env **`node_reservatorio_1U`** (ESP-NOW canal 11). Versão de 2 reserv
 | 1 | C2 100 nF cerâmico | 5V–GND, junto ao C3 |
 | 1 | C3 100 nF cerâmico | G1–GND (estabiliza a leitura) |
 | 1 | C4 100 µF / 10 V | 5V–GND, junto ao sensor |
-| 1 | *(opcional)* DS18B20 à prova d'água + R5 4,7 kΩ | compensação de temperatura |
+| 1 | *(opcional)* sensor de temperatura: **HTU21D/SHT3x** (I2C) **ou** DS18B20 à prova d'água + R5 4,7 kΩ | compensação da velocidade do som + temperatura no painel; o nó detecta sozinho no boot |
 | 1 | Placa perfurada, bornes, caixa IP65, prensa-cabo | |
 
 ---
@@ -41,6 +41,7 @@ Firmware: env **`node_reservatorio_1U`** (ESP-NOW canal 11). Versão de 2 reserv
 | **G4** | ECHO | nó R1/R2 (**nunca** o ECHO direto) | verde |
 | **G1** | monitor 5 V | nó R3/R4 + C3 | marrom |
 | **G10** | 1-Wire | DS18B20 DQ (amarelo) + R5 para 3V3 | ciano |
+| **G6 / G7** | I2C SDA / SCL | HTU21D/SHT3x (opcional; VCC no 3V3) — o OLED futuro divide o mesmo barramento | roxo / cinza |
 | G2, G8 | — | **não usar** (pinos de boot; G8 = LED da placa) | |
 | G0, G5–G7, G9, G20, G21 | — | **reservados** (tabela abaixo) | |
 
@@ -49,7 +50,7 @@ Firmware: env **`node_reservatorio_1U`** (ESP-NOW canal 11). Versão de 2 reserv
 | C3 | Reserva | Cuidado |
 |----|---------|---------|
 | **G0** | Microfone analógico (MAX9814/MAX4466 em 3V3) | detectar água entrando pelo ruído; ADC1 funciona com o rádio ligado |
-| **G6 / G7** | I2C SDA / SCL — sensores e OLED SSD1306 (0x3C) | pull-up 4k7 se o módulo não tiver |
+| **G6 / G7** | OLED SSD1306 (0x3C) na mesma I2C do sensor de temperatura | pull-up 4k7 se nenhum módulo tiver |
 | **G5** | Saída: relé 1 | pino mais seguro para saída |
 | **G21** | Saída: relé 2 | a ROM transmite neste pino no boot: o relé pode dar um pulso |
 | **G9** | Entrada: botão PB1 (é o botão BOOT da placa) | |
@@ -84,7 +85,10 @@ sensor ECHO ── R1 1k ──┬── G4          5V ── R3 200k ──┬
 4. **Divisor do ECHO:** R1 entre o borne ECHO e o pino G4; R2 entre G4 e GND.
 5. **Monitor da fonte:** R3 entre 5V e G1; R4 e C3 entre G1 e GND.
 6. **TRIG:** fio direto do borne TRIG ao G3.
-7. **DS18B20 (opcional):** vermelho no 3V3, preto no GND, amarelo no G10; R5 4k7 entre G10 e 3V3.
+7. **Temperatura (opcional, um dos dois):**
+   - **HTU21D/SHT3x (I2C):** VCC no 3V3, GND, SDA no G6, SCL no G7. Tem prioridade se os dois existirem.
+   - **DS18B20:** vermelho no 3V3, preto no GND, amarelo no G10; R5 4k7 entre G10 e 3V3.
+   - Sem nenhum, o nó usa 25 °C fixos e não manda temperatura ao servidor.
 8. **Conferência com o C3 fora do soquete e multímetro:**
    - 5V–GND: **sem curto**.
    - G4–GND: ~2 kΩ. G1–GND: ~67 kΩ (100k ∥ 200k).
@@ -129,6 +133,7 @@ Sensor apontado para uma parede a ~1 m, gateway ligado no servidor.
 | `gateway XX:XX:… → unicast` | gateway respondeu ao HELLO; envio com confirmação |
 | `S1 dist: 100 cm` | leitura chegando (varia ±1–2 cm) |
 | `WDT 60s` | watchdog ativo |
+| `temperatura I2C …: HTU21D/HD21D 0x40` ou `sonda EXT detectada` | sensor de temperatura achado (sem sensor: `nenhum` / `sem sonda`) |
 
 **LED da placa:** 2 piscadas no boot e 1 piscada curta a cada envio.
 

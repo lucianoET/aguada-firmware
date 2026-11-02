@@ -26,7 +26,7 @@ os dois sensores dividem o TRIG. O nó envia `sensor_id` 1 e 2 com o mesmo `node
 | 1 | C2 100 nF cerâmico | 5V–GND, junto ao C3 |
 | 1 | C3 100 nF cerâmico | G1–GND (estabiliza a leitura) |
 | 2 | C4, C5 100 µF / 10 V | 5V–GND, junto a cada sensor |
-| 1 | *(opcional)* DS18B20 à prova d'água + R5 4,7 kΩ | compensação de temperatura |
+| 1 | *(opcional)* sensor de temperatura: **HTU21D/SHT3x** (I2C) **ou** DS18B20 à prova d'água + R5 4,7 kΩ | compensação da velocidade do som + temperatura no painel; o nó detecta sozinho no boot |
 | 1 | Placa perfurada, bornes, caixa IP65, prensa-cabo | |
 
 ---
@@ -43,6 +43,7 @@ os dois sensores dividem o TRIG. O nó envia `sensor_id` 1 e 2 com o mesmo `node
 | **G20** | ECHO2 | nó R6/R7 do sensor 2 (**nunca** o ECHO direto) | verde-claro |
 | **G1** | monitor 5 V | nó R3/R4 + C3 | marrom |
 | **G10** | 1-Wire | DS18B20 DQ (amarelo) + R5 para 3V3 | ciano |
+| **G6 / G7** | I2C SDA / SCL | HTU21D/SHT3x (opcional; VCC no 3V3) — o OLED futuro divide o mesmo barramento | roxo / cinza |
 | G2, G8 | — | **não usar** (pinos de boot; G8 = LED da placa) | |
 | G0, G5–G7, G9, G21 | — | **reservados** (tabela abaixo) | |
 
@@ -51,7 +52,7 @@ os dois sensores dividem o TRIG. O nó envia `sensor_id` 1 e 2 com o mesmo `node
 | C3 | Reserva | Cuidado |
 |----|---------|---------|
 | **G0** | Microfone analógico (MAX9814/MAX4466 em 3V3) | detectar água entrando pelo ruído; ADC1 funciona com o rádio ligado |
-| **G6 / G7** | I2C SDA / SCL — sensores e OLED SSD1306 (0x3C) | pull-up 4k7 se o módulo não tiver |
+| **G6 / G7** | OLED SSD1306 (0x3C) na mesma I2C do sensor de temperatura | pull-up 4k7 se nenhum módulo tiver |
 | **G5** | Saída: relé 1 | pino mais seguro para saída |
 | **G21** | Saída: relé 2 | a ROM transmite neste pino no boot: o relé pode dar um pulso |
 | **G9** | Entrada: botão PB1 (é o botão BOOT da placa) | |
@@ -94,7 +95,10 @@ sensor 2 ECHO ─ R6 1k ─┬── G20         TRIG: G3 ──┬── sensor
    Sensor 2 — R6 entre o borne ECHO2 e o G20, R7 entre G20 e GND.
 5. **Monitor da fonte:** R3 entre 5V e G1; R4 e C3 entre G1 e GND.
 6. **TRIG:** do G3 até os bornes TRIG dos dois sensores (um fio que se divide).
-7. **DS18B20 (opcional):** vermelho no 3V3, preto no GND, amarelo no G10; R5 4k7 entre G10 e 3V3.
+7. **Temperatura (opcional, um dos dois):**
+   - **HTU21D/SHT3x (I2C):** VCC no 3V3, GND, SDA no G6, SCL no G7. Tem prioridade se os dois existirem.
+   - **DS18B20:** vermelho no 3V3, preto no GND, amarelo no G10; R5 4k7 entre G10 e 3V3.
+   - Sem nenhum, o nó usa 25 °C fixos e não manda temperatura ao servidor.
 8. **Conferência com o C3 fora do soquete e multímetro:**
    - 5V–GND: **sem curto**.
    - G4–GND e G20–GND: ~2 kΩ cada. G1–GND: ~67 kΩ (100k ∥ 200k).
@@ -139,6 +143,7 @@ Cada sensor apontado para uma parede diferente (ex.: ~1 m e ~2 m, para distingui
 | `gateway XX:XX:… → unicast` | gateway respondeu ao HELLO; envio com confirmação |
 | `S1 dist: 100 cm` / `S2 dist: 200 cm` | as duas leituras chegando (variam ±1–2 cm) |
 | `WDT 60s` | watchdog ativo |
+| `temperatura I2C …: HTU21D/HD21D 0x40` ou `sonda EXT detectada` | sensor de temperatura achado (sem sensor: `nenhum` / `sem sonda`) |
 
 **LED da placa:** 2 piscadas no boot e 1 piscada curta a cada envio.
 
@@ -175,7 +180,8 @@ Cada sensor apontado para uma parede diferente (ex.: ~1 m e ~2 m, para distingui
   prensa-cabo, com laço de gotejamento no cabo, de preferência na sombra.
 - **Antena:** a ponta da placa oposta ao USB voltada para o gateway, sem metal na frente. Antes
   de fechar a caixa, confira o RSSI: melhor que **−85 dBm**.
-- **Sonda DS18B20 (opcional):** uma só, no ar de um dos reservatórios (vale para os dois).
+- **Temperatura (opcional):** um sensor só, no ar de um dos reservatórios (vale para os dois).
+  Onde a sonda não cabe (ex.: CIE), um HTU21D dentro da caixa do nó já ajuda, protegido do sol.
   Ao ligar a sonda, a escala muda ~2%, então recalibre o `sensor_offset_cm`.
 
 ---

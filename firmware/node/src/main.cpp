@@ -89,6 +89,12 @@
 #define US_TEMP_DEFAULT_C 25.0f
 #endif
 #define US_TEMP_MAX_AGE_MS (10UL * 60UL * 1000UL)
+// Sensor I2C de temperatura (HTU21D/HD21D 0x40 ou SHT3x 0x44, SDA G6 / SCL G7) como fonte
+// da compensação; tem prioridade sobre a DS18B20. 0 = não procurar.
+#ifndef US_TEMP_I2C
+#define US_TEMP_I2C 0
+#endif
+#define US_TEMP_ANY (US_TEMP_PIN >= 0 || US_TEMP_I2C)
 #include "rgb_led.h"
 #include <WebServer.h>
 #include <DNSServer.h>
@@ -422,6 +428,23 @@ static void relay_aux_init(void) {
                   g_relay_aux.i2c_ready ? "yes" : "no",
                   relay_led_conflict() ? "yes" : "no");
 }
+
+#if US_TEMP_I2C
+static relay_i2c_sensor_t s_air_i2c = RELAY_I2C_NONE;
+
+// Sensor I2C de temperatura do ar para a compensação (mesmos drivers do relay).
+static void air_i2c_init(void) {
+    relay_i2c_bus_recovery();
+    Wire.begin(RELAY_I2C_SDA_PIN, RELAY_I2C_SCL_PIN);
+    Wire.setClock(RELAY_I2C_CLOCK_HZ);
+    delay(50);
+    if (relay_i2c_probe_addr(RELAY_I2C_ADDR_HD21D) == 0)      s_air_i2c = RELAY_I2C_HD21D;
+    else if (relay_i2c_probe_addr(RELAY_I2C_ADDR_SHT3X) == 0) s_air_i2c = RELAY_I2C_SHT3X;
+    ESP_LOGI(TAG, "temperatura I2C (sda=%d scl=%d): %s", RELAY_I2C_SDA_PIN, RELAY_I2C_SCL_PIN,
+             s_air_i2c == RELAY_I2C_HD21D ? "HTU21D/HD21D 0x40" :
+             s_air_i2c == RELAY_I2C_SHT3X ? "SHT3x 0x44" : "nenhum");
+}
+#endif
 
 static void relay_aux_tick(void) {
     uint32_t now = millis();
@@ -827,7 +850,7 @@ static void sensor_tick(uint8_t idx) {
         return;
     }
 
-#if US_TEMP_PIN >= 0
+#if US_TEMP_ANY
     // Velocidade do som pela temperatura do ar: c = 331,3 + 0,606·T m/s.
     // Com sonda configurada a escala é sempre esta (sem leitura recente → US_TEMP_DEFAULT_C),
     // para o nó não alternar entre duas conversões.
@@ -875,10 +898,11 @@ static void heartbeat_tick(void) {
         if (g_last_sent_cm[i] == DISTANCE_ERROR) continue; // no valid reading yet
         send_packet(PKT_HEARTBEAT, i + 1, g_last_sent_cm[i], 0);
     }
-#if US_TEMP_PIN >= 0
+#if US_TEMP_ANY
     // Temperatura do ar da compensação, no canal extra T_EXT (mesma codificação do AirQ).
+    // Só depois da 1ª leitura válida: nó montado sem sensor não manda erro a cada minuto.
     bool t_ok = g_air_temp_ms && now - g_air_temp_ms < US_TEMP_MAX_AGE_MS;
-    send_ext_pkt(SENSOR_ID_T_EXT, t_ok, temp_enc(g_air_temp_c), 0);
+    send_ext(SENSOR_ID_T_EXT, t_ok, temp_enc(g_air_temp_c), 0);
 #endif
 }
 
@@ -1047,6 +1071,9 @@ void setup(void) {
 #if US_TEMP_PIN >= 0
         probe_init(US_TEMP_PIN, -1);   // DS18B20 do ar do reservatório na porta EXT
 #endif
+#if US_TEMP_I2C
+        air_i2c_init();
+#endif
         led_blink(2, 100);
     }
 
@@ -1084,17 +1111,30 @@ static void link_tick(void) {
 #endif
 }
 
-#if US_TEMP_PIN >= 0
-// Conversão não-bloqueante da DS18B20: cada chamada lê a anterior e pede a próxima.
+#if US_TEMP_ANY
+// A cada 10 s: sensor I2C se houver, senão DS18B20 (conversão não-bloqueante: cada
+// chamada lê a anterior e pede a próxima).
 static void air_temp_tick(void) {
     static uint32_t last_ms = 0;
     uint32_t now = millis();
     if (last_ms && now - last_ms < 10000) return;
     last_ms = now;
+    float t, hum;
+    bool ok = false;
+#if US_TEMP_I2C
+    if (s_air_i2c == RELAY_I2C_HD21D)      ok = relay_i2c_read_hd21d(&t, &hum);
+    else if (s_air_i2c == RELAY_I2C_SHT3X) ok = relay_i2c_read_sht3x(&t, &hum);
+#endif
+#if US_TEMP_PIN >= 0
     probe_tick();
-    ProbeReading p = probe_get(PROBE_EXT);
-    if (p.valid) {
-        g_air_temp_c  = p.temp_c;
+    if (!ok) {
+        ProbeReading p = probe_get(PROBE_EXT);
+        ok = p.valid;
+        t  = p.temp_c;
+    }
+#endif
+    if (ok) {
+        g_air_temp_c  = t;
         g_air_temp_ms = now ? now : 1;
     }
 }
@@ -1121,7 +1161,7 @@ void loop(void) {
         ani_tick();
         relay_aux_tick();
     } else if (g_cfg.num_sensors > 0) {
-#if US_TEMP_PIN >= 0
+#if US_TEMP_ANY
         air_temp_tick();
 #endif
         for (uint8_t i = 0; i < 2; i++) {
