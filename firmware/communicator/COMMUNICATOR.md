@@ -17,7 +17,8 @@ OLED, MQTT/HA, captive portal) e o esboço `xFonoclama/esp32_warning_system.tsx`
 1. Hardware modular, um firmware: mic INMP441, alto-falante MAX98357A (ou linha PCM5102A),
    OLED SSD1306, botões, sirene/relé — tudo opcional.
 2. Perfis: `communicator_c3` (C3 SuperMini: mic + falante/linha + OLED + botões + sirene) e
-   `communicator_audio` (ESP32-S3 + codec ES8388: entrada **e** saída de linha).
+   `communicator_audio` (ESP32-S3 + codec ES8388: entrada **e** saída de linha) e
+   `yeti_s3` (boneco Yeti com rosto num ST7789 e sensores — [YETI.md](YETI.md)).
 3. Voz por WiFi (UDP multicast); alarme/status/comando por ESP-NOW (protocolo v3).
 4. Anúncio PTT: segura o botão → voz para todos os communicators (ou uma zona).
 5. Discurso local: mic → saída de linha → amplificador do Fonoclama (70 V), latência mínima.

@@ -15,6 +15,7 @@
 #include "voice_dsp.h"
 #include "voice_net.h"
 #include "alarm.h"
+#include "tones.h"
 
 static const char *TAG = "comm";
 
@@ -25,34 +26,6 @@ static uint16_t s_node_id = 0;
 // Estado compartilhado entre a task de áudio e a de UI.
 static volatile bool s_ptt = false;          // botão PTT pressionado (e mic presente)
 static volatile bool s_on_air = false;       // transmitindo (inclui o gongo)
-
-// ── Geração de tons ─────────────────────────────────────────────────────────────
-static float s_phase = 0;
-
-static void tone_fill(int16_t *out, size_t n, float hz, float amp) {
-    const float step = 2.0f * (float)M_PI * hz / AUDIO_RATE_HZ;
-    for (size_t i = 0; i < n; i++) {
-        out[i] = (int16_t)(amp * 32767.0f * sinf(s_phase));
-        s_phase += step;
-        if (s_phase > 2.0f * (float)M_PI) s_phase -= 2.0f * (float)M_PI;
-    }
-}
-
-// Gongo de anúncio: 2 tons (dó–lá) de 240 ms cada, com decaimento. bloco = índice de 20 ms.
-static bool chime_block(int16_t *out, size_t n, int bloco) {
-    if (bloco >= 24) return false;
-    float hz = bloco < 12 ? 1046.5f : 880.0f;
-    float env = 0.5f * expf(-(bloco % 12) / 5.0f);
-    tone_fill(out, n, hz, env);
-    return true;
-}
-
-// Sirene no falante: varredura 600↔1200 Hz em 1 s.
-static void siren_block(int16_t *out, size_t n) {
-    float t = (millis() % 1000) / 1000.0f;
-    float hz = 600.0f + 600.0f * (t < 0.5f ? t * 2 : (1 - t) * 2);
-    tone_fill(out, n, hz, 0.6f);
-}
 
 // ── Task de áudio: TX do PTT ou RX/tons para a saída ────────────────────────────
 static void audio_task(void *) {

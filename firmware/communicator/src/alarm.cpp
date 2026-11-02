@@ -31,7 +31,7 @@ static uint8_t s_seen_i = 0;
 static void siren(bool on) {
     if (on && !s_siren) s_siren_since = millis();
     s_siren = on;
-    digitalWrite(COMM_PIN_SIREN, on ? HIGH : LOW);
+    if (COMM_PIN_SIREN >= 0) digitalWrite(COMM_PIN_SIREN, on ? HIGH : LOW);   // -1 = só tom no falante
 }
 
 static void send_espnow(uint16_t seq, uint8_t code) {
@@ -74,7 +74,7 @@ static void emit(uint8_t code) {
 
 void alarm_init(uint16_t node_id) {
     s_node = node_id;
-    pinMode(COMM_PIN_SIREN, OUTPUT);
+    if (COMM_PIN_SIREN >= 0) pinMode(COMM_PIN_SIREN, OUTPUT);
     siren(false);
     esp_now_peer_info_t peer = {};
     memcpy(peer.peer_addr, BCAST, 6);
