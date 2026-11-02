@@ -28,6 +28,17 @@ Node de qualidade do ar (ESP32-C3) expandido com captive portal por componente e
 
 ---
 
+## Node Communicator — 2026-11-02
+
+Voz (PTT por UDP multicast), alto-falante ou saída de linha, OLED, botões de alarme e sirene.
+Doc e fases: [`firmware/communicator/COMMUNICATOR.md`](firmware/communicator/COMMUNICATOR.md).
+
+| Fase | Escopo | Estado |
+|------|--------|--------|
+| 1 | C3: I2S full-duplex, PTT + gongo, AGC/gate, alarme ESP-NOW (`SENSOR_ID_ALARM 0xE0`) + multicast, sirene, OLED | 🟡 compila, falta bancada |
+| 2 | captive portal + MQTT/HA (do slave_wifi do fonoclama), bridge.py entende 0xE0 | ⬜ |
+| 3 | S3 + ES8388: entrada de linha, discurso local mic → linha | ⬜ |
+
 ## Fases
 
 ### Fase 1 — Firmware Node (sensor + relay + NVS boot)

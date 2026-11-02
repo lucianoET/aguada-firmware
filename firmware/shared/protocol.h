@@ -141,6 +141,14 @@ typedef enum : uint8_t {
                                        //   reserved = pico dB SPL (uint8)
 #define SENSOR_ID_VOC        0xF6      // ENS160: distance_cm = TVOC ppb, reserved = AQI 1-5
 
+// Communicator (firmware/communicator) — alarme por PKT_HEARTBEAT, repassado pelo gateway
+// sem reflash. distance_cm = ALARM_* ; reserved = zona (0 = todas).
+#define SENSOR_ID_ALARM      0xE0
+#define ALARM_CLEAR          0
+#define ALARM_GENERAL        1         // pânico / geral
+#define ALARM_FIRE           2
+#define ALARM_TEST           3
+
 #define DISTANCE_ERROR      0xFFFF
 
 typedef struct __attribute__((packed)) {
