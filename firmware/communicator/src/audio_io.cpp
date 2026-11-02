@@ -58,6 +58,17 @@ bool audio_init(void) {
         if (probe[i] > vmax) vmax = probe[i];
     }
     s_mic = (vmax - vmin) > 16;
+    // Diagnóstico: dado no slot direito = L/R do INMP441 solto ou em 3V3.
+    size_t bytes = 0;
+    int nz_l = 0, nz_r = 0;
+    i2s_channel_read(s_rx, s_frame, sizeof(s_frame), &bytes, pdMS_TO_TICKS(100));
+    for (size_t i = 0; i < bytes / (2 * sizeof(int32_t)); i++) {
+        if (s_frame[2 * i])     nz_l++;
+        if (s_frame[2 * i + 1]) nz_r++;
+    }
+    ESP_LOGI(TAG, "mic diag: min=%ld max=%ld nz_L=%d nz_R=%d (de %u) din_nivel=%d",
+             (long)vmin, (long)vmax, nz_l, nz_r, (unsigned)(bytes / 8),
+             gpio_get_level((gpio_num_t)COMM_PIN_I2S_DIN));
     ESP_LOGI(TAG, "I2S %d Hz bclk=%d ws=%d dout=%d din=%d — mic %s (span=%ld)",
              AUDIO_RATE_HZ, COMM_PIN_I2S_BCLK, COMM_PIN_I2S_WS, COMM_PIN_I2S_DOUT,
              COMM_PIN_I2S_DIN, s_mic ? "OK" : "ausente", (long)(vmax - vmin));

@@ -260,7 +260,27 @@ void setup() {
     digitalWrite(COMM_PIN_LED, HIGH);
     s_btn_ptt.begin(); s_btn_alarm.begin(); s_btn_vol.begin();
 
+    // Diagnóstico: em repouso SDA/SCL ficam em 1 (pull-up do módulo); 0 = curto ou sem VCC.
+    pinMode(COMM_PIN_SDA, INPUT); pinMode(COMM_PIN_SCL, INPUT);
+    Serial.printf("[i2c] repouso sda=%d scl=%d\n", digitalRead(COMM_PIN_SDA), digitalRead(COMM_PIN_SCL));
     Wire.begin(COMM_PIN_SDA, COMM_PIN_SCL);
+    Serial.print("[i2c] scan:");
+    int found = 0;
+    for (uint8_t a = 1; a < 127; a++) {
+        Wire.beginTransmission(a);
+        if (Wire.endTransmission() == 0) { Serial.printf(" 0x%02X", a); found++; }
+    }
+    Serial.println(found ? "" : " nenhum");
+    if (!found) {   // diagnóstico: SDA e SCL trocados?
+        Wire.end(); Wire.begin(COMM_PIN_SCL, COMM_PIN_SDA);
+        Serial.print("[i2c] scan trocado (sda=G7 scl=G6):");
+        for (uint8_t a = 1; a < 127; a++) {
+            Wire.beginTransmission(a);
+            if (Wire.endTransmission() == 0) { Serial.printf(" 0x%02X", a); found++; }
+        }
+        Serial.println(found ? "  <- SDA/SCL TROCADOS" : " nenhum");
+        Wire.end(); Wire.begin(COMM_PIN_SDA, COMM_PIN_SCL);
+    }
     Wire.beginTransmission(COMM_OLED_ADDR);
     s_oled_ok = Wire.endTransmission() == 0 && s_oled.begin(SSD1306_SWITCHCAPVCC, COMM_OLED_ADDR);
     if (s_oled_ok) {
