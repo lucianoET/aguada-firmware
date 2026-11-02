@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 800" width="960" height="800"><title>Nó reservatório Aguada — ligações</title>
 <rect width="960" height="800" fill="#fbfcfb"/>
-<text x="24" y="34" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#14201b" text-anchor="start">Nó reservatório Aguada — ligações (env node-c3-ch11)</text>
+<text x="24" y="34" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="700" fill="#14201b" text-anchor="start">Nó reservatório 2U Aguada — ligações (env node_reservatorio_2U)</text>
 <text x="24" y="56" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="400" fill="#5a6b64" text-anchor="start">ESP32-C3 SuperMini visto por cima (componentes para cima, USB-C no topo). Confira a serigrafia da sua placa.</text>
 <rect x="455" y="78" width="60" height="30" rx="5" fill="#9aa3a8" stroke="none" stroke-width="1.5"/>
 <text x="485" y="98" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">USB-C</text>
@@ -55,24 +55,32 @@
 <text x="34" y="245" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">e pull-up R5 4k7 (saída, não alimentar aqui)</text>
 <path d="M393,278 L360,278" fill="none" stroke="#1a9a52" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 <rect x="24" y="258" width="336" height="40" rx="6" fill="#fff" stroke="#1a9a52" stroke-width="2"/>
-<text x="34" y="275" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">ECHO ← nó do divisor R1/R2</text>
+<text x="34" y="275" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">ECHO1 ← nó do divisor R1/R2</text>
 <text x="34" y="291" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">NUNCA ligar o ECHO de 5 V direto</text>
 <path d="M393,324 L360,324" fill="none" stroke="#1f6fd1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 <rect x="24" y="304" width="336" height="40" rx="6" fill="#fff" stroke="#1f6fd1" stroke-width="2"/>
-<text x="34" y="321" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">TRIG → sensor TRIG</text>
-<text x="34" y="337" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">direto (3,3 V basta para o sensor)</text>
+<text x="34" y="321" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">TRIG → TRIG dos 2 sensores</text>
+<text x="34" y="337" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">um fio para os dois (disparam juntos)</text>
 <text x="386" y="375" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="end">não usar (boot)</text>
 <path d="M393,416 L360,416" fill="none" stroke="#9a5b2e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 <rect x="24" y="396" width="336" height="40" rx="6" fill="#fff" stroke="#9a5b2e" stroke-width="2"/>
 <text x="34" y="413" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">MON 5V ← nó do divisor R3/R4</text>
 <text x="34" y="429" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">leitura da fonte (÷3)</text>
-<text x="386" y="467" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="end">livre</text>
+<text x="386" y="467" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="end">reserva: microfone</text>
+<text x="584" y="145" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">reserva: relé 1</text>
+<text x="584" y="191" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">reserva: I2C SDA (sensores/OLED)</text>
+<text x="584" y="237" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">reserva: I2C SCL (sensores/OLED)</text>
 <text x="584" y="283" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">LED — não usar</text>
-<text x="584" y="329" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">BOOT — não usar</text>
+<text x="584" y="329" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">BOOT = botão PB1 (reserva)</text>
 <path d="M577,370 L610,370" fill="none" stroke="#0d8c8c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 <rect x="610" y="350" width="326" height="40" rx="6" fill="#fff" stroke="#0d8c8c" stroke-width="2"/>
 <text x="620" y="367" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">G10 ↔ DS18B20 DQ (amarelo)</text>
 <text x="620" y="383" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">opcional · pull-up R5 4k7 para 3V3</text>
+<path d="M577,416 L610,416" fill="none" stroke="#1a9a52" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="610" y="396" width="326" height="40" rx="6" fill="#fff" stroke="#1a9a52" stroke-width="2"/>
+<text x="620" y="413" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">ECHO2 ← nó do divisor R6/R7</text>
+<text x="620" y="429" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">2º sensor · NUNCA o ECHO de 5 V direto</text>
+<text x="584" y="467" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">reserva: relé 2</text>
 <rect x="24" y="560" width="290" height="220" rx="10" fill="#f3f6f4" stroke="#d5ddd8" stroke-width="1.5"/>
 <text x="38" y="584" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#14201b" text-anchor="start">1 · Divisor do ECHO (5 V → 3,3 V)</text>
 <text x="110" y="612" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#1a9a52" text-anchor="middle">sensor ECHO</text>
@@ -93,6 +101,7 @@
 <path d="M107,760 L113,760" fill="none" stroke="#1c1f23" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
 <text x="170" y="725" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">2k = 2× 1k em série</text>
 <text x="170" y="740" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">5 V × 2/3 = 3,3 V</text>
+<text x="170" y="760" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="700" fill="#1a9a52" text-anchor="start">2º sensor: R6 1k + R7 2k → G20</text>
 <rect x="330" y="560" width="290" height="220" rx="10" fill="#f3f6f4" stroke="#d5ddd8" stroke-width="1.5"/>
 <text x="344" y="584" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#14201b" text-anchor="start">2 · Monitor da fonte 5 V (G1)</text>
 <text x="416" y="612" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#d6332a" text-anchor="middle">5V</text>

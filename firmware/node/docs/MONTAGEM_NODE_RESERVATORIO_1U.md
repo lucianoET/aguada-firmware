@@ -1,11 +1,11 @@
-# Manual de montagem — Nó reservatório Aguada
+# Manual de montagem — Nó reservatório Aguada 1U (1 reservatório)
 
 ESP32-C3 SuperMini + sensor ultrassônico (HC-SR04 ou JSN-SR04T) + fonte 5 V DC.
-Firmware: env **`node-c3-ch11`** (ESP-NOW canal 11). Tempo de bancada: ~1 h.
+Firmware: env **`node_reservatorio_1U`** (ESP-NOW canal 11). Versão de 2 reservatórios: [MONTAGEM_NODE_RESERVATORIO_2U.md](MONTAGEM_NODE_RESERVATORIO_2U.md). Tempo de bancada: ~1 h.
 
-![Ligações](node_reservatorio_ligacoes.svg)
+![Ligações](node_reservatorio_1U_ligacoes.svg)
 
-> Diagrama gerado por `wiring_src/node_reservatorio.py`. A placa está vista por cima
+> Diagrama gerado por `wiring_src/node_reservatorio.py ... 1U`. A placa está vista por cima
 > (componentes para cima, USB-C no topo). **Confira a serigrafia** da sua SuperMini antes de soldar.
 
 ---
@@ -41,8 +41,22 @@ Firmware: env **`node-c3-ch11`** (ESP-NOW canal 11). Tempo de bancada: ~1 h.
 | **G4** | ECHO | nó R1/R2 (**nunca** o ECHO direto) | verde |
 | **G1** | monitor 5 V | nó R3/R4 + C3 | marrom |
 | **G10** | 1-Wire | DS18B20 DQ (amarelo) + R5 para 3V3 | ciano |
-| G2, G8, G9 | — | **não usar** (pinos de boot; G8 = LED da placa) | |
-| G0, G5–G7, G20, G21 | — | reservados: microfone (G0), I2C/OLED (G6/G7), relés (G5/G21), botão (G20) — ver [node_pinout.md](../node_pinout.md) | |
+| G2, G8 | — | **não usar** (pinos de boot; G8 = LED da placa) | |
+| G0, G5–G7, G9, G20, G21 | — | **reservados** (tabela abaixo) | |
+
+**Pinos reservados para expansão** (ainda sem firmware — não usar para outra coisa):
+
+| C3 | Reserva | Cuidado |
+|----|---------|---------|
+| **G0** | Microfone analógico (MAX9814/MAX4466 em 3V3) | detectar água entrando pelo ruído; ADC1 funciona com o rádio ligado |
+| **G6 / G7** | I2C SDA / SCL — sensores e OLED SSD1306 (0x3C) | pull-up 4k7 se o módulo não tiver |
+| **G5** | Saída: relé 1 | pino mais seguro para saída |
+| **G21** | Saída: relé 2 | a ROM transmite neste pino no boot: o relé pode dar um pulso |
+| **G9** | Entrada: botão PB1 (é o botão BOOT da placa) | |
+| **G20** | Entrada: botão PB2 (pull-up interno, botão ao GND) | |
+| G2 | só botão, com pull-up 10k externo | nível baixo no boot impede a placa de iniciar |
+
+Relé: módulo acionado por 3,3 V (transistor/optoacoplador), bobina no 5 V.
 
 **Por que o divisor no ECHO:** o sensor alimentado em 5 V devolve um pulso de 5 V, e o C3 só
 aguenta 3,6 V nas entradas. Sem o divisor o pino queima — já aconteceu no nó CON (G0).
@@ -93,8 +107,8 @@ pinos antigos salvos no NVS:
 
 ```bash
 cd ~/Dev/aguada-firmware/firmware/node
-~/.platformio/penv/bin/pio run -e node-c3-ch11 -t erase
-~/.platformio/penv/bin/pio run -e node-c3-ch11 -t upload
+~/.platformio/penv/bin/pio run -e node_reservatorio_1U -t erase
+~/.platformio/penv/bin/pio run -e node_reservatorio_1U -t upload
 ~/.platformio/penv/bin/pio device monitor -b 115200
 ```
 

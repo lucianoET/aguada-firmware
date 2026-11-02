@@ -797,11 +797,22 @@ static void sensor_tick(uint8_t idx) {
 
     uint8_t sid = idx + 1;
 
+    // TRIG compartilhado (node_reservatorio_2U): o outro sensor disparou junto com as
+    // leituras anteriores; espera o eco dele terminar antes de disparar de novo.
+    static uint32_t s_last_read_ms = 0;
+    uint8_t other = idx ^ 1;
+    if (g_cfg.num_sensors == 2 &&
+        g_cfg.sensor[other].trig_pin == g_cfg.sensor[idx].trig_pin &&
+        millis() - s_last_read_ms < 60) {
+        delay(60);
+    }
+
     UltrasonicReading r = us_dist_cm(
         g_cfg.sensor[idx].trig_pin,
         g_cfg.sensor[idx].echo_pin,
         5, 0, HC_MAX_RANGE_CM
     );
+    s_last_read_ms = millis();
 
     if (!r.valid) {
         // Send error packet only once per send interval to avoid flooding

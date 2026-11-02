@@ -1,5 +1,9 @@
-# Gera firmware/node/docs/node_reservatorio_ligacoes.svg (env node-c3-ch11)
+# Gera o diagrama de ligações do nó reservatório:
+#   python3 node_reservatorio.py ../node_reservatorio_1U_ligacoes.svg 1U
+#   python3 node_reservatorio.py ../node_reservatorio_2U_ligacoes.svg 2U
 import sys
+V = sys.argv[2] if len(sys.argv) > 2 else "1U"
+DOIS = V == "2U"
 W, H = 960, 800
 C = dict(v5="#d6332a", gnd="#1c1f23", v33="#e0661a", trig="#1f6fd1", echo="#1a9a52",
          mon="#9a5b2e", dq="#0d8c8c", off="#a3ada8", ink="#14201b", muted="#5a6b64",
@@ -28,7 +32,7 @@ def tag(x, y, w, col, title, sub):
     t(x + 10, y + 13, sub, 11, C["muted"])
 
 o.append(f'<rect width="{W}" height="{H}" fill="#fbfcfb"/>')
-t(24, 34, "Nó reservatório Aguada — ligações (env node-c3-ch11)", 21, weight=700)
+t(24, 34, f"Nó reservatório {V} Aguada — ligações (env node_reservatorio_{V})", 21, weight=700)
 t(24, 56, "ESP32-C3 SuperMini visto por cima (componentes para cima, USB-C no topo). Confira a serigrafia da sua placa.", 12, C["muted"])
 
 # ── placa ─────────────────────────────────────────────────────────────────────
@@ -42,8 +46,10 @@ left  = ["5V", "GND", "3V3", "G4", "G3", "G2", "G1", "G0"]
 right = ["G5", "G6", "G7", "G8", "G9", "G10", "G20", "G21"]
 ys = [by + 40 + i * 46 for i in range(8)]
 use_l = {"5V": "v5", "GND": "gnd", "3V3": "v33", "G4": "echo", "G3": "trig", "G1": "mon"}
-use_r = {"G10": "dq"}
-note_r = {"G8": "LED", "G9": "BOOT"}
+use_r = {"G10": "dq", **({"G20": "echo"} if DOIS else {})}
+note_r = {"G8": "LED — não usar", "G9": "BOOT = botão PB1 (reserva)", "G5": "reserva: relé 1",
+          "G6": "reserva: I2C SDA (sensores/OLED)", "G7": "reserva: I2C SCL (sensores/OLED)",
+          "G21": "reserva: relé 2", **({} if DOIS else {"G20": "reserva: botão PB2"})}
 for name, y in zip(left, ys):
     col = C[use_l[name]] if name in use_l else C["off"]
     o.append(f'<circle cx="{bx}" cy="{y}" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>')
@@ -57,8 +63,10 @@ tags_l = {
     "5V":  ("5V  ← Fonte + (5 V DC)", "também: sensor VCC · R3 200k · C1 470µF"),
     "GND": ("GND ← Fonte −", "também: sensor GND · R2 · R4 · DS18B20 GND"),
     "3V3": ("3V3 → DS18B20 VDD", "e pull-up R5 4k7 (saída, não alimentar aqui)"),
-    "G4":  ("ECHO ← nó do divisor R1/R2", "NUNCA ligar o ECHO de 5 V direto"),
-    "G3":  ("TRIG → sensor TRIG", "direto (3,3 V basta para o sensor)"),
+    "G4":  ("ECHO1 ← nó do divisor R1/R2" if DOIS else "ECHO ← nó do divisor R1/R2",
+            "NUNCA ligar o ECHO de 5 V direto"),
+    "G3":  ("TRIG → TRIG dos 2 sensores" if DOIS else "TRIG → sensor TRIG",
+            "um fio para os dois (disparam juntos)" if DOIS else "direto (3,3 V basta para o sensor)"),
     "G1":  ("MON 5V ← nó do divisor R3/R4", "leitura da fonte (÷3)"),
 }
 for name, y in zip(left, ys):
@@ -67,14 +75,17 @@ for name, y in zip(left, ys):
         line([(bx - 7, y), (360, y)], col)
         tag(24, y, 336, col, *tags_l[name])
     elif name in ("G2", "G0"):
-        t(bx - 14, y + 5, "livre" if name == "G0" else "não usar (boot)", 11, C["off"], "end")
+        t(bx - 14, y + 5, "reserva: microfone" if name == "G0" else "não usar (boot)", 11, C["off"], "end")
 # ── direita ───────────────────────────────────────────────────────────────────
 for name, y in zip(right, ys):
-    if name in use_r:
+    if name == "G10":
         line([(bx + bw + 7, y), (610, y)], C["dq"])
         tag(610, y, 326, C["dq"], "G10 ↔ DS18B20 DQ (amarelo)", "opcional · pull-up R5 4k7 para 3V3")
+    elif name in use_r:
+        line([(bx + bw + 7, y), (610, y)], C["echo"])
+        tag(610, y, 326, C["echo"], "ECHO2 ← nó do divisor R6/R7", "2º sensor · NUNCA o ECHO de 5 V direto")
     elif name in note_r:
-        t(bx + bw + 14, y + 5, f"{note_r[name]} — não usar", 11, C["off"])
+        t(bx + bw + 14, y + 5, note_r[name], 11, C["off"])
 
 # ── detalhes ──────────────────────────────────────────────────────────────────
 top = 560
@@ -92,6 +103,8 @@ res(x, top + 130, top + 190, "R2 2k", C["gnd"])
 gnd(x, top + 190)
 t(170, top + 165, "2k = 2× 1k em série", 11, C["muted"])
 t(170, top + 180, "5 V × 2/3 = 3,3 V", 11, C["muted"])
+if DOIS:
+    t(170, top + 200, "2º sensor: R6 1k + R7 2k → G20", 11, C["echo"], weight=700)
 # 2) monitor da fonte
 panel(330, 290, "2 · Monitor da fonte 5 V (G1)")
 x = 416

@@ -48,9 +48,10 @@ ESP32-C3          HC-SR04
 
 ---
 
-### Nó reservatório padrão — env `node-c3-ch11` (fonte 5 V)
+### node_reservatorio_1U — 1 reservatório, env `node_reservatorio_1U` (fonte 5 V)
 
-Manual completo de montagem: [docs/MONTAGEM_NODE_RESERVATORIO.md](docs/MONTAGEM_NODE_RESERVATORIO.md).
+Manual completo de montagem: [docs/MONTAGEM_NODE_RESERVATORIO_1U.md](docs/MONTAGEM_NODE_RESERVATORIO_1U.md).
+O env antigo `node-c3-ch11` é o mesmo firmware.
 
 | Sinal | GPIO | Ligação |
 |-------|------|---------|
@@ -89,10 +90,28 @@ firmware novo) ou com `-DDEFAULT_GATEWAY_MAC`; sem isso, broadcast como antes.
 | 8 | LED da placa | strapping; manter só como LED de status |
 | **9** | Entrada: **PB1** = botão BOOT da placa | strapping, mas o botão já existe; vale como botão depois do boot |
 | 10 | 1-Wire (DS18B20) | já em uso |
-| **20** | Entrada: **PB2** (pull-up interno) | U0RXD, livre (log vai pela USB) |
+| **20** | Entrada: **PB2** (pull-up interno) | U0RXD, livre (log vai pela USB). No 2U vira ECHO2 |
 | **21** | Saída: **relé 2** | U0TXD: a ROM transmite no boot e o relé pode dar um pulso. Só para carga não crítica |
 
 Relé: módulo com transistor/optoacoplador acionado por 3,3 V, bobina no 5 V. Botões: GPIO → botão → GND.
+
+### node_reservatorio_2U — 2 reservatórios lado a lado, env `node_reservatorio_2U`
+
+Manual: [docs/MONTAGEM_NODE_RESERVATORIO_2U.md](docs/MONTAGEM_NODE_RESERVATORIO_2U.md). Igual ao 1U, mais um sensor
+(`sensor_id` 2, mesmo `node_id`):
+
+| Sinal | GPIO | Ligação |
+|-------|------|---------|
+| TRIG (os dois) | **3** | TRIG do sensor 1 **e** do sensor 2 |
+| ECHO1 | **4** | sensor 1 → 1k série + 2k ao GND |
+| ECHO2 | **20** | sensor 2 → 1k série + 2k ao GND |
+| Fonte 5 V | **1** | igual ao 1U |
+| DS18B20 | **10** | uma sonda para os dois (ar) |
+| Reservados | 0 · 5 · 6/7 · 9 · 21 | mic · relé 1 · I2C/OLED · PB1 · relé 2 (sem PB2: G20 virou ECHO2) |
+
+**TRIG compartilhado:** os dois sensores disparam juntos e cada leitura usa só o seu ECHO; o
+firmware lê um de cada vez com ≥ 60 ms de folga. Vale para reservatórios separados — dois
+sensores na mesma água ouviriam o eco um do outro.
 
 ---
 
