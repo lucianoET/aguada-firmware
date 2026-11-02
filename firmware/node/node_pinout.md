@@ -82,9 +82,9 @@ firmware novo) ou com `-DDEFAULT_GATEWAY_MAC`; sem isso, broadcast como antes.
 
 | GPIO | Reserva | Observação |
 |------|---------|------------|
-| **0** | Microfone analógico (ADC1_CH0) | MAX9814/MAX4466 em 3V3 (saída ~1,6 V de bias). Detecta água entrando pelo ruído: envelope/RMS vs. nível de fundo. ADC1 funciona com o rádio ligado |
+| **0** | Microfone **INMP441** — SCK (saída) | I2S digital, 3V3, L/R→GND. Mesmo módulo e driver do AirQ (`sound_sensor`): dB SPL real sem calibrar. Detecta água entrando pelo ruído: nível vs. fundo |
 | 1 | Fonte 5 V | já em uso |
-| **2** | Entrada (PB), só com pull-up 10k externo | **strapping**: tem de estar em nível alto no boot — nada que puxe para GND ao ligar |
+| **2** | Microfone INMP441 — WS (saída) | **strapping** (alto no boot): o WS do INMP441 é entrada de alta impedância, não puxa o pino. Nada mais neste pino |
 | 3 / 4 | Ultrassom TRIG / ECHO | já em uso |
 | **5** | Saída: **relé 1** | sem strapping; é ADC2 (inútil com rádio), mas como digital é o pino mais seguro para saída |
 | **6 / 7** | **I2C SDA / SCL** | sensor de temperatura (já suportado) + OLED SSD1306 (0x3C, reserva). Endereços sem conflito: AHT21 0x38, ENS160 0x53, SCD41 0x62, BH1750 0x23. Pull-up 4k7 se o módulo não tiver |
@@ -92,9 +92,12 @@ firmware novo) ou com `-DDEFAULT_GATEWAY_MAC`; sem isso, broadcast como antes.
 | **9** | Entrada: **PB1** = botão BOOT da placa | strapping, mas o botão já existe; vale como botão depois do boot |
 | 10 | 1-Wire (DS18B20) | já em uso |
 | **20** | Entrada: **PB2** (pull-up interno) | U0RXD, livre (log vai pela USB). No 2U vira ECHO2 |
-| **21** | Saída: **relé 2** | U0TXD: a ROM transmite no boot e o relé pode dar um pulso. Só para carga não crítica |
+| **21** | Microfone INMP441 — SD (entrada) | U0TXD: a ROM transmite no boot, por isso aqui só **entrada** (o SD do mic fica em alta impedância sem clock). Pull-down interno: sem mic lê zeros → detectado |
 
 Relé: módulo com transistor/optoacoplador acionado por 3,3 V, bobina no 5 V. Botões: GPIO → botão → GND.
+Só há um relé direto (G5); um 2º relé, se precisar, vai por expansor I2C (PCF8574) na G6/G7.
+Mic: o INMP441 substituiu o analógico (MAX9814/MAX4466 em G0) — 3 pinos em vez de 1, mas sai
+dB SPL comparável entre nodes e o driver já existe. Fio do mic curto (< 20 cm): I2S a 1 MHz.
 
 ### node_reservatorio_2U — 2 reservatórios lado a lado, env `node_reservatorio_2U`
 
@@ -108,7 +111,7 @@ Manual: [docs/MONTAGEM_NODE_RESERVATORIO_2U.md](docs/MONTAGEM_NODE_RESERVATORIO_
 | ECHO2 | **20** | sensor 2 → 1k série + 2k ao GND |
 | Fonte 5 V | **1** | igual ao 1U |
 | Temperatura | **6/7** (I2C) ou **10** (DS18B20) | opcional, um sensor para os dois (ar) |
-| Reservados | 0 · 5 · 6/7 · 9 · 21 | mic · relé 1 · I2C/OLED · PB1 · relé 2 (sem PB2: G20 virou ECHO2) |
+| Reservados | 0/2/21 · 5 · 6/7 · 9 | mic INMP441 (SCK/WS/SD) · relé · I2C/OLED · PB1 (sem PB2: G20 virou ECHO2) |
 
 **TRIG compartilhado:** os dois sensores disparam juntos e cada leitura usa só o seu ECHO; o
 firmware lê um de cada vez com ≥ 60 ms de folga. Vale para reservatórios separados — dois

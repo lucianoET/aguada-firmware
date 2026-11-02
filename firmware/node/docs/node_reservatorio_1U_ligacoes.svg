@@ -61,13 +61,13 @@
 <rect x="24" y="304" width="336" height="40" rx="6" fill="#fff" stroke="#1f6fd1" stroke-width="2"/>
 <text x="34" y="321" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">TRIG → sensor TRIG</text>
 <text x="34" y="337" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">direto (3,3 V basta para o sensor)</text>
-<text x="386" y="375" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="end">não usar (boot)</text>
+<text x="386" y="375" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="end">reserva: mic INMP441 WS</text>
 <path d="M393,416 L360,416" fill="none" stroke="#9a5b2e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 <rect x="24" y="396" width="336" height="40" rx="6" fill="#fff" stroke="#9a5b2e" stroke-width="2"/>
 <text x="34" y="413" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">MON 5V ← nó do divisor R3/R4</text>
 <text x="34" y="429" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">leitura da fonte (÷3)</text>
-<text x="386" y="467" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="end">reserva: microfone</text>
-<text x="584" y="145" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">reserva: relé 1</text>
+<text x="386" y="467" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="end">reserva: mic INMP441 SCK</text>
+<text x="584" y="145" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">reserva: relé</text>
 <text x="584" y="191" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">reserva: I2C SDA (sensores/OLED)</text>
 <text x="584" y="237" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">reserva: I2C SCL (sensores/OLED)</text>
 <text x="584" y="283" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">LED — não usar</text>
@@ -77,7 +77,7 @@
 <text x="620" y="367" font-family="Arial,Helvetica,sans-serif" font-size="13" font-weight="700" fill="#14201b" text-anchor="start">G10 ↔ DS18B20 DQ (amarelo)</text>
 <text x="620" y="383" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#5a6b64" text-anchor="start">opcional · pull-up R5 4k7 para 3V3</text>
 <text x="584" y="421" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">reserva: botão PB2</text>
-<text x="584" y="467" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">reserva: relé 2</text>
+<text x="584" y="467" font-family="Arial,Helvetica,sans-serif" font-size="11" font-weight="400" fill="#a3ada8" text-anchor="start">reserva: mic INMP441 SD</text>
 <rect x="24" y="560" width="290" height="220" rx="10" fill="#f3f6f4" stroke="#d5ddd8" stroke-width="1.5"/>
 <text x="38" y="584" font-family="Arial,Helvetica,sans-serif" font-size="14" font-weight="700" fill="#14201b" text-anchor="start">1 · Divisor do ECHO (5 V → 3,3 V)</text>
 <text x="110" y="612" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="700" fill="#1a9a52" text-anchor="middle">sensor ECHO</text>

@@ -47,9 +47,9 @@ right = ["G5", "G6", "G7", "G8", "G9", "G10", "G20", "G21"]
 ys = [by + 40 + i * 46 for i in range(8)]
 use_l = {"5V": "v5", "GND": "gnd", "3V3": "v33", "G4": "echo", "G3": "trig", "G1": "mon"}
 use_r = {"G10": "dq", **({"G20": "echo"} if DOIS else {})}
-note_r = {"G8": "LED — não usar", "G9": "BOOT = botão PB1 (reserva)", "G5": "reserva: relé 1",
+note_r = {"G8": "LED — não usar", "G9": "BOOT = botão PB1 (reserva)", "G5": "reserva: relé",
           "G6": "reserva: I2C SDA (sensores/OLED)", "G7": "reserva: I2C SCL (sensores/OLED)",
-          "G21": "reserva: relé 2", **({} if DOIS else {"G20": "reserva: botão PB2"})}
+          "G21": "reserva: mic INMP441 SD", **({} if DOIS else {"G20": "reserva: botão PB2"})}
 for name, y in zip(left, ys):
     col = C[use_l[name]] if name in use_l else C["off"]
     o.append(f'<circle cx="{bx}" cy="{y}" r="7" fill="#e8c46a" stroke="#8a6d1f" stroke-width="1.5"/>')
@@ -75,7 +75,7 @@ for name, y in zip(left, ys):
         line([(bx - 7, y), (360, y)], col)
         tag(24, y, 336, col, *tags_l[name])
     elif name in ("G2", "G0"):
-        t(bx - 14, y + 5, "reserva: microfone" if name == "G0" else "não usar (boot)", 11, C["off"], "end")
+        t(bx - 14, y + 5, "reserva: mic INMP441 SCK" if name == "G0" else "reserva: mic INMP441 WS", 11, C["off"], "end")
 # ── direita ───────────────────────────────────────────────────────────────────
 for name, y in zip(right, ys):
     if name == "G10":

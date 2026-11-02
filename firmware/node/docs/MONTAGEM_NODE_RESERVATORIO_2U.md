@@ -44,19 +44,17 @@ os dois sensores dividem o TRIG. O nó envia `sensor_id` 1 e 2 com o mesmo `node
 | **G1** | monitor 5 V | nó R3/R4 + C3 | marrom |
 | **G10** | 1-Wire | DS18B20 DQ (amarelo) + R5 para 3V3 | ciano |
 | **G6 / G7** | I2C SDA / SCL | HTU21D/SHT3x (opcional; VCC no 3V3) — o OLED futuro divide o mesmo barramento | roxo / cinza |
-| G2, G8 | — | **não usar** (pinos de boot; G8 = LED da placa) | |
-| G0, G5–G7, G9, G21 | — | **reservados** (tabela abaixo) | |
+| G8 | — | **não usar** (pino de boot; LED da placa) | |
+| G0, G2, G5–G7, G9, G21 | — | **reservados** (tabela abaixo) | |
 
 **Pinos reservados para expansão** (ainda sem firmware — não usar para outra coisa):
 
 | C3 | Reserva | Cuidado |
 |----|---------|---------|
-| **G0** | Microfone analógico (MAX9814/MAX4466 em 3V3) | detectar água entrando pelo ruído; ADC1 funciona com o rádio ligado |
+| **G0 / G2 / G21** | Microfone **INMP441** (I2S): G0 → SCK, G2 → WS, G21 ← SD; VDD 3V3, GND, L/R → GND | detectar água entrando pelo ruído. G2 é pino de boot: só o WS do mic nele. Fios curtos (< 20 cm) |
 | **G6 / G7** | OLED SSD1306 (0x3C) na mesma I2C do sensor de temperatura | pull-up 4k7 se nenhum módulo tiver |
-| **G5** | Saída: relé 1 | pino mais seguro para saída |
-| **G21** | Saída: relé 2 | a ROM transmite neste pino no boot: o relé pode dar um pulso |
+| **G5** | Saída: relé | pino mais seguro para saída. 2º relé: expansor I2C (PCF8574) na G6/G7 |
 | **G9** | Entrada: botão PB1 (é o botão BOOT da placa) | |
-| G2 | só botão, com pull-up 10k externo | nível baixo no boot impede a placa de iniciar |
 
 Relé: módulo acionado por 3,3 V (transistor/optoacoplador), bobina no 5 V.
 
