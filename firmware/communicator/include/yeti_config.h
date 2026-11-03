@@ -13,7 +13,7 @@
 #define YETI_PIN_TFT_DC     10
 #endif
 #ifndef YETI_PIN_TFT_RST
-#define YETI_PIN_TFT_RST    13
+#define YETI_PIN_TFT_RST    -1    // RES no RC (10k a 3V3 + 100 nF); G13 virou touch do braço
 #endif
 #ifndef YETI_PIN_TFT_BL
 #define YETI_PIN_TFT_BL     2     // BLK: PWM do backlight
@@ -35,10 +35,32 @@
 
 // ── Touch capacitivo do topo da cabeça (TTP223, saída ativa alta) ──────────────
 #ifndef YETI_PIN_TOUCH
-#define YETI_PIN_TOUCH      1
+#define YETI_PIN_TOUCH      44    // RX da UART0 (console é o USB nativo)
 #endif
 #ifndef YETI_TOUCH_ACTIVE
 #define YETI_TOUCH_ACTIVE   HIGH  // TTP223 com jumper A aberto; LOW se o jumper A for fechado
+#endif
+
+// ── Touch nativo dos braços (fita de cobre por dentro do braço) ───────────────
+#ifndef YETI_PIN_ARM_L
+#define YETI_PIN_ARM_L      3     // TOUCH3
+#endif
+#ifndef YETI_PIN_ARM_R
+#define YETI_PIN_ARM_R      13    // TOUCH13
+#endif
+
+// ── LEDs WS2812 das bochechas e bateria ───────────────────────────────────────
+#ifndef YETI_PIN_LED
+#define YETI_PIN_LED        43    // TX da UART0: pisca no boot (log do ROM)
+#endif
+#ifndef YETI_LED_COUNT
+#define YETI_LED_COUNT      2
+#endif
+#ifndef YETI_PIN_VBAT
+#define YETI_PIN_VBAT       1     // ADC1_CH0, divisor 100k/100k
+#endif
+#ifndef YETI_VBAT_DIV
+#define YETI_VBAT_DIV       2.0f
 #endif
 
 // ── Comportamento ──────────────────────────────────────────────────────────────
