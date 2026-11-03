@@ -1,5 +1,5 @@
-// Yeti — boneco de mesa com rosto no ST7789 240×240, mic, falante, touch na cabeça e
-// sensores (HTU21D, IMU, BH1750). É um communicator: fala por PTT (segurar a cabeça),
+// Yeti — boneco de mesa com rosto no ST7789 240×240, mic (1 ou 2), falante, touch na
+// cabeça e nos braços, LEDs nas bochechas e sensores (HTU21D, IMU, BH1750). É um communicator: fala por PTT (segurar a cabeça),
 // toca os anúncios dos outros nodes e reage aos alarmes do Aguada. Doc: YETI.md
 #include <Arduino.h>
 #include <WiFi.h>
@@ -17,6 +17,7 @@
 #include "tones.h"
 #include "face.h"
 #include "sensors.h"
+#include "body.h"
 
 static const char *TAG = "yeti";
 
@@ -24,6 +25,8 @@ static uint16_t s_node_id = 0;
 static volatile bool  s_ptt = false;
 static volatile bool  s_on_air = false;
 static volatile float s_level = 0;           // nível da voz (mic no ar ou falante) 0..1
+static volatile float s_sound_dir = 0;       // -1 esquerda .. +1 direita (mics estéreo)
+static volatile uint32_t s_sound_ms = 0;     // millis() do último som alto
 
 // ── Efeitos sonoros ─────────────────────────────────────────────────────────────
 enum Sfx : uint8_t { SFX_NONE, SFX_BOOT, SFX_HAPPY, SFX_BEEP };
@@ -46,6 +49,18 @@ static float rms01(const int16_t *p, size_t n) {
     for (size_t i = 0; i < n; i++) acc += (float)p[i] * p[i];
     float db = 10.0f * log10f(acc / n / (32768.0f * 32768.0f) + 1e-9f);   // dBFS
     return constrain((db + 45.0f) / 40.0f, 0.0f, 1.0f);                  // −45..−5 dBFS
+}
+
+// Ocioso com 2 mics: som alto de um lado → o Yeti olha para lá. Bloqueia 20 ms no I2S.
+static void listen_dir(int32_t *raw, int16_t *pcm) {
+    audio_read_mic(raw, AUDIO_FRAME);
+    for (int i = 0; i < AUDIO_FRAME; i++) pcm[i] = raw[i] >> 8;
+    if (rms01(pcm, AUDIO_FRAME) < YETI_SOUND_LEVEL) return;
+    float l, r;
+    audio_mic_energy(&l, &r);
+    float d = (sqrtf(r) - sqrtf(l)) / (sqrtf(r) + sqrtf(l) + 1e-6f);   // -1..1
+    s_sound_dir = s_sound_dir * 0.6f + constrain(d * 3.0f, -1.0f, 1.0f) * 0.4f;
+    s_sound_ms = millis();
 }
 
 // ── Task de áudio (mesmo fluxo do communicator + efeitos e nível p/ a boca) ─────
@@ -101,7 +116,8 @@ static void audio_task(void *) {
             } else {
                 sfx = SFX_NONE;
                 s_level = 0;
-                vTaskDelay(pdMS_TO_TICKS(5));
+                if (audio_mic_stereo()) listen_dir(raw, pcm);
+                else vTaskDelay(pdMS_TO_TICKS(5));
             }
         }
     }
@@ -117,6 +133,12 @@ static void on_taps(int n) {
         s_sfx = SFX_HAPPY;
     } else if (n == 2) {
         face_show_info(YETI_INFO_MS);
+        int p = body_vbat_pct();
+        if (p >= 0) {
+            char m[24];
+            snprintf(m, sizeof(m), "bateria %d%%", p);
+            face_toast(m);
+        }
     } else {
         uint8_t v = audio_volume();
         v = v >= 100 ? 25 : (v / 25 + 1) * 25;
@@ -180,6 +202,8 @@ static void mood_tick(void) {
     // Inclinar o boneco puxa o olhar; parado, olha sozinho.
     if (v.imu && (fabsf(v.ax) > 0.2f || fabsf(v.ay) > 0.2f) && m != MOOD_DIZZY)
         face_set_gaze(constrain(-v.ay * 2.0f, -1.0f, 1.0f), constrain(v.ax * 2.0f, -1.0f, 1.0f));
+    else if (s_sound_ms && now - s_sound_ms < 1500 && m == MOOD_IDLE)
+        face_set_gaze(s_sound_dir, 0);
     else
         face_set_gaze(NAN, NAN);
 
@@ -190,12 +214,49 @@ static void mood_tick(void) {
     if (m == MOOD_SLEEPY) bl = 12;
     static uint8_t cur = 0;
     if (bl != cur) { cur = cur + (bl > cur ? 1 : -1) * max(1, abs(bl - cur) / 8); face_set_brightness(cur); }
+    body_leds(m, cur, s_level);
+}
+
+// ── Braços: toque D = sim, toque E = não, segurar = gatilho, os dois = abraço ───
+// Cada evento sai também na serial (YETI_EVT ...) para quem quiser automatizar.
+static void arms_tick(void) {
+    ArmEvt e = body_arms_tick();
+    if (e == ARM_NONE) return;
+    static const char *const name[] = { "", "nao", "sim", "gatilho_E", "gatilho_D", "abraco" };
+    Serial.printf("YETI_EVT braco=%s\n", name[e]);
+    s_awake_until = millis() + 10000;
+    switch (e) {
+        case ARM_TAP_R:  face_toast("sim");  body_leds_flash(0, 160, 0, 400);  s_sfx = SFX_BEEP; break;
+        case ARM_TAP_L:  face_toast("nao");  body_leds_flash(160, 0, 0, 400);  s_sfx = SFX_BEEP; break;
+        case ARM_HOLD_L: face_toast("gatilho E"); body_leds_flash(160, 90, 0, 600); break;
+        case ARM_HOLD_R: face_toast("gatilho D"); body_leds_flash(160, 90, 0, 600); break;
+        case ARM_HUG:
+            s_happy_until = millis() + 3000;
+            s_sfx = SFX_HAPPY;
+            body_leds_flash(200, 40, 90, 1500);
+            break;
+        default: break;
+    }
+}
+
+// Bateria: aviso ao cair abaixo de YETI_VBAT_LOW (de novo a cada 5 min).
+static void vbat_tick(void) {
+    static uint32_t warned = 0;
+    float v = body_vbat();
+    if (isnan(v) || v >= YETI_VBAT_LOW) return;
+    if (!warned || millis() - warned > 300000) {
+        warned = millis();
+        face_toast("bateria fraca");
+        body_leds_flash(160, 90, 0, 1000);
+    }
 }
 
 static void ui_task(void *) {
     uint32_t last = 0;
     for (;;) {
         touch_tick();
+        arms_tick();
+        vbat_tick();
         alarm_tick();
         uint32_t now = millis();
         if (now - last >= 1000 / YETI_FPS) {
@@ -216,6 +277,7 @@ void setup() {
     face_toast("iniciando...");
     face_draw();
     sensors_begin();
+    body_begin();
 
     WiFi.mode(WIFI_STA);
     WiFi.setSleep(false);
@@ -242,9 +304,10 @@ void setup() {
 
     uint8_t ch; wifi_second_chan_t sc;
     esp_wifi_get_channel(&ch, &sc);
-    Serial.printf("YETI_BOOT node=0x%04X name=%s zone=%u wifi=%s ip=%s canal=%u mic=%d\n",
+    Serial.printf("YETI_BOOT node=0x%04X name=%s zone=%u wifi=%s ip=%s canal=%u mic=%d estereo=%d vbat=%.2f\n",
                   s_node_id, COMM_NAME, COMM_ZONE, WiFi.isConnected() ? "ok" : "--",
-                  WiFi.localIP().toString().c_str(), ch, audio_mic_present());
+                  WiFi.localIP().toString().c_str(), ch, audio_mic_present(),
+                  audio_mic_stereo(), (double)body_vbat());
 
     xTaskCreate(audio_task, "audio", 6144, nullptr, 5, nullptr);
     xTaskCreate(ui_task,    "ui",    6144, nullptr, 2, nullptr);

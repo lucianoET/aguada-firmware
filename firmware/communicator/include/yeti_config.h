@@ -48,6 +48,13 @@
 #ifndef YETI_PIN_ARM_R
 #define YETI_PIN_ARM_R      13    // TOUCH13
 #endif
+#ifndef YETI_ARM_ON
+#define YETI_ARM_ON         1.04f // leitura/base acima disso = tocado (parede de 1,5–2 mm)
+#endif
+#ifndef YETI_ARM_OFF
+#define YETI_ARM_OFF        1.02f
+#endif
+#define YETI_ARM_HOLD_MS    800   // segurar o braço = gatilho
 
 // ── LEDs WS2812 das bochechas e bateria ───────────────────────────────────────
 #ifndef YETI_PIN_LED
@@ -55,6 +62,9 @@
 #endif
 #ifndef YETI_LED_COUNT
 #define YETI_LED_COUNT      2
+#endif
+#ifndef YETI_LED_MAX
+#define YETI_LED_MAX        120   // teto de brilho (0..255): atrás de PLA fino já basta
 #endif
 #ifndef YETI_PIN_VBAT
 #define YETI_PIN_VBAT       1     // ADC1_CH0, divisor 100k/100k
@@ -72,3 +82,5 @@
 #define YETI_COLD_C         18.0f
 #define YETI_HOT_C          30.0f
 #define YETI_FPS            25
+#define YETI_VBAT_LOW       3.45f // V: aviso de bateria fraca
+#define YETI_SOUND_LEVEL    0.35f // nível (0..1) a partir do qual o Yeti olha para o som

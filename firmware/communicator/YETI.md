@@ -77,6 +77,23 @@ MPU6050 vai preso firme ao corpo.
 | inclinar o boneco | os olhos seguem a inclinação |
 | chacoalhar | olhos de espiral (tonto) por 3 s |
 | batida no corpo | acorda se estiver dormindo |
+| toque no braço **direito** | **sim**: toast, bochechas verdes, bipe |
+| toque no braço **esquerdo** | **não**: toast, bochechas vermelhas, bipe |
+| segurar um braço ≥ 0,8 s | **gatilho** E/D (toast, bochechas âmbar) |
+| os dois braços juntos | **abraço**: olhos felizes, piado, bochechas rosa |
+| som alto de um lado (2 mics) | os olhos viram para o lado do som por 1,5 s |
+
+Esquerdo/direito = de quem olha o Yeti de frente. Cada gesto dos braços sai na serial como
+`YETI_EVT braco=sim|nao|gatilho_E|gatilho_D|abraco`. Com 2 toques na cabeça, o rodapé mostra a
+bateria em %; abaixo de 3,45 V aparece "bateria fraca" (a cada 5 min).
+
+**Bochechas (WS2812):** cor pelo humor (rosado calmo, verde no ar, azul ouvindo, vermelho
+piscando no alarme, apagadas dormindo), com brilho seguindo o backlight e teto em
+`YETI_LED_MAX`.
+
+**Calibração dos braços:** no boot o log mostra `braços: base E=… D=…`. Se o toque não
+pegar, baixe `YETI_ARM_ON` (padrão 1,04 = +4 %); se disparar sozinho, suba. Não toque nos
+braços durante o boot (é quando a linha de base é medida).
 
 ## Humores (por prioridade)
 

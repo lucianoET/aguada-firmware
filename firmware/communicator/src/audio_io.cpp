@@ -11,6 +11,8 @@ static const char *TAG = "audio";
 
 static i2s_chan_handle_t s_tx = nullptr, s_rx = nullptr;
 static bool     s_mic = false;
+static bool     s_mic_r = false;        // 2º INMP441 com L/R em 3V3 (canal direito)
+static float    s_eng[2] = { 0, 0 };    // energia L/R do último bloco lido
 static uint8_t  s_vol = COMM_VOLUME_DEFAULT;
 static int32_t  s_frame[CHUNK * 2];     // RX: L,R intercalados
 static int32_t  s_txf[CHUNK * 2];       // TX (outro buffer: leitura e escrita podem vir de tasks diferentes)
@@ -66,28 +68,40 @@ bool audio_init(void) {
         if (s_frame[2 * i])     nz_l++;
         if (s_frame[2 * i + 1]) nz_r++;
     }
+    s_mic_r = nz_r > (int)(bytes / 16);  // slot R com dado em >50% das amostras
     ESP_LOGI(TAG, "mic diag: min=%ld max=%ld nz_L=%d nz_R=%d (de %u) din_nivel=%d",
              (long)vmin, (long)vmax, nz_l, nz_r, (unsigned)(bytes / 8),
              gpio_get_level((gpio_num_t)COMM_PIN_I2S_DIN));
     ESP_LOGI(TAG, "I2S %d Hz bclk=%d ws=%d dout=%d din=%d — mic %s (span=%ld)",
              AUDIO_RATE_HZ, COMM_PIN_I2S_BCLK, COMM_PIN_I2S_WS, COMM_PIN_I2S_DOUT,
              COMM_PIN_I2S_DIN, s_mic ? "OK" : "ausente", (long)(vmax - vmin));
+    if (s_mic_r) ESP_LOGI(TAG, "2º mic no canal R: estéreo (voz = média L+R)");
     return true;
 }
 
 bool audio_mic_present(void) { return s_mic; }
+bool audio_mic_stereo(void) { return s_mic && s_mic_r; }
+
+void audio_mic_energy(float *l, float *r) { *l = s_eng[0]; *r = s_eng[1]; }
 
 size_t audio_read_mic(int32_t *out, size_t n) {
     size_t got = 0;
+    float el = 0, er = 0;
     while (got < n) {
         size_t want = n - got > CHUNK ? CHUNK : n - got;
         size_t bytes = 0;
         if (i2s_channel_read(s_rx, s_frame, want * 2 * sizeof(int32_t), &bytes,
                              pdMS_TO_TICKS(100)) != ESP_OK && bytes == 0) break;
         size_t k = bytes / (2 * sizeof(int32_t));
-        for (size_t i = 0; i < k; i++) out[got + i] = s_frame[2 * i] >> 8;   // L, 24 bit
+        for (size_t i = 0; i < k; i++) {
+            int32_t l = s_frame[2 * i] >> 8, r = s_frame[2 * i + 1] >> 8;   // 24 bit
+            el += (float)l * l;
+            er += (float)r * r;
+            out[got + i] = s_mic_r ? (l + r) / 2 : l;
+        }
         got += k;
     }
+    if (got) { s_eng[0] = el / got; s_eng[1] = er / got; }
     return got;
 }
 
