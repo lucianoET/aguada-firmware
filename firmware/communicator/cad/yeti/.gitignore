@@ -1,0 +1,9 @@
+# STLs originais do Yeti v1.2 (terceiros) e saídas derivadas deles
+obj_*.stl
+obj_*.gcode
+yeti_corpo_v2.stl
+yeti_skin_*.stl
+*.step
+frontal_*.stl
+frame_st7789_1p3_b3d.stl
+modular/

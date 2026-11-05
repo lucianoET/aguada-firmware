@@ -1,13 +1,17 @@
-# Yeti — boneco de mesa (perfil `yeti_s3` do communicator)
+# Yeti — boneco de mesa (perfis `yeti_s3` e `yeti_c3` do communicator)
 
 Yeti v1.2 impresso com rosto num ST7789 1.3" 240×240, microfone, falante, touch no topo da
 cabeça e sensores de clima, movimento e luz. **É um communicator:** usa os mesmos
 `audio_io`, `voice_net`, `voice_dsp` e `alarm`. Fala por PTT, toca os anúncios dos outros
 nodes e reage aos alarmes do Aguada. A moldura do display é o `frame_st7789_1p3.stl`,
-gerada por `frame_st7789_1p3.py` na pasta dos STLs do Yeti. Na mesma pasta: `yeti_edit.py`
+gerada por `frame_st7789_1p3.py` em `cad/yeti/`. Na mesma pasta: `yeti_edit.py`
 (corpo com furos dos mics e marcas de toque nos braços → `yeti_corpo_v2.stl`),
 `yeti_base_energia.py` (base de bateria) e as skins `yeti_skin_cmasm.py` (chapéu) e
 `yeti_skin_bibico.py` (bibico).
+
+**CAD:** [cad/yeti/](cad/yeti/README.md) · **Manuais:** montagem [S3](docs/MONTAGEM_YETI_S3.md) / [C3](docs/MONTAGEM_YETI_C3.md) · [usuário](docs/MANUAL_USUARIO_YETI.md) ·
+diagramas [S3](docs/yeti_s3_ligacoes.svg) / [C3](docs/yeti_c3_ligacoes.svg) (gerados por
+`docs/wiring_src/yeti.py`).
 
 ## Pinagem — ESP32-S3 SuperMini
 
