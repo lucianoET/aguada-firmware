@@ -1,5 +1,6 @@
 #include "body.h"
 #include "yeti_config.h"
+#include "sensors.h"
 #include <Arduino.h>
 #include <esp_log.h>
 #include <math.h>
@@ -17,6 +18,14 @@ struct Arm {
 };
 static Arm s_arm[2] = { { YETI_PIN_ARM_L }, { YETI_PIN_ARM_R } };
 
+#if YETI_TOUCH_MPR121
+// Braços pelo MPR121 (bits E1/E2): o chip já faz linha de base e histerese.
+static void arm_calibrate(Arm &) {}
+static bool arm_sample(Arm &a) {
+    a.down = sensors().touch & (&a == &s_arm[0] ? 0x02 : 0x04);
+    return a.down;
+}
+#else
 static void arm_calibrate(Arm &a) {
     uint32_t acc = 0;
     for (int i = 0; i < 16; i++) { acc += touchRead(a.pin); delay(2); }
@@ -36,6 +45,7 @@ static bool arm_sample(Arm &a) {
     }
     return a.down;
 }
+#endif
 
 ArmEvt body_arms_tick(void) {
     static uint32_t last = 0, both_t = 0;
@@ -151,8 +161,12 @@ int body_vbat_pct(void) {
 
 void body_begin(void) {
     for (Arm &a : s_arm) arm_calibrate(a);
+#if YETI_TOUCH_MPR121
+    ESP_LOGI(TAG, "braços: MPR121 E1/E2 %s", sensors().mpr ? "ok" : "AUSENTE");
+#else
     ESP_LOGI(TAG, "braços: base E=%.0f D=%.0f (toque > x%.2f)", s_arm[0].base, s_arm[1].base,
              (double)YETI_ARM_ON);
+#endif
     s_led_ok = rmtInit(YETI_PIN_LED, RMT_TX_MODE, RMT_MEM_NUM_BLOCKS_1, 10000000);
     leds_write(0, 0, 0);
     analogSetPinAttenuation(YETI_PIN_VBAT, ADC_11db);

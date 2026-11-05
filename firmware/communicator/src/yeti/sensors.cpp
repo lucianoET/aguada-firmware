@@ -74,6 +74,35 @@ static void imu_update(void) {
     }
 }
 
+// ── MPR121 (0x5A): toque capacitivo por I2C (yeti_c3: o C3 não tem touch nativo) ──
+// E0 = cabeça, E1 = braço esquerdo, E2 = braço direito. Limiares baixos: a fita fica
+// atrás de 1,5–2 mm de PLA. Linha de base automática do próprio chip.
+#define MPR_ADDR 0x5A
+
+static void mpr_init(void) {
+    wr(MPR_ADDR, 0x80, 0x63);                    // soft reset
+    delay(2);
+    wr(MPR_ADDR, 0x5E, 0x00);                    // parado para configurar
+    for (uint8_t i = 0; i < 12; i++) {
+        wr(MPR_ADDR, 0x41 + 2 * i, YETI_MPR_TOUCH);
+        wr(MPR_ADDR, 0x42 + 2 * i, YETI_MPR_RELEASE);
+    }
+    static const uint8_t filt[][2] = {           // filtros do AN3944 (valores do datasheet)
+        { 0x2B, 0x01 }, { 0x2C, 0x01 }, { 0x2D, 0x0E }, { 0x2E, 0x00 },
+        { 0x2F, 0x01 }, { 0x30, 0x05 }, { 0x31, 0x01 }, { 0x32, 0x00 },
+        { 0x33, 0x00 }, { 0x34, 0x00 }, { 0x35, 0x00 },
+        { 0x5B, 0x11 },                          // debounce 1 toque / 1 soltura
+        { 0x5C, 0x10 }, { 0x5D, 0x20 },          // 16 µA, 0,5 µs
+    };
+    for (auto &r : filt) wr(MPR_ADDR, r[0], r[1]);
+    wr(MPR_ADDR, 0x5E, 0x80 | 3);                // E0..E2, baseline carregado da 1ª leitura
+}
+
+static void mpr_update(void) {
+    uint8_t b[2];
+    if (wr(MPR_ADDR, 0x00) && rd(MPR_ADDR, b, 2) == 2) s.touch = (b[0] | b[1] << 8) & 0x0FFF;
+}
+
 // ── BH1750: modo contínuo alta resolução (1 lx, 120 ms) ────────────────────────
 static void lux_update(void) {
     uint8_t b[2];
@@ -85,6 +114,7 @@ static void sensors_task(void *) {
     for (;;) {
         uint32_t now = millis();
         if (s.imu) imu_update();
+        if (s.mpr) mpr_update();
         if (s.lux && now - t_lux >= 200) { t_lux = now; lux_update(); }
         if (s.htu && (t_htu == 0 || now - t_htu >= 5000)) { t_htu = now; htu_update(); }
         if (now - t_log >= 10000) {
@@ -121,7 +151,8 @@ void sensors_begin(void) {
     for (uint8_t a : { 0x23, 0x5C }) {
         if (probe(a) && wr(a, 0x01) && wr(a, 0x10)) { s_lux_addr = a; s.lux = true; break; }
     }
-    ESP_LOGI(TAG, "HTU21D %s, IMU %s, BH1750 %s", s.htu ? "ok" : "--", s.imu ? "ok" : "--",
-             s.lux ? "ok" : "--");
+    if (probe(MPR_ADDR)) { mpr_init(); s.mpr = true; }
+    ESP_LOGI(TAG, "HTU21D %s, IMU %s, BH1750 %s, MPR121 %s", s.htu ? "ok" : "--",
+             s.imu ? "ok" : "--", s.lux ? "ok" : "--", s.mpr ? "ok" : "--");
     xTaskCreate(sensors_task, "sens", 3072, nullptr, 1, nullptr);
 }

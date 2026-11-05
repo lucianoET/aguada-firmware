@@ -155,7 +155,11 @@ static void touch_tick(void) {
     static uint32_t t0 = 0, last_up = 0;
     static int taps = 0;
     uint32_t now = millis();
+#if YETI_TOUCH_MPR121
+    bool t = sensors().touch & 0x01;              // E0 = cabeça
+#else
     bool t = digitalRead(YETI_PIN_TOUCH) == YETI_TOUCH_ACTIVE;
+#endif
 
     if (t && !down) { down = true; held = false; t0 = now; }
     if (t && down && !held && now - t0 >= YETI_HOLD_PTT_MS) {
@@ -272,7 +276,7 @@ static void ui_task(void *) {
 void setup() {
     Serial.begin(115200);
     delay(300);
-    pinMode(YETI_PIN_TOUCH, INPUT);
+    if (!YETI_TOUCH_MPR121) pinMode(YETI_PIN_TOUCH, INPUT);
     face_begin();
     face_toast("iniciando...");
     face_draw();

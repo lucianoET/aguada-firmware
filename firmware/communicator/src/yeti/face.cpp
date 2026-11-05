@@ -48,7 +48,7 @@ public:
         l.pin_bl = YETI_PIN_TFT_BL;
         l.invert = false;
         l.freq   = 12000;
-        l.pwm_channel = 7;
+        l.pwm_channel = YETI_TFT_BL_CH;
         _light.config(l);
         _panel.setLight(&_light);
 
@@ -85,7 +85,12 @@ void face_begin(void) {
     s_lcd.fillScreen(TFT_BLACK);
     s_spr.setColorDepth(16);
     s_spr.setPsram(false);                       // RAM interna: DMA mais rápido
-    if (!s_spr.createSprite(240, 240)) s_ok = false;
+    if (!s_spr.createSprite(240, 240)) {          // sem 115 KB livres (C3): 8 bit, 57 KB
+        s_spr.setColorDepth(8);
+        if (!s_spr.createSprite(240, 240)) s_ok = false;
+    }
+    Serial.printf("[face] sprite %d bit, heap livre %u\n", s_spr.getColorDepth(),
+                  (unsigned)ESP.getFreeHeap());
     s_mood_since = millis();
 }
 
@@ -105,13 +110,13 @@ void face_toast(const char *msg) {
 
 static uint16_t mood_color(void) {
     switch (s_mood) {
-        case MOOD_ALARM:  return (millis() / 250) % 2 ? s_spr.color888(255, 40, 30) : s_spr.color888(120, 0, 0);
-        case MOOD_TALK:   return s_spr.color888(90, 255, 140);
-        case MOOD_LISTEN: return s_spr.color888(120, 200, 255);
-        case MOOD_COLD:   return s_spr.color888(110, 170, 255);
-        case MOOD_HOT:    return s_spr.color888(255, 160, 60);
-        case MOOD_SLEEPY: return s_spr.color888(120, 140, 160);
-        default:          return s_spr.color888(190, 245, 255);
+        case MOOD_ALARM:  return (millis() / 250) % 2 ? s_spr.color565(255, 40, 30) : s_spr.color565(120, 0, 0);
+        case MOOD_TALK:   return s_spr.color565(90, 255, 140);
+        case MOOD_LISTEN: return s_spr.color565(120, 200, 255);
+        case MOOD_COLD:   return s_spr.color565(110, 170, 255);
+        case MOOD_HOT:    return s_spr.color565(255, 160, 60);
+        case MOOD_SLEEPY: return s_spr.color565(120, 140, 160);
+        default:          return s_spr.color565(190, 245, 255);
     }
 }
 
@@ -203,8 +208,8 @@ static void draw_face(void) {
         for (int i = 0; i <= k; i++) s_spr.drawString("z", 196 + i * 12, 40 - i * 14);
     } else if (s_mood == MOOD_HOT) {
         int dy = (now / 40) % 60;
-        s_spr.fillCircle(214, 52 + dy, 7, s_spr.color888(120, 200, 255));
-        s_spr.fillTriangle(207, 50 + dy, 221, 50 + dy, 214, 36 + dy, s_spr.color888(120, 200, 255));
+        s_spr.fillCircle(214, 52 + dy, 7, s_spr.color565(120, 200, 255));
+        s_spr.fillTriangle(207, 50 + dy, 221, 50 + dy, 214, 36 + dy, s_spr.color565(120, 200, 255));
     } else if (s_mood == MOOD_LISTEN) {
         int r = 8 + (int)(mouth * 14);
         s_spr.fillArc(14, 120, r, r + 3, -50, 50, col);
@@ -217,19 +222,19 @@ static void draw_info(void) {
     char buf[24];
     s_spr.fillScreen(TFT_BLACK);
     s_spr.setTextDatum(middle_center);
-    s_spr.setTextColor(s_spr.color888(190, 245, 255));
+    s_spr.setTextColor(s_spr.color565(190, 245, 255));
     s_spr.setFont(&fonts::FreeSansBold24pt7b);
     if (isnan(v.temp_c)) snprintf(buf, sizeof(buf), "--.-");
     else                 snprintf(buf, sizeof(buf), "%.1f", v.temp_c);
     s_spr.drawString(buf, 112, 82);
-    s_spr.drawCircle(178, 62, 6, s_spr.color888(190, 245, 255));   // °
-    s_spr.drawCircle(178, 62, 5, s_spr.color888(190, 245, 255));
+    s_spr.drawCircle(178, 62, 6, s_spr.color565(190, 245, 255));   // °
+    s_spr.drawCircle(178, 62, 5, s_spr.color565(190, 245, 255));
     s_spr.setFont(&fonts::FreeSans18pt7b);
     if (isnan(v.rh)) snprintf(buf, sizeof(buf), "-- %%");
     else             snprintf(buf, sizeof(buf), "%.0f %%", v.rh);
     s_spr.drawString(buf, 120, 140);
     s_spr.setFont(&fonts::FreeSans12pt7b);
-    s_spr.setTextColor(s_spr.color888(120, 140, 160));
+    s_spr.setTextColor(s_spr.color565(120, 140, 160));
     if (isnan(v.lux_v)) snprintf(buf, sizeof(buf), "luz --");
     else                snprintf(buf, sizeof(buf), "%.0f lx", v.lux_v);
     s_spr.drawString(buf, 120, 190);
@@ -246,10 +251,10 @@ void face_draw(void) {
         s_spr.setFont(&fonts::FreeSans9pt7b);
         s_spr.setTextDatum(bottom_center);
         s_spr.setTextColor(TFT_WHITE);
-        s_spr.fillRoundRect(30, 212, 180, 26, 8, s_spr.color888(40, 40, 60));
+        s_spr.fillRoundRect(30, 212, 180, 26, 8, s_spr.color565(40, 40, 60));
         s_spr.drawString(s_toast, 120, 233);
         s_spr.setTextDatum(top_left);
     }
-    s_spr.fillCircle(232, 8, 3, s_net ? s_spr.color888(40, 200, 90) : s_spr.color888(70, 70, 70));
+    s_spr.fillCircle(232, 8, 3, s_net ? s_spr.color565(40, 200, 90) : s_spr.color565(70, 70, 70));
     s_spr.pushSprite(0, 0);
 }

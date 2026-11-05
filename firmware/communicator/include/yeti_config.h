@@ -18,6 +18,9 @@
 #ifndef YETI_PIN_TFT_BL
 #define YETI_PIN_TFT_BL     2     // BLK: PWM do backlight
 #endif
+#ifndef YETI_TFT_BL_CH
+#define YETI_TFT_BL_CH      7     // canal LEDC do backlight (o C3 só tem 0..5)
+#endif
 #ifndef YETI_TFT_ROTATION
 #define YETI_TFT_ROTATION   1     // 0..3: módulo deitado atrás da moldura, flex de lado
 #endif
@@ -39,6 +42,17 @@
 #endif
 #ifndef YETI_TOUCH_ACTIVE
 #define YETI_TOUCH_ACTIVE   HIGH  // TTP223 com jumper A aberto; LOW se o jumper A for fechado
+#endif
+
+// ── Toque por MPR121 no I2C (yeti_c3): E0 cabeça, E1 braço E, E2 braço D ───────
+#ifndef YETI_TOUCH_MPR121
+#define YETI_TOUCH_MPR121   0     // 1 = cabeça e braços pelo MPR121 (sem TTP223, sem touch nativo)
+#endif
+#ifndef YETI_MPR_TOUCH
+#define YETI_MPR_TOUCH      8     // limiar de toque (contagens; menor = mais sensível)
+#endif
+#ifndef YETI_MPR_RELEASE
+#define YETI_MPR_RELEASE    4
 #endif
 
 // ── Touch nativo dos braços (fita de cobre por dentro do braço) ───────────────
@@ -81,6 +95,8 @@
 #define YETI_DARK_S         30
 #define YETI_COLD_C         18.0f
 #define YETI_HOT_C          30.0f
-#define YETI_FPS            25
+#ifndef YETI_FPS
+#define YETI_FPS            25    // yeti_c3: 15 (um núcleo só)
+#endif
 #define YETI_VBAT_LOW       3.45f // V: aviso de bateria fraca
 #define YETI_SOUND_LEVEL    0.35f // nível (0..1) a partir do qual o Yeti olha para o som
